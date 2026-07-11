@@ -1,0 +1,404 @@
+/* ── Bracket page: design tokens ──────────────────────────────────────────
+   A chess bracket reads like an official pairing wall-chart, not a SaaS
+   dashboard: warm card-stock ivory, walnut-ink connector lines, brass seed
+   medallions, and a felt-green accent for whatever's live right now. The
+   losers bracket gets its own muted maroon so the eye never confuses the
+   two trees. Scoped under .bx-page so nothing here leaks into the rest of
+   the app. */
+
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap");
+
+.bx-page {
+  --bx-ivory: #f6f1e7;
+  --bx-card: #fffdf9;
+  --bx-ink: #211d18;
+  --bx-walnut: #6b4a34;
+  --bx-walnut-soft: #ddd0bd;
+  --bx-felt: #2b5d4f;
+  --bx-felt-soft: #dceae3;
+  --bx-brass: #a9803d;
+  --bx-brass-soft: #f1e4c4;
+  --bx-maroon: #8c3b3b;
+  --bx-maroon-soft: #f3e1de;
+  --bx-mist: #948a7c;
+
+  --bx-font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --bx-font-body: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --bx-font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  font-family: var(--bx-font-body);
+  color: var(--bx-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bx-page * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* ── Champion banner ─────────────────────────────────────────────────────── */
+
+.bx-champion-banner {
+  position: relative;
+  background: linear-gradient(135deg, var(--bx-brass-soft), #fbf3df);
+  border: 1px solid #e6d3a0;
+  border-radius: 14px;
+  padding: 20px 26px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  overflow: hidden;
+}
+.bx-champion-banner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px rgba(169, 128, 61, 0.15);
+  pointer-events: none;
+}
+.bx-champion-icon {
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--bx-card);
+  border: 1.5px solid var(--bx-brass);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  box-shadow: 0 2px 6px rgba(169, 128, 61, 0.25);
+}
+.bx-champion-eyebrow {
+  margin: 0;
+  font-family: var(--bx-font-mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--bx-brass);
+}
+.bx-champion-banner h2 {
+  margin: 2px 0 0;
+  font-family: var(--bx-font-display);
+  font-weight: 600;
+  font-size: 1.4rem;
+  letter-spacing: -0.01em;
+}
+
+/* ── Canvas ──────────────────────────────────────────────────────────────── */
+
+.bx-scroll {
+  overflow: auto;
+  background: var(--bx-ivory);
+  border: 1px solid var(--bx-walnut-soft);
+  border-radius: 14px;
+  padding: 28px 32px 36px;
+  background-image: radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.6), transparent 60%);
+}
+.bx-canvas {
+  position: relative;
+}
+.bx-headers,
+.bx-lines,
+.bx-nodes {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+.bx-lines {
+  pointer-events: none;
+}
+.bx-nodes {
+  position: absolute;
+}
+
+.bx-round-header {
+  position: absolute;
+  text-align: center;
+  font-family: var(--bx-font-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  color: var(--bx-mist);
+}
+.bx-round-header-gf {
+  color: var(--bx-brass);
+}
+.bx-round-header-gf::before {
+  content: "♛ ";
+}
+.bx-round-header-losers {
+  color: var(--bx-maroon);
+}
+.bx-section-label {
+  position: absolute;
+  left: -4px;
+  font-family: var(--bx-font-mono);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  color: var(--bx-maroon);
+}
+
+.bx-edge {
+  fill: none;
+  stroke: var(--bx-walnut-soft);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+/* ── Match card ──────────────────────────────────────────────────────────── */
+
+.bx-card {
+  position: relative;
+  background: var(--bx-card);
+  border: 1px solid var(--bx-walnut-soft);
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(33, 29, 24, 0.05);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 12px;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+.bx-card-clickable {
+  cursor: pointer;
+}
+.bx-card-clickable:hover {
+  border-color: var(--bx-felt);
+  box-shadow: 0 6px 16px rgba(43, 93, 79, 0.16);
+  transform: translateY(-1px);
+}
+.bx-card-clickable:focus-visible {
+  outline: 2px solid var(--bx-felt);
+  outline-offset: 2px;
+}
+.bx-card.bx-badge-ready {
+  border-color: var(--bx-felt);
+}
+.bx-card.bx-badge-complete {
+  border-color: var(--bx-brass-soft);
+}
+.bx-card.bx-badge-bye,
+.bx-card.bx-badge-skipped {
+  border-style: dashed;
+  opacity: 0.72;
+}
+
+.bx-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  min-width: 0;
+}
+.bx-row-empty {
+  color: var(--bx-mist);
+  font-style: italic;
+}
+.bx-row-winner .bx-name {
+  font-weight: 700;
+  color: var(--bx-felt);
+}
+.bx-seed {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid var(--bx-walnut-soft);
+  background: var(--bx-ivory);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--bx-font-mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: var(--bx-walnut);
+}
+.bx-seed:empty {
+  visibility: hidden;
+}
+.bx-name {
+  font-size: 0.86rem;
+  color: var(--bx-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1 1 auto;
+}
+.bx-check {
+  color: var(--bx-felt);
+  font-weight: 700;
+  font-size: 0.8rem;
+  flex: 0 0 auto;
+}
+.bx-divider {
+  height: 1px;
+  background: var(--bx-walnut-soft);
+  opacity: 0.5;
+  margin: 0 -12px;
+}
+
+.bx-status-tag {
+  position: absolute;
+  top: -9px;
+  right: 10px;
+  font-family: var(--bx-font-mono);
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--bx-card);
+}
+.bx-badge-ready.bx-status-tag {
+  color: var(--bx-felt);
+  border: 1px solid var(--bx-felt);
+}
+.bx-badge-complete.bx-status-tag {
+  color: var(--bx-brass);
+  border: 1px solid var(--bx-brass-soft);
+}
+.bx-badge-bye.bx-status-tag {
+  color: var(--bx-maroon);
+  border: 1px solid var(--bx-maroon-soft);
+}
+
+/* ── Score-entry modal ─────────────────────────────────────────────────────
+   A fixed-height card layout means expanding a match's score form can't
+   nudge any other card in the bracket — so results are entered in a modal,
+   not inline. */
+
+.bx-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(33, 29, 24, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+  animation: bx-fade-in 0.15s ease;
+}
+.bx-modal {
+  background: var(--bx-card);
+  border-radius: 14px;
+  padding: 22px 24px 24px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 24px 64px rgba(33, 29, 24, 0.3);
+  animation: bx-modal-in 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes bx-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes bx-modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+.bx-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--bx-walnut-soft);
+}
+.bx-modal-title {
+  font-family: var(--bx-font-display);
+  font-weight: 600;
+  font-size: 1.08rem;
+}
+.bx-modal-subtitle {
+  font-family: var(--bx-font-mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--bx-mist);
+  margin-top: 4px;
+}
+.bx-modal-close {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  color: var(--bx-mist);
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px;
+  border-radius: 6px;
+}
+.bx-modal-close:hover {
+  color: var(--bx-ink);
+  background: var(--bx-ivory);
+}
+.bx-modal-hint {
+  color: var(--bx-walnut);
+  margin: 0 0 12px;
+  font-size: 0.88rem;
+}
+.bx-modal-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bx-modal .btn-primary {
+  background: var(--bx-felt);
+  border-color: var(--bx-felt);
+}
+.bx-modal .btn-primary:hover:not(:disabled) {
+  background: #234c41;
+}
+.bx-modal .btn-secondary {
+  background: var(--bx-card);
+  border: 1px solid var(--bx-walnut-soft);
+  color: var(--bx-ink);
+}
+.bx-modal .btn-secondary:hover:not(:disabled) {
+  border-color: var(--bx-felt);
+  color: var(--bx-felt);
+}
+
+.bx-board-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.bx-board-table th {
+  text-align: left;
+  font-family: var(--bx-font-mono);
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--bx-mist);
+  font-weight: 600;
+  padding: 4px 6px;
+}
+.bx-board-table td {
+  padding: 6px;
+  text-align: left;
+  border-top: 1px solid var(--bx-walnut-soft);
+}
+.bx-board-table select {
+  font-family: var(--bx-font-mono);
+  font-size: 0.82rem;
+}
+.bx-tiebreak {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--bx-maroon-soft);
+  border-radius: 8px;
+  border: 1px solid #e6c9c4;
+}

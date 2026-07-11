@@ -1,0 +1,177 @@
+/* ── Overview tab: token system ───────────────────────────────────────────
+   Same "hall" material language as the rest of the app — walnut, felt,
+   brass, parchment. Scoped under `.ov-root`.
+
+   The ambient background now lives in TournamentLayout.jsx/.css instead of
+   here, so it persists across every tab instead of flickering when you
+   switch away from Overview. `.ov-root` still redeclares the same token
+   values below so this file stays portable on its own if reused elsewhere.
+─────────────────────────────────────────────────────────────────────────── */
+
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap");
+
+.ov-root {
+  --ink: #1c231f;
+  --parchment: #f4efe2;
+  --felt: #24483a;
+  --felt-light: #3a6b53;
+  --walnut: #402a1f;
+  --brass: #b8863a;
+  --claret: #7c3130;
+  --muted: rgba(251, 247, 238, 0.65);
+
+  position: relative;
+  isolation: isolate;
+  color: var(--ink);
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+.ov-root h1,
+.ov-root h2,
+.ov-root h3 {
+  font-family: "Fraunces", Georgia, serif;
+  letter-spacing: -0.01em;
+}
+
+/* ── Glass surfaces ───────────────────────────────────────────────────── */
+.ov-root .card {
+  background: rgba(244, 239, 226, 0.22);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(244, 239, 226, 0.35);
+  box-shadow: 0 12px 30px rgba(20, 15, 10, 0.18);
+  border-radius: 14px;
+  padding: 24px 26px;
+  margin-bottom: 22px;
+}
+.ov-root .card > h2 {
+  color: #fbf7ee;
+  font-size: 1.2rem;
+  margin: 0 0 6px;
+}
+.ov-root .muted {
+  color: var(--muted);
+}
+
+.ov-root .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.ov-root .section-header h2 {
+  margin: 0;
+}
+
+/* ── Buttons (scoped refinements on top of the shared .btn-* classes) ──── */
+.ov-root .btn-secondary {
+  background: rgba(244, 239, 226, 0.14);
+  border: 1px solid rgba(244, 239, 226, 0.35);
+  color: #fbf7ee;
+}
+.ov-root .btn-secondary:hover:not(:disabled) {
+  background: rgba(244, 239, 226, 0.24);
+}
+.ov-root .btn-primary {
+  background: var(--felt);
+  border-color: var(--felt);
+}
+.ov-root .btn-primary:hover:not(:disabled) {
+  background: var(--felt-light);
+}
+
+/* ── Info bar ─────────────────────────────────────────────────────────── */
+.ov-root .info-bar {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+.ov-root .info-bar > div {
+  background: rgba(244, 239, 226, 0.14);
+  border: 1px solid rgba(244, 239, 226, 0.25);
+  border-radius: 10px;
+  padding: 8px 16px;
+  color: rgba(251, 247, 238, 0.75);
+  font-size: 0.82rem;
+}
+.ov-root .info-bar span {
+  font-family: "IBM Plex Mono", monospace;
+  color: #fbf7ee;
+  font-weight: 600;
+}
+
+/* ── Edit form ────────────────────────────────────────────────────────── */
+.ov-root input,
+.ov-root select,
+.ov-root textarea {
+  background: rgba(255, 253, 247, 0.92);
+  border: 1px solid rgba(64, 42, 31, 0.22);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-family: "Inter", sans-serif;
+  font-size: 0.92rem;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.ov-root input:focus,
+.ov-root select:focus,
+.ov-root textarea:focus {
+  outline: none;
+  border-color: var(--felt-light);
+  box-shadow: 0 0 0 3px rgba(58, 107, 83, 0.18);
+}
+.ov-root .field span:first-child {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: #fbf7ee;
+  margin-bottom: 5px;
+  display: inline-block;
+}
+.ov-root .hint {
+  color: var(--muted);
+  font-size: 0.82rem;
+  display: block;
+  margin-top: 4px;
+}
+.ov-root .inline-error {
+  color: #ffb4a8;
+  font-size: 0.85rem;
+}
+.ov-root .banner-error {
+  background: rgba(124, 49, 48, 0.18);
+  border: 1px solid rgba(124, 49, 48, 0.4);
+  color: #ffd7cf;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin: 12px 0;
+}
+
+/* ── Finished / champion banner ───────────────────────────────────────── */
+.ov-root .finished-banner {
+  background: linear-gradient(
+    135deg,
+    rgba(184, 134, 58, 0.22),
+    rgba(184, 134, 58, 0.1)
+  );
+  border: 1px solid rgba(184, 134, 58, 0.4);
+  text-align: center;
+}
+.ov-root .finished-banner h2 {
+  color: #f5e6c4;
+  margin-bottom: 6px;
+}
+.ov-root .finished-banner p {
+  color: rgba(251, 247, 238, 0.85);
+  margin: 0 0 14px;
+}
+
+@media (max-width: 640px) {
+  .ov-root .card {
+    padding: 18px 16px;
+  }
+}

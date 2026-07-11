@@ -1,0 +1,354 @@
+/* ── Welcome page ──────────────────────────────────────────────────────────
+   Same chess-hall material language as the bracket page (ivory card stock,
+   walnut ink, felt green, brass) so the app reads as one place, not a
+   landing page bolted onto a tool. Tokens are redeclared locally so this
+   file stays portable on its own. */
+
+.welcome-page {
+  --w-ivory: #f6f1e7;
+  --w-card: #fffdf9;
+  --w-ink: #211d18;
+  --w-walnut: #6b4a34;
+  --w-walnut-soft: #ddd0bd;
+  --w-felt: #2b5d4f;
+  --w-felt-soft: #dceae3;
+  --w-brass: #a9803d;
+  --w-brass-soft: #f1e4c4;
+  --w-mist: #948a7c;
+
+  --w-font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --w-font-body: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --w-font-mono:
+    "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  font-family: var(--w-font-body);
+  color: var(--w-ink);
+  background: var(--w-ivory);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-page * {
+    animation: none !important;
+    transition: none !important;
+  }
+  .welcome-page .reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+
+/* ── Hero ──────────────────────────────────────────────────────────────── */
+
+.welcome-hero {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.welcome-hero-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  padding: 32px;
+  color: var(--w-ivory);
+}
+
+.welcome-glyph {
+  font-size: 3rem;
+  color: var(--w-brass-soft);
+  margin-bottom: 4px;
+  text-shadow: 0 2px 18px rgba(169, 128, 61, 0.5);
+}
+
+.welcome-title {
+  font-family: var(--w-font-display);
+  font-weight: 600;
+  font-size: clamp(2.2rem, 5vw, 3.6rem);
+  letter-spacing: -0.01em;
+  margin: 0;
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.35);
+}
+
+.welcome-tagline {
+  font-size: clamp(1rem, 1.6vw, 1.15rem);
+  color: rgba(246, 241, 231, 0.88);
+  max-width: 480px;
+  margin: 6px 0 22px;
+}
+
+.welcome-hero-content .btn-lg {
+  font-size: 1rem;
+  padding: 14px 34px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.welcome-credit {
+  margin-top: 18px;
+  font-family: var(--w-font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(246, 241, 231, 0.55);
+}
+
+.welcome-hero-edge {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 12px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--w-ivory) 0 16px,
+    var(--w-walnut) 16px 32px
+  );
+  z-index: 2;
+}
+
+.welcome-scroll-cue {
+  position: absolute;
+  left: 50%;
+  bottom: 34px;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: rgba(246, 241, 231, 0.85);
+  font-family: var(--w-font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 6px 10px;
+}
+.welcome-scroll-cue svg {
+  animation: welcome-bounce 1.8s ease-in-out infinite;
+}
+@keyframes welcome-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(5px);
+  }
+}
+
+/* ── Sections ──────────────────────────────────────────────────────────── */
+
+.welcome-section {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 88px 24px;
+}
+
+.welcome-section-head {
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto 46px;
+}
+
+.welcome-eyebrow {
+  font-family: var(--w-font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--w-brass);
+  margin: 0 0 8px;
+}
+
+.welcome-section-head h2 {
+  font-family: var(--w-font-display);
+  font-weight: 600;
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+  margin: 0 0 12px;
+}
+
+.welcome-lede {
+  color: var(--w-walnut);
+  font-size: 1rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ── Format grid ───────────────────────────────────────────────────────── */
+
+.format-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px;
+}
+
+.format-card {
+  background: var(--w-card);
+  border: 1px solid var(--w-walnut-soft);
+  border-radius: 14px;
+  padding: 26px 22px;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.2s ease,
+    border-color 0.2s ease;
+}
+.format-card:hover {
+  border-color: var(--w-felt);
+  box-shadow: 0 10px 26px rgba(43, 93, 79, 0.12);
+  transform: translateY(-2px);
+}
+
+.format-icon-wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--w-ivory);
+  border: 1px solid var(--w-walnut-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--w-walnut);
+  margin-bottom: 14px;
+}
+.format-icon {
+  width: 26px;
+  height: 26px;
+}
+
+.format-card h3 {
+  font-family: var(--w-font-display);
+  font-weight: 600;
+  font-size: 1.08rem;
+  margin: 0 0 8px;
+}
+.format-card p {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--w-ink);
+  opacity: 0.85;
+  margin: 0;
+}
+
+.bughouse-callout {
+  margin-top: 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: var(--w-brass-soft);
+  border: 1px solid #e6d3a0;
+  border-radius: 14px;
+  padding: 24px 28px;
+}
+.format-icon-wrap-callout {
+  background: var(--w-card);
+  border-color: var(--w-brass);
+  color: var(--w-brass);
+  flex: 0 0 auto;
+}
+.bughouse-callout h3 {
+  font-family: var(--w-font-display);
+  font-weight: 600;
+  font-size: 1.08rem;
+  margin: 0 0 6px;
+}
+.bughouse-callout p {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--w-ink);
+  opacity: 0.85;
+}
+
+/* ── Versatility ───────────────────────────────────────────────────────── */
+
+.welcome-versatility {
+  background: var(--w-felt-soft);
+  border-radius: 28px;
+  max-width: 1080px;
+}
+
+.sport-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.sport-chip {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: var(--w-card);
+  border: 1px solid var(--w-walnut-soft);
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+.sport-chip-icon {
+  font-size: 1.05rem;
+}
+
+/* ── CTA + footer ──────────────────────────────────────────────────────── */
+
+.welcome-cta {
+  text-align: center;
+}
+.welcome-cta h2 {
+  font-family: var(--w-font-display);
+  font-weight: 600;
+  font-size: clamp(1.6rem, 3vw, 2.1rem);
+  margin: 0 0 20px;
+}
+
+.welcome-footer {
+  text-align: center;
+  padding: 28px 24px 40px;
+  border-top: 1px solid var(--w-walnut-soft);
+}
+.welcome-footer p {
+  font-family: var(--w-font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--w-mist);
+  margin: 0;
+}
+
+/* ── Scroll reveal ─────────────────────────────────────────────────────── */
+
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    opacity 0.65s ease,
+    transform 0.65s ease;
+}
+.reveal-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Responsive ────────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .welcome-section {
+    padding: 64px 18px;
+  }
+  .bughouse-callout {
+    flex-direction: column;
+    text-align: center;
+  }
+  .welcome-versatility {
+    border-radius: 20px;
+  }
+}

@@ -1,0 +1,435 @@
+/* ── Dashboard: token system ──────────────────────────────────────────────
+   Grounded in the material world of an actual chess set and tournament
+   hall — walnut boards, felt playing surfaces, brass trophies — rather
+   than a generic SaaS palette. Everything below is scoped under
+   `.dash-root` so it never leaks onto other pages that reuse .card,
+   .btn-primary, etc.
+─────────────────────────────────────────────────────────────────────────── */
+
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap");
+
+.dash-root {
+  --ink: #1c231f;
+  --parchment: #f4efe2;
+  --felt: #24483a;
+  --felt-light: #3a6b53;
+  --walnut: #402a1f;
+  --brass: #b8863a;
+  --claret: #7c3130;
+
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  color: var(--ink);
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+.dash-root h1,
+.dash-root h2,
+.dash-root h3 {
+  font-family: "Fraunces", Georgia, serif;
+  letter-spacing: -0.01em;
+}
+
+.dash-mono {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+/* ── Ambient background: slow cross-fading "hall light" scenes ─────────── */
+.dash-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  background: var(--walnut);
+}
+
+.dash-bg-scene {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
+.dash-bg-scene:nth-child(1) {
+  background: radial-gradient(
+    120% 90% at 15% 10%,
+    #5c3c28 0%,
+    #402a1f 55%,
+    #241811 100%
+  );
+}
+.dash-bg-scene:nth-child(2) {
+  background: radial-gradient(
+    120% 90% at 85% 15%,
+    #2f5a45 0%,
+    #24483a 55%,
+    #142720 100%
+  );
+}
+.dash-bg-scene:nth-child(3) {
+  background: radial-gradient(
+    120% 90% at 50% 90%,
+    #8a6a34 0%,
+    #4a3820 55%,
+    #241811 100%
+  );
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dash-bg-scene {
+    animation: dashCycle 24s infinite;
+  }
+  .dash-bg-scene:nth-child(1) {
+    animation-delay: 0s;
+  }
+  .dash-bg-scene:nth-child(2) {
+    animation-delay: 8s;
+  }
+  .dash-bg-scene:nth-child(3) {
+    animation-delay: 16s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-bg-scene:nth-child(1) {
+    opacity: 1;
+  }
+}
+
+@keyframes dashCycle {
+  0% {
+    opacity: 0;
+  }
+  4% {
+    opacity: 1;
+  }
+  29% {
+    opacity: 1;
+  }
+  33% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* faint oversized rotated board-grid watermark, always present */
+.dash-bg::after {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(244, 239, 226, 0.05) 0 2px,
+      transparent 2px 64px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(244, 239, 226, 0.05) 0 2px,
+      transparent 2px 64px
+    );
+  transform: rotate(-8deg);
+}
+
+/* ── Glass surfaces: overrides .card only within the dashboard ─────────── */
+.dash-root .card {
+  background: rgba(244, 239, 226, 0.219);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(244, 239, 226, 0.35);
+  box-shadow: 0 12px 30px rgba(20, 15, 10, 0.18);
+}
+
+.dash-root .page-title {
+  color: #fbf7ee;
+}
+.dash-root .page-subtitle {
+  color: rgba(251, 247, 238, 0.82);
+}
+
+/* ── Header / stat strip ─────────────────────────────────────────────── */
+.dash-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.dash-stats {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+
+.dash-stat {
+  background: rgba(244, 239, 226, 0.14);
+  border: 1px solid rgba(244, 239, 226, 0.25);
+  border-radius: 10px;
+  padding: 10px 16px;
+  color: #fbf7ee;
+  min-width: 120px;
+}
+
+.dash-stat strong {
+  display: block;
+  font-family: "Fraunces", serif;
+  font-size: 1.6rem;
+  line-height: 1.1;
+}
+
+.dash-stat span {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.8;
+}
+
+/* ── Sections ─────────────────────────────────────────────────────────── */
+.dash-section {
+  margin-bottom: 40px;
+}
+
+.dash-section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.dash-section-head h2 {
+  color: #fbf7ee;
+  font-size: 1.3rem;
+  margin: 0;
+}
+
+.dash-section-note {
+  font-size: 0.78rem;
+  color: rgba(251, 247, 238, 0.65);
+}
+
+/* ── Filters ──────────────────────────────────────────────────────────── */
+.dash-filters {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.dash-filter-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.dash-filter-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(251, 247, 238, 0.7);
+  margin-right: 4px;
+}
+
+.dash-chip {
+  border: 1px solid rgba(244, 239, 226, 0.4);
+  background: rgba(244, 239, 226, 0.1);
+  color: #fbf7ee;
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.dash-chip:hover {
+  background: rgba(244, 239, 226, 0.22);
+}
+
+.dash-chip.active {
+  background: var(--brass);
+  border-color: var(--brass);
+  color: #241811;
+  font-weight: 600;
+}
+
+/* ── Tournament grid (glass cards on top of .tourney-grid/.tourney-card) ─ */
+.dash-root .tourney-card {
+  cursor: pointer;
+  border-top: 3px solid var(--felt-light);
+}
+
+.dash-root .status-pill {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.68rem;
+}
+
+/* ── News / blog cards ────────────────────────────────────────────────── */
+.dash-news-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.dash-news-card {
+  padding: 18px;
+}
+
+.dash-news-tag {
+  display: inline-block;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--felt);
+  background: rgba(36, 72, 58, 0.1);
+  border-radius: 4px;
+  padding: 2px 8px;
+  margin-bottom: 10px;
+}
+
+.dash-news-card h3 {
+  font-size: 1.05rem;
+  margin: 0 0 8px;
+}
+
+.dash-news-card p {
+  font-size: 0.88rem;
+  color: #4a463c;
+  line-height: 1.5;
+  margin: 0 0 10px;
+}
+
+.dash-news-date {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.72rem;
+  color: #8a8478;
+}
+
+/* ── Reviews ──────────────────────────────────────────────────────────── */
+.dash-reviews-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.dash-review-card {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dash-review-stars {
+  color: var(--brass);
+  letter-spacing: 2px;
+  font-size: 0.95rem;
+}
+
+.dash-review-quote {
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: #322d24;
+  font-style: italic;
+}
+
+.dash-review-author {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.82rem;
+  color: #6b665a;
+}
+
+.dash-review-author strong {
+  color: var(--ink);
+  font-style: normal;
+}
+
+.dash-review-form {
+  padding: 18px;
+}
+
+.dash-review-form .form-grid {
+  margin-bottom: 12px;
+}
+
+.dash-star-picker {
+  display: flex;
+  gap: 4px;
+  font-size: 1.3rem;
+  cursor: pointer;
+}
+
+.dash-star-picker span {
+  color: #d8d2c2;
+}
+
+.dash-star-picker span.filled {
+  color: var(--brass);
+}
+
+/* ── Footer acknowledgement banner ───────────────────────────────────── */
+.dash-footer {
+  margin-top: 48px;
+  border-radius: 14px;
+  padding: 26px 30px;
+  background: rgba(36, 24, 17, 0.72);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(244, 239, 226, 0.18);
+  color: #fbf7ee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.dash-footer-title {
+  font-family: "Fraunces", serif;
+  font-size: 1.05rem;
+  margin: 0 0 4px;
+}
+
+.dash-footer-sub {
+  font-size: 0.82rem;
+  color: rgba(251, 247, 238, 0.7);
+  margin: 0;
+}
+
+.dash-footer-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.82rem;
+}
+
+.dash-footer-contact a {
+  color: #f0dcae;
+  text-decoration: none;
+}
+
+.dash-footer-contact a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .dash-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .dash-footer-contact {
+    align-items: flex-start;
+  }
+}

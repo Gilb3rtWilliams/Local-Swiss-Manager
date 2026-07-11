@@ -1,0 +1,264 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500&display=swap");
+
+/* ── Winner Reveal overlay ────────────────────────────────────────────────
+   Full-screen celebration sequence: suspense text -> name reveal -> podium.
+   Sits above Fireworks (z-index 1001) so the confetti/fireworks read as
+   happening "behind" the announcement, not competing with it.
+─────────────────────────────────────────────────────────────────────────── */
+
+.wr-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1002;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 24px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(10, 8, 6, 0.55) 0%,
+    rgba(6, 5, 4, 0.82) 100%
+  );
+  animation: wrFadeIn 0.5s ease both;
+  text-align: center;
+}
+
+@keyframes wrFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ── Suspense ("And the winner is...") ──────────────────────────────────── */
+.wr-suspense-text {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: clamp(1.8rem, 5vw, 3rem);
+  color: #fdf6e3;
+  letter-spacing: 0.01em;
+  margin: 0;
+  animation: wrPulse 1.1s ease-in-out infinite;
+}
+
+@keyframes wrPulse {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+}
+
+.wr-dots span {
+  display: inline-block;
+  animation: wrDot 1.2s infinite;
+  opacity: 0;
+}
+.wr-dots span:nth-child(1) {
+  animation-delay: 0s;
+}
+.wr-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.wr-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes wrDot {
+  0%,
+  20% {
+    opacity: 0;
+  }
+  40%,
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ── Reveal (winner name) ─────────────────────────────────────────────── */
+.wr-reveal {
+  animation: wrRevealIn 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
+}
+
+@keyframes wrRevealIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) translateY(30px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.wr-trophy {
+  font-size: clamp(3rem, 8vw, 5rem);
+  filter: drop-shadow(0 0 24px rgba(255, 205, 90, 0.65));
+  animation: wrTrophyFloat 2.4s ease-in-out infinite;
+}
+
+@keyframes wrTrophyFloat {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(2deg);
+  }
+}
+
+.wr-winner-name {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: clamp(2.2rem, 7vw, 4rem);
+  color: #ffd76a;
+  text-shadow: 0 0 30px rgba(255, 215, 100, 0.55);
+  margin: 6px 0 0;
+  line-height: 1.1;
+}
+
+.wr-winner-sub {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.82rem;
+  color: rgba(253, 246, 227, 0.8);
+  margin: 6px 0 0;
+}
+
+/* ── Podium ───────────────────────────────────────────────────────────── */
+.wr-podium {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 8px;
+}
+
+.wr-podium-card {
+  background: rgba(253, 246, 227, 0.08);
+  border: 1px solid rgba(253, 246, 227, 0.25);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 16px 20px;
+  min-width: 130px;
+  color: #fdf6e3;
+  opacity: 0;
+  animation: wrPodiumUp 0.55s ease both;
+}
+
+/* Classic podium arrangement: silver / gold / bronze left-to-right,
+   gold physically taller and center-raised, even though the DOM order
+   stays rank-first (1st, 2nd, 3rd) for anyone using a screen reader. */
+.wr-gold {
+  order: 2;
+  padding-top: 28px;
+  padding-bottom: 28px;
+  animation-delay: 0.25s;
+  border-color: rgba(255, 215, 100, 0.55);
+}
+.wr-silver {
+  order: 1;
+  animation-delay: 0.05s;
+  border-color: rgba(200, 210, 220, 0.5);
+}
+.wr-bronze {
+  order: 3;
+  animation-delay: 0.45s;
+  border-color: rgba(205, 140, 90, 0.5);
+}
+
+@keyframes wrPodiumUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.wr-medal {
+  font-size: 2rem;
+  margin-bottom: 4px;
+}
+
+.wr-podium-place {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.7;
+  margin-bottom: 6px;
+}
+
+.wr-podium-name {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 1.1rem;
+  margin-bottom: 4px;
+}
+
+.wr-podium-score {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.85rem;
+  opacity: 0.85;
+}
+
+/* ── Dismiss ──────────────────────────────────────────────────────────── */
+.wr-dismiss {
+  margin-top: 6px;
+  background: none;
+  border: 1px solid rgba(253, 246, 227, 0.4);
+  color: #fdf6e3;
+  border-radius: 999px;
+  padding: 8px 20px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  animation: wrFadeIn 0.6s ease 0.6s both;
+  transition: background 0.15s ease;
+}
+
+.wr-dismiss:hover {
+  background: rgba(253, 246, 227, 0.12);
+}
+
+@media (max-width: 520px) {
+  .wr-podium {
+    flex-direction: column;
+    align-items: center;
+  }
+  .wr-gold,
+  .wr-silver,
+  .wr-bronze {
+    order: initial;
+    padding: 16px 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wr-overlay,
+  .wr-suspense-text,
+  .wr-dots span,
+  .wr-reveal,
+  .wr-trophy,
+  .wr-podium-card,
+  .wr-dismiss {
+    animation: none !important;
+  }
+  .wr-suspense-text,
+  .wr-reveal,
+  .wr-podium-card {
+    opacity: 1;
+    transform: none;
+  }
+}

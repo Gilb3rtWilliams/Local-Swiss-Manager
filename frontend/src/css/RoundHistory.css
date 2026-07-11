@@ -1,0 +1,546 @@
+/* ===================================================
+   ROUND HISTORY
+=================================================== */
+
+.team-matches {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+/* ===================================================
+   MATCH CARD
+=================================================== */
+
+.team-match-card {
+  background: #18181b;
+
+  border: 1px solid #2d2d35;
+
+  border-radius: 18px;
+
+  overflow: hidden;
+
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+
+  transition:
+    transform 0.25s,
+    box-shadow 0.25s;
+}
+
+.team-match-card:hover {
+  transform: translateY(-4px);
+
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+/* ===================================================
+   MATCH HEADER
+=================================================== */
+
+.team-match-header {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+
+  padding: 1rem 1.4rem;
+
+  background: linear-gradient(90deg, #1f2937, #111827);
+
+  border-bottom: 1px solid #2f3542;
+}
+
+/* ===================================================
+   TEAM NAMES
+=================================================== */
+
+.team-tag {
+  padding: 0.55rem 1rem;
+
+  border-radius: 999px;
+
+  font-weight: 700;
+
+  font-size: 0.95rem;
+
+  letter-spacing: 0.3px;
+}
+
+.team-tag.white {
+  background: #f8fafc;
+
+  color: #111827;
+}
+
+.team-tag.black {
+  background: #111827;
+
+  color: white;
+
+  border: 1px solid #374151;
+}
+
+/* ===================================================
+   SCORE
+=================================================== */
+
+.vs {
+  font-size: 1.2rem;
+
+  font-weight: 700;
+
+  color: #3b82f6;
+}
+
+/* ===================================================
+   TABLE
+=================================================== */
+
+.pairing-table {
+  width: 100%;
+
+  border-collapse: collapse;
+}
+
+.pairing-table thead {
+  background: #22252d;
+}
+
+.pairing-table th {
+  padding: 0.9rem;
+
+  text-align: left;
+
+  color: #cbd5e1;
+
+  font-size: 0.9rem;
+
+  font-weight: 600;
+
+  border-bottom: 1px solid #333;
+}
+
+.pairing-table td {
+  padding: 0.9rem;
+
+  border-bottom: 1px solid #2d2d35;
+
+  transition: background 0.2s;
+}
+
+.pairing-table tbody tr:hover {
+  background: #20252f;
+}
+
+/* ===================================================
+   BOARD NUMBER
+=================================================== */
+
+.board-num {
+  width: 60px;
+
+  text-align: center;
+
+  font-weight: 700;
+
+  color: #60a5fa;
+}
+
+/* ===================================================
+   PLAYER
+=================================================== */
+
+.player-name {
+  font-weight: 600;
+
+  color: #f8fafc;
+}
+
+/* ===================================================
+   WHITE / BLACK DOTS
+=================================================== */
+
+.color-w,
+.color-b {
+  width: 14px;
+
+  height: 14px;
+
+  border-radius: 50%;
+
+  display: inline-block;
+
+  margin-right: 10px;
+
+  vertical-align: middle;
+}
+
+.color-w {
+  background: white;
+
+  border: 2px solid #999;
+}
+
+.color-b {
+  background: black;
+
+  border: 2px solid white;
+}
+
+/* ===================================================
+   RESULT BADGES
+=================================================== */
+
+strong {
+  display: inline-block;
+
+  padding: 0.45rem 0.8rem;
+
+  border-radius: 999px;
+
+  background: #2563eb22;
+
+  color: #60a5fa;
+
+  font-weight: 700;
+}
+
+/* ===================================================
+   BYE
+=================================================== */
+
+.bye-result {
+  display: inline-block;
+
+  margin-left: 10px;
+
+  padding: 0.35rem 0.7rem;
+
+  border-radius: 999px;
+
+  background: #f59e0b22;
+
+  color: #fbbf24;
+
+  font-size: 0.85rem;
+
+  font-weight: 700;
+}
+
+/* ===================================================
+   TEAM BYE CARD
+=================================================== */
+
+.team-match-bye {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+
+  padding: 1.2rem 1.4rem;
+}
+
+/* ===================================================
+   NICE BUTTONS
+=================================================== */
+
+.round-btn {
+  padding: 0.75rem 1.5rem;
+
+  border: none;
+
+  border-radius: 10px;
+
+  cursor: pointer;
+
+  font-size: 0.95rem;
+
+  font-weight: 600;
+
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s,
+    background 0.2s;
+
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 0.5rem;
+}
+
+/* Previous */
+
+.round-btn.secondary {
+  background: #2b3444;
+
+  color: #d1d5db;
+}
+
+.round-btn.secondary:hover {
+  background: #374151;
+
+  transform: translateY(-2px);
+
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
+}
+
+/* Next */
+
+.round-btn.primary {
+  background: #2563eb;
+
+  color: white;
+}
+
+.round-btn.primary:hover {
+  background: #1d4ed8;
+
+  transform: translateY(-2px);
+
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.35);
+}
+
+/* Disabled */
+
+.round-btn:disabled {
+  opacity: 0.45;
+
+  cursor: not-allowed;
+
+  transform: none;
+
+  box-shadow: none;
+}
+
+/* ===================================================
+   RESPONSIVE
+=================================================== */
+
+@media (max-width: 768px) {
+  .team-match-header {
+    flex-direction: column;
+
+    gap: 1rem;
+  }
+
+  .pairing-table {
+    font-size: 0.88rem;
+  }
+
+  .team-tag {
+    width: 100%;
+
+    text-align: center;
+  }
+}
+/* ===========================================
+   ROUND PICKER
+=========================================== */
+
+.round-picker {
+  margin: 1.5rem 0 2rem;
+}
+
+.round-picker-scroll {
+  display: flex;
+
+  gap: 0.9rem;
+
+  overflow-x: auto;
+
+  padding: 0.35rem;
+
+  scrollbar-width: none;
+
+  scroll-behavior: smooth;
+
+  -webkit-overflow-scrolling: touch;
+}
+
+.round-picker-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* ===========================================
+   ROUND PILLS
+=========================================== */
+
+.round-pill {
+  flex: 0 0 auto;
+
+  min-width: 90px;
+
+  padding: 0.85rem 1rem;
+
+  border: none;
+
+  border-radius: 14px;
+
+  background: #1b1d24;
+
+  border: 1px solid #303544;
+
+  cursor: pointer;
+
+  transition: all 0.25s ease;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
+  position: relative;
+
+  overflow: hidden;
+}
+
+/* shine */
+
+.round-pill::before {
+  content: "";
+
+  position: absolute;
+
+  inset: 0;
+
+  background: linear-gradient(
+    120deg,
+    transparent,
+    rgba(255, 255, 255, 0.12),
+    transparent
+  );
+
+  transform: translateX(-100%);
+
+  transition: transform 0.6s;
+}
+
+.round-pill:hover::before {
+  transform: translateX(100%);
+}
+
+.round-pill:hover {
+  transform: translateY(-4px);
+
+  background: #242833;
+
+  border-color: #3b82f6;
+
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* active */
+
+.round-pill.active {
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+
+  border-color: #60a5fa;
+
+  box-shadow: 0 0 22px rgba(37, 99, 235, 0.45);
+
+  transform: translateY(-2px);
+}
+
+.round-pill-label {
+  font-size: 0.68rem;
+
+  letter-spacing: 2px;
+
+  color: #9ca3af;
+
+  font-weight: 700;
+}
+
+.round-pill.active .round-pill-label {
+  color: #dbeafe;
+}
+
+.round-pill-number {
+  margin-top: 0.25rem;
+
+  font-size: 1.4rem;
+
+  font-weight: 700;
+
+  color: white;
+}
+
+/* ===========================================
+   MOBILE
+=========================================== */
+
+@media (max-width: 700px) {
+  .round-pill {
+    min-width: 75px;
+
+    padding: 0.75rem;
+  }
+
+  .round-pill-number {
+    font-size: 1.2rem;
+  }
+}
+.round-picker {
+  position: relative;
+}
+
+.round-picker::before,
+.round-picker::after {
+  content: "";
+
+  position: absolute;
+
+  top: 0;
+
+  bottom: 0;
+
+  width: 40px;
+
+  pointer-events: none;
+
+  z-index: 5;
+}
+
+.round-picker::before {
+  left: 0;
+
+  background: linear-gradient(to right, #18181b, transparent);
+}
+
+.round-picker::after {
+  right: 0;
+
+  background: linear-gradient(to left, #18181b, transparent);
+}
+.round-picker {
+  margin: 1.5rem 0 2rem;
+}
+
+.round-picker-scroll {
+  overflow-x: auto;
+
+  overflow-y: hidden;
+
+  scrollbar-width: thin;
+
+  scroll-behavior: smooth;
+}
+
+.round-picker-track {
+  display: flex;
+
+  gap: 1rem;
+
+  width: max-content;
+
+  min-width: 100%;
+
+  padding: 0.35rem;
+}

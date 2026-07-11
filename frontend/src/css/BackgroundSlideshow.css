@@ -1,0 +1,92 @@
+/* ── Background slideshow ─────────────────────────────────────────────────
+   Self-contained: declares its own fallback tokens so it looks right
+   wherever it's dropped in, without depending on a parent page's CSS. */
+
+.bgshow {
+  --bgshow-ivory: #f6f1e7;
+  --bgshow-walnut: #6b4a34;
+  --bgshow-felt: #2b5d4f;
+
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.bgshow-slide {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  opacity: 0;
+  transition: opacity 1.6s ease;
+  will-change: opacity, transform;
+}
+.bgshow-slide-active {
+  opacity: 1;
+}
+.bgshow-slide-ken.bgshow-slide-active {
+  animation-name: bgshow-ken-burns;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+}
+@keyframes bgshow-ken-burns {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.06);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bgshow-slide-ken.bgshow-slide-active {
+    animation: none;
+  }
+  .bgshow-slide {
+    transition: none;
+  }
+}
+
+.bgshow-fallback {
+  background:
+    radial-gradient(circle at 15% 20%, rgba(43, 93, 79, 0.35), transparent 55%),
+    radial-gradient(circle at 85% 80%, rgba(169, 128, 61, 0.3), transparent 55%),
+    linear-gradient(135deg, #2a2420, #17140f);
+}
+
+.bgshow-overlay {
+  position: absolute;
+  inset: 0;
+}
+.bgshow-overlay-dark {
+  background: linear-gradient(
+    180deg,
+    rgba(23, 19, 14, 0.55) 0%,
+    rgba(23, 19, 14, 0.68) 55%,
+    rgba(23, 19, 14, 0.85) 100%
+  );
+}
+.bgshow-overlay-light {
+  background: linear-gradient(180deg, rgba(246, 241, 231, 0.55), rgba(246, 241, 231, 0.8));
+}
+
+.bgshow-dots {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 7px;
+  z-index: 1;
+}
+.bgshow-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(246, 241, 231, 0.4);
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+.bgshow-dot-active {
+  background: rgba(246, 241, 231, 0.95);
+  transform: scale(1.3);
+}

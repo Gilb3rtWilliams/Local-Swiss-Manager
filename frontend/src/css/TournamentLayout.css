@@ -1,0 +1,357 @@
+/* ── Tournament shell: token system ───────────────────────────────────────
+   This is the persistent frame around every tab (Overview, Pairings,
+   Bracket, Standings, etc.) — the background and header live here so they
+   survive navigation between tabs instead of flickering per-route.
+   Scoped under `.tl-root`.
+─────────────────────────────────────────────────────────────────────────── */
+
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap");
+
+.tl-root {
+  --ink: #1c231f;
+  --parchment: #f4efe2;
+  --felt: #24483a;
+  --felt-light: #3a6b53;
+  --walnut: #402a1f;
+  --brass: #b8863a;
+  --claret: #7c3130;
+  --muted: rgba(251, 247, 238, 0.65);
+
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  color: var(--ink);
+  font-family: "Inter", system-ui, sans-serif;
+  padding-bottom: 60px;
+}
+
+.tl-root h1,
+.tl-root h2,
+.tl-root h3 {
+  font-family: "Fraunces", Georgia, serif;
+  letter-spacing: -0.01em;
+}
+
+/* ── Ambient background — mounted once here, so it persists across every
+   tab (Outlet swaps below it, the background never unmounts) ───────────── */
+.tl-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  background: var(--walnut);
+}
+.tl-bg-scene {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+.tl-bg-scene:nth-child(1) {
+  background: radial-gradient(
+    120% 90% at 15% 10%,
+    #5c3c28 0%,
+    #402a1f 55%,
+    #241811 100%
+  );
+}
+.tl-bg-scene:nth-child(2) {
+  background: radial-gradient(
+    120% 90% at 85% 15%,
+    #2f5a45 0%,
+    #24483a 55%,
+    #142720 100%
+  );
+}
+.tl-bg-scene:nth-child(3) {
+  background: radial-gradient(
+    120% 90% at 50% 90%,
+    #8a6a34 0%,
+    #4a3820 55%,
+    #241811 100%
+  );
+}
+@media (prefers-reduced-motion: no-preference) {
+  .tl-bg-scene {
+    animation: tlCycle 24s infinite;
+  }
+  .tl-bg-scene:nth-child(1) {
+    animation-delay: 0s;
+  }
+  .tl-bg-scene:nth-child(2) {
+    animation-delay: 8s;
+  }
+  .tl-bg-scene:nth-child(3) {
+    animation-delay: 16s;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tl-bg-scene:nth-child(1) {
+    opacity: 1;
+  }
+}
+@keyframes tlCycle {
+  0% {
+    opacity: 0;
+  }
+  4% {
+    opacity: 1;
+  }
+  29% {
+    opacity: 1;
+  }
+  33% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.tl-bg::after {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(244, 239, 226, 0.05) 0 2px,
+      transparent 2px 64px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(244, 239, 226, 0.05) 0 2px,
+      transparent 2px 64px
+    );
+  transform: rotate(-8deg);
+}
+
+/* ── Header ───────────────────────────────────────────────────────────── */
+.tl-root .tourney-header-row {
+  margin-bottom: 18px;
+}
+.tl-root .page-title {
+  color: #fbf7ee;
+  margin: 2px 0 4px;
+}
+.tl-root .page-subtitle {
+  color: rgba(251, 247, 238, 0.8);
+  margin: 0;
+  font-size: 0.92rem;
+}
+.tl-root .muted {
+  color: var(--muted);
+}
+.tl-root .banner-error {
+  background: rgba(124, 49, 48, 0.18);
+  border: 1px solid rgba(124, 49, 48, 0.4);
+  color: #ffd7cf;
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+
+/* ── Sub-tabs ─────────────────────────────────────────────────────────── */
+.tl-root .sub-tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  background: rgba(244, 239, 226, 0.12);
+  border: 1px solid rgba(244, 239, 226, 0.22);
+  border-radius: 12px;
+  padding: 5px;
+  margin-bottom: 26px;
+  width: fit-content;
+  max-width: 100%;
+}
+.tl-root .sub-tab {
+  appearance: none;
+  border: none;
+  background: transparent;
+  text-decoration: none;
+  color: rgba(251, 247, 238, 0.72);
+  font-size: 0.86rem;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 8px;
+  white-space: nowrap;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.tl-root .sub-tab:hover {
+  background: rgba(244, 239, 226, 0.14);
+  color: #fbf7ee;
+}
+.tl-root .sub-tab.active {
+  background: var(--brass);
+  color: #241811;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .tl-root .sub-tabs {
+    width: 100%;
+    overflow-x: auto;
+  }
+}
+
+/* ── Shared tab-content chrome ────────────────────────────────────────────
+   Every Outlet tab (Overview, Pairings, Round History, Standings, Starting
+   Rank, Bracket) is a descendant of .tl-root, so the common surface styles
+   live here once instead of being copy-pasted into each tab's own file.
+   Tab files should only need CSS for what's actually unique to them.
+─────────────────────────────────────────────────────────────────────────── */
+
+.tl-root .card {
+  background: rgba(244, 239, 226, 0.22);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(244, 239, 226, 0.35);
+  box-shadow: 0 12px 30px rgba(20, 15, 10, 0.18);
+  border-radius: 14px;
+  padding: 24px 26px;
+  margin-bottom: 22px;
+}
+.tl-root .card > h2 {
+  color: #fbf7ee;
+  font-size: 1.2rem;
+  margin: 0 0 14px;
+}
+
+.tl-root .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.tl-root .section-header h2 {
+  margin: 0;
+}
+
+.tl-root .banner-error {
+  background: rgba(124, 49, 48, 0.18);
+  border: 1px solid rgba(124, 49, 48, 0.4);
+  color: #ffd7cf;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+}
+.tl-root .inline-error {
+  color: #ffb4a8;
+  font-size: 0.85rem;
+}
+.tl-root .hint {
+  color: var(--muted);
+  font-size: 0.82rem;
+  display: block;
+  margin-top: 4px;
+}
+
+.tl-root .btn-secondary {
+  background: rgba(244, 239, 226, 0.14);
+  border: 1px solid rgba(244, 239, 226, 0.35);
+  color: #fbf7ee;
+}
+.tl-root .btn-secondary:hover:not(:disabled) {
+  background: rgba(244, 239, 226, 0.24);
+}
+.tl-root .btn-primary {
+  background: var(--felt);
+  border-color: var(--felt);
+}
+.tl-root .btn-primary:hover:not(:disabled) {
+  background: var(--felt-light);
+}
+.tl-root .btn-primary:disabled,
+.tl-root .btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tl-root input,
+.tl-root select,
+.tl-root textarea {
+  background: rgba(255, 253, 247, 0.92);
+  border: 1px solid rgba(64, 42, 31, 0.22);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-family: "Inter", sans-serif;
+  font-size: 0.92rem;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.tl-root input:focus,
+.tl-root select:focus,
+.tl-root textarea:focus {
+  outline: none;
+  border-color: var(--felt-light);
+  box-shadow: 0 0 0 3px rgba(58, 107, 83, 0.18);
+}
+.tl-root input::placeholder {
+  color: #a39a89;
+}
+
+.tl-root .round-badge {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--brass);
+  background: rgba(184, 134, 58, 0.12);
+  border: 1px solid rgba(184, 134, 58, 0.35);
+  border-radius: 999px;
+  padding: 3px 12px;
+}
+
+.tl-root .player-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.tl-root .player-row input,
+.tl-root .player-row select {
+  flex: 1 1 160px;
+}
+
+.tl-root .two-col {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 22px;
+}
+@media (max-width: 760px) {
+  .tl-root .two-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Generic table safety net — Standings/CrossTable/StartingRank all render
+   plain <table> markup; the specific class names below (.standings-table
+   etc.) get their own refinements in each tab's stylesheet. */
+.tl-root table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  color: var(--ink);
+}
+.tl-root th {
+  text-align: left;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #5c5648;
+  font-weight: 600;
+  padding: 6px 8px;
+  border-bottom: 2px solid rgba(64, 42, 31, 0.18);
+}
+.tl-root td {
+  padding: 7px 8px;
+  border-bottom: 1px solid rgba(64, 42, 31, 0.1);
+}
+.tl-root tbody tr:hover {
+  background: rgba(36, 72, 58, 0.06);
+}
+.tl-root tbody tr:last-child td {
+  border-bottom: none;
+}

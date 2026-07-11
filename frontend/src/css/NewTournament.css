@@ -1,0 +1,519 @@
+/* ── New Tournament: token system ─────────────────────────────────────────
+   Same "hall" material language as the dashboard — walnut, felt, brass,
+   parchment — so filling in a tournament feels like the same place you
+   just came from, not a different app. Scoped under `.nt-root`.
+─────────────────────────────────────────────────────────────────────────── */
+
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap");
+
+.nt-root {
+  --ink: #1c231f;
+  --parchment: #f4efe2;
+  --felt: #24483a;
+  --felt-light: #3a6b53;
+  --walnut: #402a1f;
+  --brass: #b8863a;
+  --claret: #7c3130;
+
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  color: var(--ink);
+  font-family: "Inter", system-ui, sans-serif;
+  padding-bottom: 60px;
+}
+
+.nt-root h1,
+.nt-root h2,
+.nt-root h3 {
+  font-family: "Fraunces", Georgia, serif;
+  letter-spacing: -0.01em;
+}
+
+/* ── Ambient background (same rotating "hall light" scenes as the
+   dashboard, so the two pages read as one place) ───────────────────────── */
+.nt-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  background: var(--walnut);
+}
+
+.nt-bg-scene {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
+.nt-bg-scene:nth-child(1) {
+  background: radial-gradient(
+    120% 90% at 15% 10%,
+    #5c3c28 0%,
+    #402a1f 55%,
+    #241811 100%
+  );
+}
+.nt-bg-scene:nth-child(2) {
+  background: radial-gradient(
+    120% 90% at 85% 15%,
+    #2f5a45 0%,
+    #24483a 55%,
+    #142720 100%
+  );
+}
+.nt-bg-scene:nth-child(3) {
+  background: radial-gradient(
+    120% 90% at 50% 90%,
+    #8a6a34 0%,
+    #4a3820 55%,
+    #241811 100%
+  );
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .nt-bg-scene {
+    animation: ntCycle 24s infinite;
+  }
+  .nt-bg-scene:nth-child(1) {
+    animation-delay: 0s;
+  }
+  .nt-bg-scene:nth-child(2) {
+    animation-delay: 8s;
+  }
+  .nt-bg-scene:nth-child(3) {
+    animation-delay: 16s;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nt-bg-scene:nth-child(1) {
+    opacity: 1;
+  }
+}
+@keyframes ntCycle {
+  0% {
+    opacity: 0;
+  }
+  4% {
+    opacity: 1;
+  }
+  29% {
+    opacity: 1;
+  }
+  33% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.nt-bg::after {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(244, 239, 226, 0.05) 0 2px,
+      transparent 2px 64px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(244, 239, 226, 0.05) 0 2px,
+      transparent 2px 64px
+    );
+  transform: rotate(-8deg);
+}
+
+/* ── Glass surfaces ───────────────────────────────────────────────────── */
+.nt-root .card {
+  background: rgba(244, 239, 226, 0.22);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(244, 239, 226, 0.35);
+  box-shadow: 0 12px 30px rgba(20, 15, 10, 0.18);
+}
+
+.nt-card {
+  padding: 26px 28px;
+  margin-bottom: 22px;
+}
+.nt-card > h2 {
+  color: #fbf7ee;
+  font-size: 1.25rem;
+  margin: 0 0 20px;
+}
+
+.nt-root .page-title {
+  color: #fbf7ee;
+  margin: 2px 0 4px;
+}
+.nt-root .page-subtitle {
+  color: rgba(251, 247, 238, 0.82);
+  margin: 0 0 20px;
+}
+
+.nt-eyebrow {
+  display: inline-block;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brass);
+}
+
+/* ── Inputs (need to stay legible over a photographic/gradient backdrop) ─ */
+.nt-root input,
+.nt-root select,
+.nt-root textarea {
+  background: rgba(255, 253, 247, 0.92);
+  border: 1px solid rgba(64, 42, 31, 0.22);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-family: "Inter", sans-serif;
+  font-size: 0.92rem;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.nt-root input:focus,
+.nt-root select:focus,
+.nt-root textarea:focus {
+  outline: none;
+  border-color: var(--felt-light);
+  box-shadow: 0 0 0 3px rgba(58, 107, 83, 0.18);
+}
+.nt-root input::placeholder {
+  color: #a39a89;
+}
+.nt-root .field span:first-child {
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #fbf7ee;
+  margin-bottom: 5px;
+  display: inline-block;
+}
+.nt-root .hint {
+  color: rgba(251, 247, 238, 0.75);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+/* ── Tournament Details: panel grid ──────────────────────────────────── */
+.nt-panels {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 26px 32px;
+}
+@media (max-width: 760px) {
+  .nt-panels {
+    grid-template-columns: 1fr;
+  }
+}
+
+.nt-panel {
+  padding-top: 2px;
+}
+.nt-panel + .nt-panel {
+  border-top: none;
+}
+.nt-panel-label {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brass);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(244, 239, 226, 0.25);
+}
+
+/* Segmented toggle (FIDE rated / Test tournament) */
+.nt-toggle {
+  display: flex;
+  border: 1px solid rgba(244, 239, 226, 0.35);
+  border-radius: 8px;
+  overflow: hidden;
+  width: fit-content;
+}
+.nt-toggle label {
+  padding: 8px 16px;
+  font-size: 0.86rem;
+  font-weight: 500;
+  color: rgba(251, 247, 238, 0.85);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.nt-toggle label + label {
+  border-left: 1px solid rgba(244, 239, 226, 0.25);
+}
+.nt-toggle label.checked {
+  background: var(--brass);
+  color: #241811;
+  font-weight: 600;
+}
+.nt-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.rounds-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.rounds-row input[type="number"] {
+  width: 90px;
+  font-family: "IBM Plex Mono", monospace;
+}
+.checkbox-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: rgba(251, 247, 238, 0.85);
+  white-space: nowrap;
+}
+
+/* ── Roster (players / teams): the reinvented section ───────────────────
+   A flowing list instead of a boxed table: numbered chips, hairline
+   dividers between rows instead of individually boxed blocks, and the
+   "add" action lives as an inviting dashed row at the *bottom* of the
+   list — where your attention already is after filling in the last row,
+   instead of making you scroll back up to a button in the header. ───── */
+
+.nt-roster-card {
+  padding-bottom: 22px;
+}
+
+.nt-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.nt-section-head h2 {
+  margin: 0;
+}
+.nt-count-badge {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--brass);
+  background: rgba(184, 134, 58, 0.12);
+  border: 1px solid rgba(184, 134, 58, 0.35);
+  border-radius: 999px;
+  padding: 3px 12px;
+}
+
+.nt-roster-legend {
+  display: grid;
+  grid-template-columns: 30px 1fr 90px 34px;
+  gap: 12px;
+  padding: 14px 6px 6px;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(251, 247, 238, 0.5);
+}
+.nt-roster-legend-nested {
+  color: rgba(28, 35, 31, 0.42);
+  padding-top: 10px;
+}
+
+.nt-roster-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.nt-roster-row {
+  display: grid;
+  grid-template-columns: 30px 1fr 90px 34px;
+  gap: 12px;
+  align-items: center;
+  padding: 7px 6px;
+  border-bottom: 1px solid rgba(244, 239, 226, 0.16);
+}
+.nt-roster-row:last-of-type {
+  border-bottom: none;
+}
+
+.nt-roster-idx {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(184, 134, 58, 0.14);
+  border: 1px solid rgba(184, 134, 58, 0.4);
+  color: var(--brass);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.74rem;
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+
+.nt-roster-rating {
+  font-family: "IBM Plex Mono", monospace;
+  text-align: center;
+}
+
+.nt-row-remove {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: rgba(251, 247, 238, 0.35);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.nt-roster-list-nested .nt-row-remove {
+  color: rgba(28, 35, 31, 0.35);
+}
+.nt-row-remove:hover {
+  background: rgba(124, 49, 48, 0.15);
+  color: var(--claret);
+}
+
+/* Ghost "add" row */
+.nt-add-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1.5px dashed rgba(251, 247, 238, 0.3);
+  border-radius: 10px;
+  background: rgba(58, 107, 83, 0.08);
+  color: #d7ead9;
+  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.1s ease;
+}
+.nt-add-row:hover {
+  background: rgba(58, 107, 83, 0.18);
+  border-color: var(--felt-light);
+}
+.nt-add-row:active {
+  transform: scale(0.99);
+}
+.nt-add-row-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.nt-roster-list-nested .nt-add-row {
+  background: rgba(36, 72, 58, 0.06);
+  border-color: rgba(36, 72, 58, 0.3);
+  color: var(--felt);
+  margin-top: 8px;
+}
+.nt-roster-list-nested .nt-add-row:hover {
+  background: rgba(36, 72, 58, 0.12);
+}
+
+.nt-add-team-row {
+  margin-top: 20px;
+  padding: 16px;
+  font-size: 0.95rem;
+  border-color: rgba(184, 134, 58, 0.45);
+  background: rgba(184, 134, 58, 0.1);
+  color: #f0dcae;
+}
+.nt-add-team-row:hover {
+  background: rgba(184, 134, 58, 0.2);
+  border-color: var(--brass);
+}
+
+.nt-roster-summary {
+  margin: 14px 2px 0;
+  font-size: 0.82rem;
+  color: rgba(251, 247, 238, 0.65);
+}
+
+/* ── Team blocks ──────────────────────────────────────────────────────── */
+.nt-team-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.nt-team-block {
+  background: rgba(244, 239, 226, 0.55);
+  border: 1px solid rgba(64, 42, 31, 0.14);
+  border-left: 3px solid var(--felt-light);
+  border-radius: 10px;
+  padding: 16px 18px 18px;
+}
+
+.nt-team-block-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.nt-team-idx {
+  background: rgba(36, 72, 58, 0.12);
+  border-color: rgba(36, 72, 58, 0.4);
+  color: var(--felt);
+}
+.nt-team-name-input {
+  flex: 1 1 auto;
+  font-weight: 600;
+}
+.nt-team-avg {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.78rem;
+  color: #6b665a;
+  white-space: nowrap;
+}
+.nt-team-block .nt-row-remove {
+  color: rgba(28, 35, 31, 0.4);
+}
+
+.nt-roster-list-nested {
+  margin-top: 4px;
+}
+
+/* ── Submit ───────────────────────────────────────────────────────────── */
+.nt-submit-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 22px 28px;
+}
+.nt-submit-card .btn-primary {
+  padding: 12px 30px;
+  font-size: 0.98rem;
+}
+
+@media (max-width: 640px) {
+  .nt-card {
+    padding: 20px 18px;
+  }
+  .nt-roster-row,
+  .nt-roster-legend {
+    grid-template-columns: 26px 1fr 74px 30px;
+    gap: 8px;
+  }
+}

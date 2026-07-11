@@ -1,33 +1,29 @@
-// Plays a short celebratory fanfare using the Web Audio API — no audio files needed.
+// Plays the victory fanfare when a tournament finishes.
+// The file lives in /public (frontend/public/victory.mp3), which Vite serves
+// unprocessed from the site root — so it's reachable at "/victory.mp3"
+// regardless of which route is currently active. Don't import it as a
+// module asset; a plain absolute path is all that's needed here.
+
+let audio = null;
+
 export function playFanfare() {
-  const AudioCtx = window.AudioContext || window.webkitAudioContext;
-  if (!AudioCtx) return;
-  const ctx = new AudioCtx();
-
-  // Simple ascending triumphant motif.
-  const notes = [
-    { freq: 523.25, time: 0.0, dur: 0.16 },  // C5
-    { freq: 659.25, time: 0.16, dur: 0.16 }, // E5
-    { freq: 783.99, time: 0.32, dur: 0.16 }, // G5
-    { freq: 1046.5, time: 0.48, dur: 0.45 }, // C6 (held)
-    { freq: 783.99, time: 0.95, dur: 0.14 }, // G5
-    { freq: 1046.5, time: 1.10, dur: 0.55 }, // C6 (final)
-  ];
-
-  const now = ctx.currentTime;
-  notes.forEach(n => {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.value = n.freq;
-    gain.gain.setValueAtTime(0, now + n.time);
-    gain.gain.linearRampToValueAtTime(0.25, now + n.time + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + n.time + n.dur);
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.start(now + n.time);
-    osc.stop(now + n.time + n.dur + 0.05);
-  });
-
-  setTimeout(() => ctx.close(), 2200);
+  try {
+    if (!audio) {
+      audio = new Audio("/victory13.mp3");
+      audio.volume = 0.8;
+    }
+    audio.currentTime = 0;
+    audio.play().catch((err) => {
+      // Browsers can block audio playback until the user has interacted
+      // with the page at least once (autoplay policy). Since this fires
+      // from a useEffect reacting to state rather than directly inside a
+      // click handler, that block can occasionally still apply even though
+      // submitting the final round's results was itself a real click.
+      // Swallow it here rather than letting an unhandled rejection surface —
+      // there's nothing actionable to do about it after the fact.
+      console.warn("Victory fanfare didn't play:", err.message);
+    });
+  } catch (err) {
+    console.error("Could not play victory fanfare:", err);
+  }
 }
