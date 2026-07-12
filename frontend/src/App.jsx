@@ -12,6 +12,8 @@ import Pairings from "./pages/tournament/Pairings.jsx";
 import RoundHistoryPage from "./pages/tournament/RoundHistoryPage.jsx";
 import Standings from "./pages/tournament/Standings.jsx";
 import Module from "./pages/tournament/Module.jsx";
+import Register from "./pages/Register.jsx";
+import PublicResults from "./pages/PublicResults.jsx";
 
 export default function App() {
   return (
@@ -21,6 +23,8 @@ export default function App() {
         <Route path="/" element={<Welcome />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/new" element={<NewTournament />} />
+        <Route path="/register/:token" element={<Register />} />
+        <Route path="/results/:token" element={<PublicResults />} />
         <Route path="/tournament/:id" element={<TournamentLayout />}>
           <Route index element={<TournamentIndex />} />
           <Route path="starting-rank" element={<StartingRank />} />

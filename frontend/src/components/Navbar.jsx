@@ -5,7 +5,15 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  if (location.pathname === "/") return null;
+  // Both the registration page and the public results view are
+  // public-facing — a prospective player or spectator shouldn't see
+  // "Dashboard" or "+ New Tournament", both organizer-only actions.
+  if (
+    location.pathname === "/" ||
+    location.pathname.startsWith("/register/") ||
+    location.pathname.startsWith("/results/")
+  )
+    return null;
 
   return (
     <header className="navbar">

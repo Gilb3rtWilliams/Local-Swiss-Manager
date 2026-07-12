@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
+import { api } from "../../api.js";
 import StandingsTable from "../../components/StandingsTable.jsx";
 import TeamStandingsTable from "../../components/TeamStandingsTable.jsx";
 import CrossTable from "../../components/CrossTable.jsx";
@@ -8,6 +10,21 @@ export default function Standings() {
   const isTeam = t.format === "team";
   const isElimination =
     t.system === "single_elimination" || t.system === "double_elimination";
+
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState("");
+
+  async function handleExport() {
+    setExporting(true);
+    setExportError("");
+    try {
+      await api.downloadStandingsExport(t.id);
+    } catch (e) {
+      setExportError(e.message);
+    } finally {
+      setExporting(false);
+    }
+  }
 
   // t.rounds is a Swiss/round-robin concept — bracket results are recorded
   // match-by-match via submitBracketMatchResult(), which updates scores
@@ -34,13 +51,28 @@ export default function Standings() {
 
   return (
     <div>
-      {isElimination && (
-        <p className="muted" style={{ marginBottom: 16 }}>
-          Reflects results recorded so far in the bracket — updated the moment
-          each match is decided, independent of any other match. See the Bracket
-          tab for who's still alive.
-        </p>
-      )}
+      <div className="section-header" style={{ marginBottom: 12 }}>
+        {isElimination ? (
+          <p className="muted" style={{ margin: 0 }}>
+            Reflects results recorded so far in the bracket — updated the moment
+            each match is decided, independent of any other match. See the
+            Bracket tab for who's still alive.
+          </p>
+        ) : (
+          <span />
+        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button
+            className="btn-secondary btn-sm"
+            disabled={exporting}
+            onClick={handleExport}
+          >
+            {exporting ? "Exporting…" : "⬇ Download as Excel"}
+          </button>
+          {exportError && <span className="inline-error">{exportError}</span>}
+        </div>
+      </div>
+
       <div className="two-col">
         <div className="card">
           <h2>Standings</h2>

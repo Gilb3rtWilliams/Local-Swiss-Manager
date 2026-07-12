@@ -1,0 +1,489 @@
+/* ── Public Results page: token system ────────────────────────────────────
+   Same "hall" material language as the rest of the app, but laid out wide
+   (tables need room) rather than as a narrow centered form like /register.
+─────────────────────────────────────────────────────────────────────────── */
+
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap");
+
+.pv-root {
+  --ink: #1c231f;
+  --parchment: #f4efe2;
+  --felt: #24483a;
+  --felt-light: #3a6b53;
+  --walnut: #402a1f;
+  --brass: #b8863a;
+  --claret: #7c3130;
+  --muted: rgba(251, 247, 238, 0.65);
+
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  color: var(--ink);
+  font-family: "Inter", system-ui, sans-serif;
+  padding-bottom: 60px;
+}
+
+.pv-root h1,
+.pv-root h2 {
+  font-family: "Fraunces", Georgia, serif;
+  letter-spacing: -0.01em;
+}
+
+/* ── Ambient background ───────────────────────────────────────────────── */
+.pv-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  background: var(--walnut);
+}
+.pv-bg-scene {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+.pv-bg-scene:nth-child(1) {
+  background: radial-gradient(
+    120% 90% at 15% 10%,
+    #5c3c28 0%,
+    #402a1f 55%,
+    #241811 100%
+  );
+}
+.pv-bg-scene:nth-child(2) {
+  background: radial-gradient(
+    120% 90% at 85% 15%,
+    #2f5a45 0%,
+    #24483a 55%,
+    #142720 100%
+  );
+}
+.pv-bg-scene:nth-child(3) {
+  background: radial-gradient(
+    120% 90% at 50% 90%,
+    #8a6a34 0%,
+    #4a3820 55%,
+    #241811 100%
+  );
+}
+@media (prefers-reduced-motion: no-preference) {
+  .pv-bg-scene {
+    animation: pvCycle 24s infinite;
+  }
+  .pv-bg-scene:nth-child(1) {
+    animation-delay: 0s;
+  }
+  .pv-bg-scene:nth-child(2) {
+    animation-delay: 8s;
+  }
+  .pv-bg-scene:nth-child(3) {
+    animation-delay: 16s;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pv-bg-scene:nth-child(1) {
+    opacity: 1;
+  }
+}
+@keyframes pvCycle {
+  0% {
+    opacity: 0;
+  }
+  4% {
+    opacity: 1;
+  }
+  29% {
+    opacity: 1;
+  }
+  33% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ── Shell ────────────────────────────────────────────────────────────── */
+.pv-shell {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 56px 24px 0;
+}
+
+.pv-eyebrow {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brass);
+}
+.pv-title {
+  color: #fbf7ee;
+  font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+  margin: 6px 0 8px;
+}
+.pv-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  color: rgba(251, 247, 238, 0.75);
+  font-size: 0.88rem;
+  margin: 0 0 24px;
+}
+.pv-status {
+  font-family: "IBM Plex Mono", monospace;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(244, 239, 226, 0.35);
+}
+.pv-status-finished {
+  color: #241811;
+  background: var(--brass);
+  border-color: var(--brass);
+  font-weight: 600;
+}
+
+.pv-champion-banner {
+  background: linear-gradient(
+    135deg,
+    rgba(184, 134, 58, 0.28),
+    rgba(184, 134, 58, 0.14)
+  );
+  border: 1px solid rgba(184, 134, 58, 0.45);
+  color: #f5e6c4;
+  border-radius: 12px;
+  padding: 14px 20px;
+  margin-bottom: 24px;
+  font-size: 1rem;
+}
+
+.pv-closed {
+  text-align: center;
+  padding: 60px 20px;
+  color: #fbf7ee;
+}
+.pv-closed h2 {
+  margin-bottom: 8px;
+}
+.pv-closed p {
+  color: rgba(251, 247, 238, 0.75);
+}
+
+/* ── Card ─────────────────────────────────────────────────────────────── */
+.pv-card {
+  background: rgba(244, 239, 226, 0.22);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(244, 239, 226, 0.35);
+  box-shadow: 0 12px 30px rgba(20, 15, 10, 0.18);
+  border-radius: 14px;
+  padding: 22px 24px;
+  margin-bottom: 22px;
+}
+.pv-card h2 {
+  color: #fbf7ee;
+  font-size: 1.1rem;
+  margin: 0 0 14px;
+}
+.pv-empty {
+  color: var(--muted);
+  margin: 0;
+}
+.pv-cross-card {
+  overflow-x: auto;
+}
+
+.pv-two-col {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 22px;
+}
+@media (max-width: 760px) {
+  .pv-two-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Round picker (same pill language as the organizer's round history) ─ */
+.pv-round-picker {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 18px;
+}
+.pv-round-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(244, 239, 226, 0.35);
+  background: rgba(244, 239, 226, 0.1);
+  color: rgba(251, 247, 238, 0.8);
+  border-radius: 10px;
+  padding: 6px 14px;
+  cursor: pointer;
+  position: relative;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.pv-round-pill:hover {
+  background: rgba(244, 239, 226, 0.2);
+}
+.pv-round-pill.active {
+  background: var(--brass);
+  border-color: var(--brass);
+  color: #241811;
+}
+.pv-round-pill-label {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.75;
+}
+.pv-round-pill-number {
+  font-family: "Fraunces", serif;
+  font-weight: 600;
+  font-size: 1.1rem;
+  line-height: 1.1;
+}
+.pv-round-pill-tag {
+  position: absolute;
+  top: -7px;
+  right: -6px;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.56rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: var(--claret);
+  color: #fdf0ee;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+/* ── Match cards (re-skin of RoundHistory.css's dark theme into the warm
+   palette here) ──────────────────────────────────────────────────────────
+   RoundHistory.css is never imported on this page — RoundHistoryPage.jsx
+   is the only place that pulls it in, and its #18181b/#2563eb dark theme
+   would clash badly with everything else here anyway. Since RoundHistory.jsx
+   itself only emits class names (team-match-card, pairing-table, board-num,
+   etc.) with no inline styles, redefining those same classes here — in the
+   warm walnut/felt/brass palette — is enough to make both the live round
+   (CurrentRoundPreview, which mirrors this exact markup) and every finished
+   round (the real RoundHistory component) match perfectly. */
+
+.pv-root .team-matches {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.pv-root .team-match-card {
+  background: rgba(244, 239, 226, 0.16);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(244, 239, 226, 0.3);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.pv-root .team-match-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: rgba(64, 42, 31, 0.3);
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pv-root .team-match-bye {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.pv-root .team-tag {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.pv-root .team-tag.white {
+  background: var(--parchment);
+  color: var(--ink);
+}
+.pv-root .team-tag.black {
+  background: var(--walnut);
+  color: var(--parchment);
+  border: 1px solid rgba(244, 239, 226, 0.3);
+}
+
+.pv-root .vs {
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 700;
+  color: var(--brass);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.pv-root .pairing-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.pv-root .pairing-table thead {
+  background: rgba(64, 42, 31, 0.1);
+}
+.pv-root .pairing-table th {
+  padding: 9px 10px;
+  text-align: left;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #5c5648;
+  font-weight: 600;
+  border-bottom: 2px solid rgba(64, 42, 31, 0.18);
+}
+.pv-root .pairing-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid rgba(64, 42, 31, 0.1);
+  color: var(--ink);
+}
+.pv-root .pairing-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.pv-root .board-num {
+  width: 50px;
+  text-align: center;
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 700;
+  color: var(--brass);
+}
+
+.pv-root .player-name {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.pv-root .color-w,
+.pv-root .color-b {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+.pv-root .color-w {
+  background: #fdf6e8;
+  border: 1.5px solid #b0a88f;
+}
+.pv-root .color-b {
+  background: #241811;
+  border: 1.5px solid var(--parchment);
+}
+
+/* Result badge on finished rounds (rendered as <strong> by RoundHistory.jsx) */
+.pv-root .pairing-table strong {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(184, 134, 58, 0.16);
+  color: var(--felt);
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.pv-root .bye-result {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(184, 134, 58, 0.16);
+  color: #8a6a1f;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+/* Live round only — CurrentRoundPreview uses this instead of <strong> since
+   there's no result yet to show. */
+.pv-root .pv-pending {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(64, 42, 31, 0.08);
+  color: #8a8478;
+  font-size: 0.78rem;
+  font-style: italic;
+}
+
+@media (max-width: 640px) {
+  .pv-root .team-match-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ── Current-round read-only preview now shares the classes above (see
+   CurrentRoundPreview in PublicResults.jsx). .pv-bye is reused as a plain
+   text color for any leftover simple bye labels. */
+.pv-bye {
+  color: #6b665a;
+}
+
+/* ── Tables (StandingsTable / CrossTable / RoundHistory all render plain
+   <table> markup) ────────────────────────────────────────────────────── */
+.pv-root table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  color: var(--ink);
+}
+.pv-root th {
+  text-align: left;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #5c5648;
+  font-weight: 600;
+  padding: 6px 8px;
+  border-bottom: 2px solid rgba(64, 42, 31, 0.18);
+}
+.pv-root td {
+  padding: 7px 8px;
+  border-bottom: 1px solid rgba(64, 42, 31, 0.1);
+}
+.pv-root tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.pv-footnote {
+  text-align: center;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: rgba(251, 247, 238, 0.5);
+  margin: 30px 0 10px;
+}
+
+@media (max-width: 640px) {
+  .pv-shell {
+    padding: 36px 16px 0;
+  }
+  .pv-card {
+    padding: 16px 16px;
+  }
+}

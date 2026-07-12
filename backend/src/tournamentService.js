@@ -4,6 +4,7 @@ const store = require("./store");
 const roundRobin = require("./roundRobin");
 const bracketEngine = require("./bracket");
 const bughouse = require("./bughouse");
+const excelExport = require("./excelExport");
 
 const db = store.load();
 function persist() {
@@ -384,6 +385,10 @@ function createTournament(input) {
     dateTo: dateTo || null,
     fideRated: Boolean(fideRated),
     isTest: Boolean(isTest),
+    registrationOpen: false,
+    registrationToken: null,
+    publicViewOpen: false,
+    publicViewToken: null,
     totalRounds: null,
     currentRound: 0,
     status: "setup",
@@ -1078,6 +1083,293 @@ function addExtraRound(id) {
   return serializeTournament(t);
 }
 
+// ─── Self-registration links ────────────────────────────────────────────────
+// Lets the organizer share a link so players/teams can add themselves,
+// instead of the organizer typing every entry in by hand. Reuses the same
+// eligibility window as addLatePlayer: round-robin/elimination fields are
+// fixed up front, and registration closes once the tournament is past
+// Round 1 (mirrors addLatePlayer's own "currentRound > 1" cutoff).
+
+function findByRegistrationToken(token) {
+  const t = Object.values(db.tournaments).find(
+    (x) => x.registrationToken === token,
+  );
+  if (!t) {
+    const e = new Error("Registration link not found or no longer valid");
+    e.status = 404;
+    throw e;
+  }
+  return t;
+}
+
+function assertRegistrationWindowOpen(t) {
+  if (isRoundRobinSystem(t)) {
+    const e = new Error(
+      "Registration is closed — this tournament's schedule is fixed for the full field.",
+    );
+    e.status = 409;
+    throw e;
+  }
+  if (isEliminationSystem(t)) {
+    const e = new Error(
+      "Registration is closed — this tournament's bracket is fixed for the full field.",
+    );
+    e.status = 409;
+    throw e;
+  }
+  if (t.currentRound > 1) {
+    const e = new Error(
+      "Registration is closed — the tournament is already past Round 1.",
+    );
+    e.status = 409;
+    throw e;
+  }
+}
+
+function enableRegistration(id) {
+  const t = assertTournament(id);
+  assertRegistrationWindowOpen(t);
+  if (!t.registrationToken) t.registrationToken = uid();
+  t.registrationOpen = true;
+  t.updatedAt = new Date().toISOString();
+  persist();
+  return serializeTournament(t);
+}
+
+function disableRegistration(id) {
+  const t = assertTournament(id);
+  t.registrationOpen = false;
+  t.updatedAt = new Date().toISOString();
+  persist();
+  return serializeTournament(t);
+}
+
+// Public: what a prospective player sees before filling in the form.
+// Deliberately narrow — no arbiter names, no full roster, nothing beyond
+// what's needed to identify the event and confirm registration is open.
+function getPublicRegistration(token) {
+  const t = findByRegistrationToken(token);
+  return {
+    id: t.id,
+    name: t.name,
+    federation: t.federation,
+    format: t.format,
+    variant: t.variant,
+    system: t.system,
+    timeControl: t.timeControl,
+    dateFrom: t.dateFrom,
+    dateTo: t.dateTo,
+    fideRated: t.fideRated,
+    registrationOpen: t.registrationOpen,
+    competitorCount: t.format === "team" ? t.teams.length : t.players.length,
+  };
+}
+
+// Public: submit a registration. Individual tournaments register a single
+// player; team tournaments register a whole new team (self-registration
+// has no concept of "join an existing team" — that still goes through the
+// organizer / addLatePlayer with an explicit teamId).
+function submitPublicRegistration(token, payload = {}) {
+  const t = findByRegistrationToken(token);
+  if (!t.registrationOpen) {
+    const e = new Error("Registration is closed for this tournament");
+    e.status = 409;
+    throw e;
+  }
+  assertRegistrationWindowOpen(t);
+
+  if (t.format === "team") {
+    const { teamName, players = [] } = payload;
+    if (!teamName || !teamName.trim()) {
+      const e = new Error("Team name is required");
+      e.status = 400;
+      throw e;
+    }
+    if (
+      t.teams.some(
+        (x) => x.name.toLowerCase() === teamName.trim().toLowerCase(),
+      )
+    ) {
+      const e = new Error("A team with that name is already registered");
+      e.status = 400;
+      throw e;
+    }
+    if (!Array.isArray(players) || players.length === 0) {
+      const e = new Error("Add at least 1 player to your team");
+      e.status = 400;
+      throw e;
+    }
+    if (t.variant === "bughouse" && players.length !== 2) {
+      const e = new Error("Bughouse requires exactly 2 players per team");
+      e.status = 400;
+      throw e;
+    }
+    players.forEach((p) => {
+      if (!p.name || !p.name.trim()) {
+        const e = new Error("Every player needs a name");
+        e.status = 400;
+        throw e;
+      }
+    });
+
+    const teamId = uid();
+    const teamPlayers = players.map((p) => {
+      const comp = engine.newCompetitor(uid(), Number(p.rating) || 0);
+      comp.name = p.name.trim();
+      comp.teamId = teamId;
+      comp.startingRank = t.players.length + 1;
+      return comp;
+    });
+    const avgRating = Math.round(
+      teamPlayers.reduce((s, p) => s + p.rating, 0) / teamPlayers.length,
+    );
+    const team = {
+      id: teamId,
+      name: teamName.trim(),
+      rating: avgRating,
+      score: 0,
+      colorDiff: 0,
+      lastColor: null,
+      colorHistory: [],
+      opponents: new Set(),
+      results: {},
+      byeRounds: 0,
+      playerIds: teamPlayers.map((p) => p.id),
+      startingRank: t.teams.length + 1,
+    };
+    t.teams.push(team);
+    t.players.push(...teamPlayers);
+
+    const suggested = engine.suggestedRounds(t.teams.length);
+    if (suggested > t.totalRounds) t.totalRounds = suggested;
+
+    t.updatedAt = new Date().toISOString();
+    persist();
+    return { ok: true, teamId: team.id, teamName: team.name };
+  }
+
+  // Individual format
+  const { name, rating } = payload;
+  if (!name || !name.trim()) {
+    const e = new Error("Name is required");
+    e.status = 400;
+    throw e;
+  }
+  if (
+    t.players.some((p) => p.name.toLowerCase() === name.trim().toLowerCase())
+  ) {
+    const e = new Error("A player with that name is already registered");
+    e.status = 400;
+    throw e;
+  }
+  const comp = engine.newCompetitor(uid(), Number(rating) || 0);
+  comp.name = name.trim();
+  comp.startingRank = t.players.length + 1;
+  t.players.push(comp);
+  if (t.currentPairings) {
+    comp.score += 1;
+    comp.byeRounds += 1;
+    t.currentPairings.push({
+      type: "bye",
+      white: comp.id,
+      black: null,
+      result: undefined,
+    });
+  }
+
+  const suggested = engine.suggestedRounds(t.players.length);
+  if (suggested > t.totalRounds) t.totalRounds = suggested;
+
+  t.updatedAt = new Date().toISOString();
+  persist();
+  return { ok: true, playerId: comp.id, name: comp.name };
+}
+
+// ─── Public results links ───────────────────────────────────────────────────
+// A second, separate shareable link from registration — this one is
+// read-only and has no eligibility window, since spectators should be able
+// to check pairings/standings at any point in the event (before, during, or
+// after), unlike registration which only makes sense before Round 1.
+//
+// Elimination brackets aren't wired up here yet — t.rounds/t.currentPairings
+// stay empty for those systems (see generateNextRound), so there'd be
+// nothing meaningful to show. Bracket sharing is a separate follow-up.
+
+function assertPublicViewSupported(t) {
+  if (isEliminationSystem(t)) {
+    const e = new Error(
+      "Public results links for elimination brackets are coming soon — not available yet.",
+    );
+    e.status = 409;
+    throw e;
+  }
+}
+
+function findByPublicViewToken(token) {
+  const t = Object.values(db.tournaments).find(
+    (x) => x.publicViewToken === token,
+  );
+  if (!t) {
+    const e = new Error("This results link isn't valid or has been removed");
+    e.status = 404;
+    throw e;
+  }
+  return t;
+}
+
+function enablePublicView(id) {
+  const t = assertTournament(id);
+  assertPublicViewSupported(t);
+  if (!t.publicViewToken) t.publicViewToken = uid();
+  t.publicViewOpen = true;
+  t.updatedAt = new Date().toISOString();
+  persist();
+  return serializeTournament(t);
+}
+
+function disablePublicView(id) {
+  const t = assertTournament(id);
+  t.publicViewOpen = false;
+  t.updatedAt = new Date().toISOString();
+  persist();
+  return serializeTournament(t);
+}
+
+// Public: pairings for every round plus current standings. Reuses
+// serializeTournament() wholesale rather than re-deriving standings/rounds/
+// cross-table logic a second time, then narrows the result down to what a
+// spectator should see — no organizer contact details, no edit-relevant
+// fields, no registration token.
+function getPublicResults(token) {
+  const t = findByPublicViewToken(token);
+  if (!t.publicViewOpen) {
+    const e = new Error("Results aren't public for this tournament right now");
+    e.status = 403;
+    throw e;
+  }
+  const full = serializeTournament(t);
+  return {
+    id: full.id,
+    name: full.name,
+    federation: full.federation,
+    format: full.format,
+    variant: full.variant,
+    system: full.system,
+    timeControl: full.timeControl,
+    dateFrom: full.dateFrom,
+    dateTo: full.dateTo,
+    status: full.status,
+    currentRound: full.currentRound,
+    totalRounds: full.totalRounds,
+    currentPairings: full.currentPairings,
+    rounds: full.rounds,
+    standings: full.standings,
+    teamStandings: full.teamStandings,
+    crossTable: full.crossTable,
+    winner: full.winner,
+  };
+}
+
 function updateTournamentDetails(id, updates = {}) {
   const t = assertTournament(id);
 
@@ -1182,6 +1474,22 @@ function computeWinner(t) {
 function getTournament(id) {
   const t = assertTournament(id);
   return serializeTournament(t);
+}
+
+// Returns { buffer, filename } — kept separate from getTournament since this
+// one produces a binary payload, not JSON, so the route handles it
+// differently (no res.json wrap).
+async function exportStandingsWorkbook(id) {
+  const t = assertTournament(id);
+  const serialized = serializeTournament(t);
+  const buffer = await excelExport.buildStandingsWorkbook(serialized);
+  const slug =
+    t.name
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "tournament";
+  return { buffer, filename: `${slug}-standings.xlsx` };
 }
 
 function serializeBracket(t) {
@@ -1488,6 +1796,10 @@ function serializeTournament(t) {
     startingRankList,
     bracket: serializeBracket(t),
     winner: t.status === "finished" ? computeWinner(t) : null,
+    registrationOpen: t.registrationOpen,
+    registrationToken: t.registrationToken,
+    publicViewOpen: t.publicViewOpen,
+    publicViewToken: t.publicViewToken,
   };
 }
 
@@ -1568,6 +1880,14 @@ module.exports = {
   submitBracketMatchResult,
   getBracket,
   validateBughouseTeams,
+  enableRegistration,
+  disableRegistration,
+  getPublicRegistration,
+  submitPublicRegistration,
+  enablePublicView,
+  disablePublicView,
+  getPublicResults,
+  exportStandingsWorkbook,
   singleRoundRobinSchedule: roundRobin.singleRoundRobinSchedule,
   doubleRoundRobinSchedule: roundRobin.doubleRoundRobinSchedule,
   scheduleLength: roundRobin.scheduleLength,

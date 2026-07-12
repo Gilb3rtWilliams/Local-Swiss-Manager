@@ -25,6 +25,80 @@ export default function Overview() {
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [regBusy, setRegBusy] = useState(false);
+  const [regError, setRegError] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const [pubBusy, setPubBusy] = useState(false);
+  const [pubError, setPubError] = useState("");
+  const [pubCopied, setPubCopied] = useState(false);
+
+  const registrationEligible =
+    !isElimination &&
+    t.system !== "round_robin" &&
+    t.system !== "double_round_robin" &&
+    t.currentRound <= 1;
+
+  const registrationLink = t.registrationToken
+    ? `${window.location.origin}/register/${t.registrationToken}`
+    : null;
+
+  async function handleToggleRegistration() {
+    setRegBusy(true);
+    setRegError("");
+    try {
+      if (t.registrationOpen) {
+        await api.disableRegistration(t.id);
+      } else {
+        await api.enableRegistration(t.id);
+      }
+      refresh();
+    } catch (e) {
+      setRegError(e.message);
+    } finally {
+      setRegBusy(false);
+    }
+  }
+
+  function handleCopyLink() {
+    if (!registrationLink) return;
+    navigator.clipboard.writeText(registrationLink).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    });
+  }
+
+  // Unlike registration, the results link has no eligibility window — it's
+  // useful before, during, and after the event. Not offered yet for
+  // elimination brackets (bracket sharing is a separate follow-up).
+  const publicResultsLink = t.publicViewToken
+    ? `${window.location.origin}/results/${t.publicViewToken}`
+    : null;
+
+  async function handleTogglePublicView() {
+    setPubBusy(true);
+    setPubError("");
+    try {
+      if (t.publicViewOpen) {
+        await api.disablePublicView(t.id);
+      } else {
+        await api.enablePublicView(t.id);
+      }
+      refresh();
+    } catch (e) {
+      setPubError(e.message);
+    } finally {
+      setPubBusy(false);
+    }
+  }
+
+  function handleCopyPublicLink() {
+    if (!publicResultsLink) return;
+    navigator.clipboard.writeText(publicResultsLink).then(() => {
+      setPubCopied(true);
+      setTimeout(() => setPubCopied(false), 1800);
+    });
+  }
 
   const [editOpen, setEditOpen] = useState(false);
   const [editName, setEditName] = useState("");
@@ -241,6 +315,116 @@ export default function Overview() {
               {editError && <span className="inline-error">{editError}</span>}
             </div>
           </form>
+        )}
+      </div>
+
+      {registrationEligible && (
+        <div className="card ov-registration-card">
+          <div className="section-header">
+            <h2>Registration Link</h2>
+            <button
+              className={
+                t.registrationOpen
+                  ? "btn-secondary btn-sm"
+                  : "btn-primary btn-sm"
+              }
+              disabled={regBusy}
+              onClick={handleToggleRegistration}
+            >
+              {regBusy
+                ? "Working…"
+                : t.registrationOpen
+                  ? "Close Registration"
+                  : "Enable Registration Link"}
+            </button>
+          </div>
+          <p className="muted" style={{ marginBottom: 10 }}>
+            {t.registrationOpen
+              ? isTeam
+                ? "Share this link so team captains can register their own team before Round 1."
+                : "Share this link so players can add themselves before Round 1."
+              : "Enable a link players can use to register themselves, instead of typing every entry in by hand. Only available before Round 1 starts."}
+          </p>
+          {t.registrationOpen && registrationLink && (
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                type="text"
+                readOnly
+                value={registrationLink}
+                onClick={(e) => e.target.select()}
+                style={{
+                  flex: 1,
+                  padding: "7px 10px",
+                  border: "1px solid #d9d2c0",
+                  borderRadius: 6,
+                  fontSize: "0.85rem",
+                }}
+              />
+              <button className="btn-secondary btn-sm" onClick={handleCopyLink}>
+                {copied ? "Copied ✓" : "Copy Link"}
+              </button>
+            </div>
+          )}
+          {regError && <div className="inline-error">{regError}</div>}
+        </div>
+      )}
+
+      <div className="card ov-registration-card">
+        <div className="section-header">
+          <h2>Pairings &amp; Standings Link</h2>
+          {!isElimination && (
+            <button
+              className={
+                t.publicViewOpen ? "btn-secondary btn-sm" : "btn-primary btn-sm"
+              }
+              disabled={pubBusy}
+              onClick={handleTogglePublicView}
+            >
+              {pubBusy
+                ? "Working…"
+                : t.publicViewOpen
+                  ? "Turn Off Public Link"
+                  : "Enable Public Link"}
+            </button>
+          )}
+        </div>
+        {isElimination ? (
+          <p className="muted" style={{ marginBottom: 0 }}>
+            Coming soon — a public link for following the bracket live isn't
+            available yet.
+          </p>
+        ) : (
+          <>
+            <p className="muted" style={{ marginBottom: 10 }}>
+              {t.publicViewOpen
+                ? "Anyone with this link can browse pairings for every round and current standings — read-only, no sign-in needed."
+                : "Turn this on to share a read-only link where players and spectators can check pairings and standings themselves, any time during the event."}
+            </p>
+            {t.publicViewOpen && publicResultsLink && (
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  type="text"
+                  readOnly
+                  value={publicResultsLink}
+                  onClick={(e) => e.target.select()}
+                  style={{
+                    flex: 1,
+                    padding: "7px 10px",
+                    border: "1px solid #d9d2c0",
+                    borderRadius: 6,
+                    fontSize: "0.85rem",
+                  }}
+                />
+                <button
+                  className="btn-secondary btn-sm"
+                  onClick={handleCopyPublicLink}
+                >
+                  {pubCopied ? "Copied ✓" : "Copy Link"}
+                </button>
+              </div>
+            )}
+            {pubError && <div className="inline-error">{pubError}</div>}
+          </>
         )}
       </div>
 
