@@ -85,7 +85,7 @@ export default function WinnerReveal({ t }) {
               <div className="wr-trophy">🏆</div>
               <h1 className="wr-winner-name">{winnerName}</h1>
               <p className="wr-winner-sub">
-                {isTeam ? "Champion Team" : "Tournament Champion"}
+                {isTeam ? "Team Champions" : "Tournament Champion"}
               </p>
             </div>
           )}

@@ -1295,16 +1295,6 @@ function submitPublicRegistration(token, payload = {}) {
 // stay empty for those systems (see generateNextRound), so there'd be
 // nothing meaningful to show. Bracket sharing is a separate follow-up.
 
-function assertPublicViewSupported(t) {
-  if (isEliminationSystem(t)) {
-    const e = new Error(
-      "Public results links for elimination brackets are coming soon — not available yet.",
-    );
-    e.status = 409;
-    throw e;
-  }
-}
-
 function findByPublicViewToken(token) {
   const t = Object.values(db.tournaments).find(
     (x) => x.publicViewToken === token,
@@ -1319,7 +1309,6 @@ function findByPublicViewToken(token) {
 
 function enablePublicView(id) {
   const t = assertTournament(id);
-  assertPublicViewSupported(t);
   if (!t.publicViewToken) t.publicViewToken = uid();
   t.publicViewOpen = true;
   t.updatedAt = new Date().toISOString();
@@ -1367,6 +1356,7 @@ function getPublicResults(token) {
     teamStandings: full.teamStandings,
     crossTable: full.crossTable,
     winner: full.winner,
+    bracket: full.bracket,
   };
 }
 

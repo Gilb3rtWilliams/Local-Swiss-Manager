@@ -69,8 +69,8 @@ export default function Overview() {
   }
 
   // Unlike registration, the results link has no eligibility window — it's
-  // useful before, during, and after the event. Not offered yet for
-  // elimination brackets (bracket sharing is a separate follow-up).
+  // useful before, during, and after the event. Now covers elimination
+  // brackets too (BracketCanvas renders read-only via PublicResults).
   const publicResultsLink = t.publicViewToken
     ? `${window.location.origin}/results/${t.publicViewToken}`
     : null;
@@ -371,61 +371,56 @@ export default function Overview() {
 
       <div className="card ov-registration-card">
         <div className="section-header">
-          <h2>Pairings &amp; Standings Link</h2>
-          {!isElimination && (
-            <button
-              className={
-                t.publicViewOpen ? "btn-secondary btn-sm" : "btn-primary btn-sm"
-              }
-              disabled={pubBusy}
-              onClick={handleTogglePublicView}
-            >
-              {pubBusy
-                ? "Working…"
-                : t.publicViewOpen
-                  ? "Turn Off Public Link"
-                  : "Enable Public Link"}
-            </button>
-          )}
+          <h2>
+            {isElimination ? "Bracket Link" : "Pairings & Standings Link"}
+          </h2>
+          <button
+            className={
+              t.publicViewOpen ? "btn-secondary btn-sm" : "btn-primary btn-sm"
+            }
+            disabled={pubBusy}
+            onClick={handleTogglePublicView}
+          >
+            {pubBusy
+              ? "Working…"
+              : t.publicViewOpen
+                ? "Turn Off Public Link"
+                : "Enable Public Link"}
+          </button>
         </div>
-        {isElimination ? (
-          <p className="muted" style={{ marginBottom: 0 }}>
-            Coming soon — a public link for following the bracket live isn't
-            available yet.
-          </p>
-        ) : (
-          <>
-            <p className="muted" style={{ marginBottom: 10 }}>
-              {t.publicViewOpen
-                ? "Anyone with this link can browse pairings for every round and current standings — read-only, no sign-in needed."
-                : "Turn this on to share a read-only link where players and spectators can check pairings and standings themselves, any time during the event."}
-            </p>
-            {t.publicViewOpen && publicResultsLink && (
-              <div style={{ display: "flex", gap: 8 }}>
-                <input
-                  type="text"
-                  readOnly
-                  value={publicResultsLink}
-                  onClick={(e) => e.target.select()}
-                  style={{
-                    flex: 1,
-                    padding: "7px 10px",
-                    border: "1px solid #d9d2c0",
-                    borderRadius: 6,
-                    fontSize: "0.85rem",
-                  }}
-                />
-                <button
-                  className="btn-secondary btn-sm"
-                  onClick={handleCopyPublicLink}
-                >
-                  {pubCopied ? "Copied ✓" : "Copy Link"}
-                </button>
-              </div>
-            )}
-            {pubError && <div className="inline-error">{pubError}</div>}
-          </>
+        <p className="muted" style={{ marginBottom: 10 }}>
+          {t.publicViewOpen
+            ? isElimination
+              ? "Anyone with this link can follow the live bracket and standings — read-only, no sign-in needed."
+              : "Anyone with this link can browse pairings for every round and current standings — read-only, no sign-in needed."
+            : isElimination
+              ? "Turn this on to share a read-only link where players and spectators can follow the bracket live, any time during the event."
+              : "Turn this on to share a read-only link where players and spectators can check pairings and standings themselves, any time during the event."}
+        </p>
+        {t.publicViewOpen && publicResultsLink && (
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              type="text"
+              readOnly
+              value={publicResultsLink}
+              onClick={(e) => e.target.select()}
+              style={{
+                flex: 1,
+                padding: "7px 10px",
+                border: "1px solid #d9d2c0",
+                borderRadius: 6,
+                fontSize: "0.85rem",
+              }}
+            />
+            <button
+              className="btn-secondary btn-sm"
+              onClick={handleCopyPublicLink}
+            >
+              {pubCopied ? "Copied ✓" : "Copy Link"}
+            </button>
+          </div>
         )}
+        {pubError && <div className="inline-error">{pubError}</div>}
       </div>
 
       {isElimination ? (

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../api.js";
 import RoundHistory from "../components/RoundHistory.jsx";
+import BracketCanvas from "../components/BracketCanvas.jsx";
 import StandingsTable from "../components/StandingsTable.jsx";
 import TeamStandingsTable from "../components/TeamStandingsTable.jsx";
 import CrossTable from "../components/CrossTable.jsx";
@@ -11,6 +12,8 @@ const SYSTEM_LABEL = {
   swiss: "Swiss",
   round_robin: "Round Robin",
   double_round_robin: "Double Round Robin",
+  single_elimination: "Single Elimination",
+  double_elimination: "Double Elimination",
 };
 
 // Read-only preview for the round that's still in progress — no click
@@ -53,18 +56,24 @@ function CurrentRoundPreview({ format, pairings }) {
                         <td className="board-num">{b.boardNum}</td>
                         {b.sitOut ? (
                           <td colSpan={3}>
-                            <span className="player-name">{b.playerName}</span>
+                            <span className="player-name">
+                              {(b.white || b.black)?.name}
+                            </span>
                             <span className="bye-result"> sits out</span>
                           </td>
                         ) : (
                           <>
                             <td>
                               <span className="color-w" />
-                              <span className="player-name">{b.whiteName}</span>
+                              <span className="player-name">
+                                {b.white?.name}
+                              </span>
                             </td>
                             <td>
                               <span className="color-b" />
-                              <span className="player-name">{b.blackName}</span>
+                              <span className="player-name">
+                                {b.black?.name}
+                              </span>
                             </td>
                             <td>
                               <span className="pv-pending">to be played</span>
@@ -182,6 +191,9 @@ export default function PublicResults() {
   }
 
   const isTeam = data.format === "team";
+  const isElimination =
+    data.system === "single_elimination" ||
+    data.system === "double_elimination";
   const hasAnyRounds = data.rounds.length > 0 || data.currentPairings;
 
   return (
@@ -208,9 +220,18 @@ export default function PublicResults() {
                 : ""}
             </span>
           )}
-          <span>
-            Round {data.currentRound} / {data.totalRounds}
-          </span>
+          {isElimination ? (
+            data.bracket && (
+              <span>
+                Bracket size: {data.bracket.size}
+                {data.bracket.champion ? "" : ` · Round ${data.currentRound}`}
+              </span>
+            )
+          ) : (
+            <span>
+              Round {data.currentRound} / {data.totalRounds}
+            </span>
+          )}
           <span className={`pv-status pv-status-${data.status}`}>
             {data.status}
           </span>
@@ -222,7 +243,22 @@ export default function PublicResults() {
           </div>
         )}
 
-        {hasAnyRounds ? (
+        {isElimination ? (
+          data.bracket ? (
+            <div className="bx-page">
+              <BracketCanvas
+                bracket={data.bracket}
+                isDouble={data.system === "double_elimination"}
+                format={data.format}
+                onOpenMatch={() => {}}
+              />
+            </div>
+          ) : (
+            <div className="pv-card">
+              <p className="pv-empty">The bracket hasn't been drawn yet.</p>
+            </div>
+          )
+        ) : hasAnyRounds ? (
           <div className="pv-card">
             <div className="pv-round-picker">
               {data.currentPairings && (
