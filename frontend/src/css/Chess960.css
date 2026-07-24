@@ -45,13 +45,15 @@
 .c960-history-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 18px;
+  gap: 24px;
+  align-items: flex-start;
 }
 .c960-history-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  transition: transition 0.15s ease;
 }
 .c960-history-label {
   font-family: "IBM Plex Mono", ui-monospace, monospace;
@@ -68,4 +70,130 @@
   .c960-fen-row {
     flex-direction: column;
   }
+}
+/* ===================================================
+   POSITION HISTORY - HORIZONTAL TRACK
+   Mirrors .round-picker architecture
+=================================================== */
+
+.c960-history-picker {
+  position: relative;
+  margin: 0.5rem 0 1rem;
+}
+
+/* Gradient fade edges signaling horizontal scroll */
+.c960-history-picker::before,
+.c960-history-picker::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.c960-history-picker::before {
+  left: 0;
+  background: linear-gradient(to right, #18181b, transparent);
+}
+
+.c960-history-picker::after {
+  right: 0;
+  background: linear-gradient(to left, #18181b, transparent);
+}
+
+.c960-history-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  padding: 0.5rem 0.35rem 1rem; /* Extra bottom padding for drop shadows */
+}
+
+.c960-history-scroll::-webkit-scrollbar {
+  display: none; /* Matches hidden scrollbar style of round picker */
+}
+
+.c960-history-track {
+  display: flex;
+  gap: 1.25rem;
+  width: max-content;
+  min-width: 100%;
+}
+
+/* ===================================================
+   POSITION HISTORY - MATCH CARD STYLE
+   Mirrors .team-match-card and .round-pill
+=================================================== */
+
+.c960-history-card {
+  flex: 0 0 auto;
+  background: #18181b;
+  border: 1px solid #2d2d35;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.c960-history-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+  border-color: var(--brass, #b8863a); /* Was #3b82f6 */
+}
+
+.c960-history-card.active {
+  border: 2px solid var(--accent-color);
+  box-shadow: 0 0 18px rgba(255, 70, 70, 0.35);
+  transform: translateY(-4px);
+}
+
+/* ===================================================
+   CARD HEADER & BADGES
+   Mirrors .team-match-header and .team-tag
+=================================================== */
+
+.c960-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(90deg, #1f2937, #111827);
+  border-bottom: 1px solid #2f3542;
+}
+
+.c960-round-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #fdfaf3;
+  background: rgba(184, 134, 58, 0.18); /* Was #2563eb22 */
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(184, 134, 58, 0.4); /* Was blue border */
+}
+
+.c960-id-tag {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--brass, #b8863a); /* Was #60a5fa */
+}
+
+/* ===================================================
+   CARD BODY
+=================================================== */
+
+.c960-card-body {
+  padding: 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #14161c;
 }

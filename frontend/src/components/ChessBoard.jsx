@@ -6,15 +6,15 @@ import {
   DEFAULT_PIECE_THEME,
 } from "./chessThemes.js";
 
-const WHITE_GLYPH = { K: "♔", Q: "♕", R: "♖", B: "♗", N: "♘" };
-const BLACK_GLYPH = { K: "♚", Q: "♛", R: "♜", B: "♝", N: "♞" };
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
 
+// Returns the two-letter asset code matching your SVG filenames
 function pieceAt(backRank, rank, file) {
-  if (rank === 1) return { glyph: WHITE_GLYPH[backRank[file]], color: "white" };
-  if (rank === 8) return { glyph: BLACK_GLYPH[backRank[file]], color: "black" };
-  if (rank === 2) return { glyph: "♙", color: "white" };
-  if (rank === 7) return { glyph: "♟", color: "black" };
+  const pieceType = backRank[file];
+  if (rank === 1) return { code: `w${pieceType}`, name: `White ${pieceType}` };
+  if (rank === 8) return { code: `b${pieceType}`, name: `Black ${pieceType}` };
+  if (rank === 2) return { code: "wP", name: "White Pawn" };
+  if (rank === 7) return { code: "bP", name: "Black Pawn" };
   return null;
 }
 
@@ -55,15 +55,14 @@ export default function ChessBoard({
   // in them. Scale proportionally to the square instead. (Compact mode's own
   // CSS rule — .c960-compact .c960-piece — has higher specificity than this
   // custom property and still wins for thumbnails, so this is safe to always set.)
+
+  // We bump piece size to 80% of the square for SVGs and pass drop-shadow directly
   const themeVars = {
     "--c960-light": colors.light,
     "--c960-dark": colors.dark,
     "--c960-border": colors.border,
-    "--c960-piece-size": `${squareSize * 0.72}px`,
-    "--c960-piece-white-fill": pieces.white.fill,
-    "--c960-piece-white-shadow": pieces.white.shadow,
-    "--c960-piece-black-fill": pieces.black.fill,
-    "--c960-piece-black-shadow": pieces.black.shadow,
+    "--c960-piece-size": `${squareSize * 0.8}px`,
+    "--c960-piece-shadow": pieces.shadow || "none",
   };
 
   return (
@@ -99,9 +98,12 @@ export default function ChessBoard({
                   className={`c960-sq ${isLight ? "c960-light" : "c960-dark"}`}
                 >
                   {piece && (
-                    <span className={`c960-piece c960-piece-${piece.color}`}>
-                      {piece.glyph}
-                    </span>
+                    <img
+                      src={`/pieces/${pieces.folder}/${piece.code}.svg`}
+                      alt={piece.name}
+                      className="c960-piece"
+                      loading="lazy"
+                    />
                   )}
                 </div>
               );

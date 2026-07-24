@@ -1,6 +1,9 @@
 // Board color themes for the Chess960 board. A single source of truth so
 // the theme dropdown (Chess960.jsx) and the actual rendering (ChessBoard.jsx)
 // never drift out of sync — add a theme here and it appears in both places.
+// Board color themes for the Chess960 board. A single source of truth so
+// the theme dropdown (Chess960.jsx) and the actual rendering (ChessBoard.jsx)
+// never drift out of sync — add a theme here and it appears in both places.
 export const BOARD_THEMES = {
   walnut: {
     label: "Walnut",
@@ -38,6 +41,68 @@ export const BOARD_THEMES = {
     dark: "#c9724f",
     border: "#9c5033",
   },
+
+  // New Themes
+  mahogany: {
+    label: "Mahogany",
+    light: "#f6ece3",
+    dark: "#5a2d1d",
+    border: "#3d1d13",
+  },
+  midnight: {
+    label: "Midnight",
+    light: "#dfe6ef",
+    dark: "#1e2a44",
+    border: "#111a2c",
+  },
+  lavender: {
+    label: "Lavender",
+    light: "#f4f1fa",
+    dark: "#7466a6",
+    border: "#564a80",
+  },
+  sand: {
+    label: "Desert Sand",
+    light: "#f9f2dc",
+    dark: "#c2a26c",
+    border: "#92784d",
+  },
+  ruby: {
+    label: "Ruby",
+    light: "#f9ecec",
+    dark: "#8b2f3b",
+    border: "#611f28",
+  },
+  royal: {
+    label: "Royal Blue",
+    light: "#edf4fc",
+    dark: "#2f5d9b",
+    border: "#21426f",
+  },
+  forest: {
+    label: "Forest",
+    light: "#edf4e8",
+    dark: "#355e3b",
+    border: "#264229",
+  },
+  obsidian: {
+    label: "Obsidian",
+    light: "#d8d8d8",
+    dark: "#222222",
+    border: "#111111",
+  },
+  rosewood: {
+    label: "Rosewood",
+    light: "#f7ece9",
+    dark: "#70393f",
+    border: "#51282d",
+  },
+  gold: {
+    label: "Golden",
+    light: "#fff8dc",
+    dark: "#b8860b",
+    border: "#8a6508",
+  },
 };
 
 export const DEFAULT_BOARD_THEME = "walnut";
@@ -50,46 +115,57 @@ export const DEFAULT_BOARD_THEME = "walnut";
 // dark-fill-with-light-shadow (Black) contrast pattern as the original —
 // only the hue changes.
 export const PIECE_THEMES = {
-  ivory: {
-    label: "Ivory & Charcoal",
-    white: {
-      fill: "#fdfaf3",
-      shadow: "0 0 1px #241811, 0 1px 2px rgba(0, 0, 0, 0.5)",
-    },
-    black: { fill: "#1b1a17", shadow: "0 1px 1px rgba(255, 255, 255, 0.25)" },
+  cburnett: {
+    label: "Classic 2D (Cburnett)",
+    folder: "cburnett",
+    shadow: "drop-shadow(0 2px 3px rgba(0, 0, 0, 0.4))",
   },
-  onyx: {
-    label: "Onyx & Pearl",
-    white: {
-      fill: "#ffffff",
-      shadow: "0 0 1px #33322d, 0 1px 3px rgba(0, 0, 0, 0.55)",
-    },
-    black: { fill: "#0a0a0a", shadow: "0 1px 1px rgba(255, 255, 255, 0.35)" },
+  merida: {
+    label: "Tournament (Merida)",
+    folder: "merida",
+    shadow: "drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3))",
   },
-  royal: {
-    label: "Ruby & Sapphire",
-    white: {
-      fill: "#c23b4e",
-      shadow: "0 0 1px #4a0f18, 0 1px 2px rgba(0, 0, 0, 0.5)",
-    },
-    black: { fill: "#274a77", shadow: "0 1px 1px rgba(255, 255, 255, 0.3)" },
+  alpha: {
+    label: "Modern (Alpha)",
+    folder: "alpha",
+    shadow: "drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35))",
   },
-  metallic: {
-    label: "Gold & Silver",
-    white: {
-      fill: "#e0b84b",
-      shadow: "0 0 1px #5c4718, 0 1px 2px rgba(0, 0, 0, 0.5)",
-    },
-    black: { fill: "#7d838a", shadow: "0 1px 1px rgba(255, 255, 255, 0.3)" },
+  maestro: {
+    label: "Elegant (Maestro)",
+    folder: "maestro",
+    shadow: "drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3))",
   },
-  forest: {
-    label: "Sage & Pine",
-    white: {
-      fill: "#cfe0c3",
-      shadow: "0 0 1px #33421f, 0 1px 2px rgba(0, 0, 0, 0.5)",
-    },
-    black: { fill: "#22392a", shadow: "0 1px 1px rgba(255, 255, 255, 0.25)" },
+  // New Piece Themes
+  celtic: {
+    label: "Celtic",
+    folder: "celtic",
+    shadow: "drop-shadow(0 2px 3px rgba(0, 0, 0, 0.4))",
+  },
+  fantasy: {
+    label: "Fantasy",
+    folder: "fantasy",
+    shadow: "drop-shadow(0 2px 3px rgba(0, 0, 0, 0.4))",
+  },
+  chessnut: {
+    label: "Chessnut",
+    folder: "chessnut",
+    shadow: "drop-shadow(0 2px 3px rgba(0, 0, 0, 0.4))",
+  },
+  spatial: {
+    label: "Spatial",
+    folder: "spatial",
+    shadow: "drop-shadow(0 2px 3px rgba(0, 0, 0, 0.4))",
+  },
+  "kiwen-suwi": {
+    label: "Kiwen Suwi",
+    folder: "kiwen-suwi",
+    shadow: "drop-shadow(0 2px 3px rgba(0, 0, 0, 0.4))",
+  },
+  rhosgfx: {
+    label: "RhosGFX",
+    folder: "rhosgfx",
+    shadow: "drop-shadow(0 2px 3px rgba(0, 0, 0, 0.4))",
   },
 };
 
-export const DEFAULT_PIECE_THEME = "ivory";
+export const DEFAULT_PIECE_THEME = "cburnett";

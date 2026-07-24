@@ -8,6 +8,7 @@ import {
   DEFAULT_PIECE_THEME,
 } from "../../components/chessThemes.js";
 import "../../css/Chess960.css";
+import Chess960History from "../../components/Chess960History.jsx";
 
 const THEME_STORAGE_KEY = "c960-board-theme";
 const PIECE_THEME_STORAGE_KEY = "c960-piece-theme";
@@ -51,6 +52,8 @@ export default function Chess960() {
     }
   });
 
+  const [selectedRound, setSelectedRound] = useState(t.currentRound);
+
   useEffect(() => {
     try {
       localStorage.setItem(THEME_STORAGE_KEY, theme);
@@ -75,8 +78,19 @@ export default function Chess960() {
     );
   }
 
-  const current = t.currentChess960;
   const history = t.rounds.filter((r) => r.chess960);
+
+  const current =
+    history.find((r) => r.round === selectedRound)?.chess960 ??
+    t.currentChess960;
+
+  useEffect(() => {
+    if (!history.length) return;
+
+    setSelectedRound((prev) =>
+      prev === null ? history[history.length - 1].round : prev,
+    );
+  }, [history]);
 
   return (
     <div className="c960-page">
@@ -109,7 +123,9 @@ export default function Chess960() {
               ))}
             </select>
             {current && (
-              <span className="round-badge">Round {t.currentRound}</span>
+              <span className="round-badge">
+                Round {selectedRound ?? t.currentRound}
+              </span>
             )}
           </div>
         </div>
@@ -149,37 +165,22 @@ export default function Chess960() {
                 </div>
               </label>
               <p className="hint">
-                Every board in Round {t.currentRound} starts from this position
-                — set boards up accordingly before play begins.
+                Every board in Round {selectedRound ?? t.currentRound}
+                starts from this position — set boards up accordingly before
+                play begins.
               </p>
             </div>
           </div>
         )}
       </div>
 
-      {history.length > 0 && (
-        <div className="card">
-          <div className="section-header">
-            <h2>Position History</h2>
-          </div>
-          <div className="c960-history-grid">
-            {history.map((r) => (
-              <div className="c960-history-item" key={r.round}>
-                <ChessBoard
-                  backRank={r.chess960.backRank}
-                  size={112}
-                  theme={theme}
-                  pieceTheme={pieceTheme}
-                  compact
-                />
-                <span className="c960-history-label">
-                  Round {r.round} · #{r.chess960.id}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <Chess960History
+        history={history}
+        selectedRound={selectedRound}
+        onSelectRound={setSelectedRound}
+        theme={theme}
+        pieceTheme={pieceTheme}
+      />
     </div>
   );
 }
