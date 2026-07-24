@@ -12,9 +12,10 @@ function persist() {
   store.save(db);
 }
 
-// Migrate tournaments saved before the starting-rank feature existed.
-// Wrapped defensively so one malformed legacy record can never prevent the
-// server from starting — worst case that one tournament is skipped and logged.
+// Migrate tournaments saved before the starting-rank feature existed, and
+// separately, before the Chess960 feature existed. Wrapped defensively so
+// one malformed legacy record can never prevent the server from starting —
+// worst case that one tournament is skipped and logged.
 let migrated = false;
 Object.values(db.tournaments).forEach((t) => {
   try {
@@ -27,6 +28,18 @@ Object.values(db.tournaments).forEach((t) => {
       t.teams.some((x) => x.startingRank === undefined)
     ) {
       assignStartingRanks(t.teams);
+      migrated = true;
+    }
+    if (t.chess960 === undefined) {
+      // Tournament predates the Chess960 toggle existing at all — there's no
+      // reasonable way to know what the organizer would have chosen, so
+      // default to off (matches createTournament's own default) rather than
+      // silently turning it on for an event that was never set up for it.
+      t.chess960 = false;
+      migrated = true;
+    }
+    if (t.currentChess960 === undefined) {
+      t.currentChess960 = null;
       migrated = true;
     }
   } catch (err) {
@@ -1433,6 +1446,8 @@ function getPublicResults(token) {
     crossTable: full.crossTable,
     bracket: full.bracket,
     winner: full.winner,
+    currentChess960: full.currentChess960,
+    chess960: full.chess960,
   };
 }
 

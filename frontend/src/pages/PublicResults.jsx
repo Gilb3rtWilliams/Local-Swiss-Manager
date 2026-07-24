@@ -3,10 +3,185 @@ import { useParams } from "react-router-dom";
 import { api } from "../api.js";
 import RoundHistory from "../components/RoundHistory.jsx";
 import BracketCanvas from "../components/BracketCanvas.jsx";
+import ChessBoard from "../components/ChessBoard.jsx";
+import Chess960History from "../components/Chess960History.jsx";
+import {
+  BOARD_THEMES,
+  DEFAULT_BOARD_THEME,
+  PIECE_THEMES,
+  DEFAULT_PIECE_THEME,
+} from "../components/chessThemes.js";
 import StandingsTable from "../components/StandingsTable.jsx";
 import TeamStandingsTable from "../components/TeamStandingsTable.jsx";
 import CrossTable from "../components/CrossTable.jsx";
 import "../css/PublicResults.css";
+import "../css/Chess960.css";
+
+const PUBLIC_THEME_KEY = "c960-public-board-theme";
+const PUBLIC_PIECE_THEME_KEY = "c960-public-piece-theme";
+
+function CopyFenButton({ fen }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      className="btn-secondary btn-sm"
+      onClick={() => {
+        navigator.clipboard.writeText(fen).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        });
+      }}
+    >
+      {copied ? "Copied ✓" : "Copy FEN"}
+    </button>
+  );
+}
+
+// Same experience as the organizer's Chess960 tab (current position + board/
+// piece theme pickers + scrollable history), rebuilt read-only for a public
+// spectator: no admin chrome, and its own localStorage keys so a theme
+// choice made here never collides with the organizer's own preference if
+// both happen to be viewed in the same browser.
+function Chess960Section({ data }) {
+  const [theme, setTheme] = useState(() => {
+    try {
+      const saved = localStorage.getItem(PUBLIC_THEME_KEY);
+      return saved && BOARD_THEMES[saved] ? saved : DEFAULT_BOARD_THEME;
+    } catch {
+      return DEFAULT_BOARD_THEME;
+    }
+  });
+  const [pieceTheme, setPieceTheme] = useState(() => {
+    try {
+      const saved = localStorage.getItem(PUBLIC_PIECE_THEME_KEY);
+      return saved && PIECE_THEMES[saved] ? saved : DEFAULT_PIECE_THEME;
+    } catch {
+      return DEFAULT_PIECE_THEME;
+    }
+  });
+  const [selectedRound, setSelectedRound] = useState(null);
+
+  const history = data.rounds.filter((r) => r.chess960);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(PUBLIC_THEME_KEY, theme);
+    } catch {
+      // Private browsing / storage disabled — theme just won't persist.
+    }
+  }, [theme]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(PUBLIC_PIECE_THEME_KEY, pieceTheme);
+    } catch {
+      // Same as above — non-fatal.
+    }
+  }, [pieceTheme]);
+  useEffect(() => {
+    if (!history.length) return;
+    setSelectedRound((prev) =>
+      prev === null ? history[history.length - 1].round : prev,
+    );
+  }, [history.length]);
+
+  const current =
+    history.find((r) => r.round === selectedRound)?.chess960 ??
+    data.currentChess960;
+
+  return (
+    <>
+      <div className="pv-card c960-page">
+        <div className="section-header">
+          <h2>Chess960 Starting Position</h2>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <select
+              value={theme}
+              onChange={(e) => setTheme(e.target.value)}
+              aria-label="Board theme"
+              style={{ width: "auto" }}
+            >
+              {Object.entries(BOARD_THEMES).map(([key, th]) => (
+                <option key={key} value={key}>
+                  {th.label}
+                </option>
+              ))}
+            </select>
+            <select
+              value={pieceTheme}
+              onChange={(e) => setPieceTheme(e.target.value)}
+              aria-label="Piece theme"
+              style={{ width: "auto" }}
+            >
+              {Object.entries(PIECE_THEMES).map(([key, pt]) => (
+                <option key={key} value={key}>
+                  {pt.label}
+                </option>
+              ))}
+            </select>
+            {current && (
+              <span className="pv-status">
+                Round {selectedRound ?? data.currentRound}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {!current ? (
+          <p className="pv-empty">
+            A fresh random position is drawn each round — check back once
+            pairings are up.
+          </p>
+        ) : (
+          <div className="c960-current-layout">
+            <ChessBoard
+              backRank={current.backRank}
+              size={420}
+              theme={theme}
+              pieceTheme={pieceTheme}
+            />
+            <div className="c960-meta">
+              {current.id != null && (
+                <p className="c960-position-id">Position #{current.id}</p>
+              )}
+              {current.id === 518 && (
+                <p className="c960-note">
+                  This round happens to have drawn the standard chess starting
+                  position — Chess960 includes it as one of its 960 legal
+                  arrangements.
+                </p>
+              )}
+              <label className="field c960-fen-field">
+                <span>FEN</span>
+                <div className="c960-fen-row">
+                  <input
+                    type="text"
+                    readOnly
+                    value={current.fen}
+                    onClick={(e) => e.target.select()}
+                  />
+                  <CopyFenButton fen={current.fen} />
+                </div>
+              </label>
+              <p className="hint">
+                Every board in Round {selectedRound ?? data.currentRound} starts
+                from this position.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <Chess960History
+        history={history}
+        selectedRound={selectedRound}
+        onSelectRound={setSelectedRound}
+        theme={theme}
+        pieceTheme={pieceTheme}
+      />
+    </>
+  );
+}
 
 const SYSTEM_LABEL = {
   swiss: "Swiss",
@@ -242,6 +417,8 @@ export default function PublicResults() {
             🏆 <strong>{data.winner}</strong> won this tournament
           </div>
         )}
+
+        {data.chess960 && !isElimination && <Chess960Section data={data} />}
 
         {isElimination ? (
           data.bracket ? (
