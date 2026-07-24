@@ -1,0 +1,71 @@
+.c960-page {
+  display: flex;
+  flex-direction: column;
+}
+
+.c960-current-layout {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.c960-meta {
+  flex: 1 1 260px;
+  min-width: 220px;
+}
+
+.c960-position-id {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--brass, #b8863a);
+  margin: 0 0 8px;
+}
+
+.c960-note {
+  font-size: 0.85rem;
+  color: var(--muted, #6b665a);
+  margin: 0 0 14px;
+}
+
+.c960-fen-field {
+  margin-bottom: 12px;
+}
+.c960-fen-row {
+  display: flex;
+  gap: 8px;
+}
+.c960-fen-row input {
+  flex: 1 1 auto;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.78rem;
+}
+
+.c960-history-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+.c960-history-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.c960-history-label {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.7rem;
+  color: var(--muted, #6b665a);
+}
+
+@media (max-width: 640px) {
+  .c960-current-layout {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .c960-fen-row {
+    flex-direction: column;
+  }
+}

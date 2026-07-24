@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import BackgroundSlideshow from "../components/BackgroundSlideshow.jsx";
 import "../css/Welcome.css";
+import useTypingEffect from "/hooks/useTypingEffect.js";
 
 // Drop your own photos in /public/images/hall/ and list them here — the
 // slideshow (and this page) look fine with an empty array too, it just
@@ -224,6 +225,12 @@ const SPORTS = [
 export default function Welcome() {
   const navigate = useNavigate();
 
+  const welcomeMessage = useTypingEffect("Local Swiss Manager", 50);
+  const subMessage = useTypingEffect(
+    "Pairings, standings, and results — run entirely on your machine.",
+    30,
+  );
+
   function scrollToFormats() {
     document.getElementById("formats")?.scrollIntoView({ behavior: "smooth" });
   }
@@ -235,16 +242,22 @@ export default function Welcome() {
 
         <div className="welcome-hero-content">
           <div className="welcome-glyph">♞</div>
-          <h1 className="welcome-title">Local Swiss Manager</h1>
-          <p className="welcome-tagline">
-            Pairings, standings, and results — run entirely on your machine.
-          </p>
-          <button
-            className="btn-primary btn-lg"
-            onClick={() => navigate("/dashboard")}
-          >
-            Enter the Hall
-          </button>
+          <h1 className="welcome-title">{welcomeMessage}</h1>
+          <p className="welcome-tagline">{subMessage}</p>
+          <div className="welcome-hero-ctas">
+            <button
+              className="btn-primary btn-lg"
+              onClick={() => navigate("/tournaments")}
+            >
+              Browse Tournaments
+            </button>
+            <button
+              className="btn-secondary btn-lg welcome-admin-cta"
+              onClick={() => navigate("/login")}
+            >
+              Admin Sign In
+            </button>
+          </div>
           <p className="welcome-credit">by Gilbert Williams</p>
         </div>
 
@@ -332,12 +345,24 @@ export default function Welcome() {
       <section className="welcome-section welcome-cta">
         <Reveal>
           <h2>Ready to set the pairings?</h2>
+          <p className="welcome-cta-sub">
+            Organizing an event? Sign in to create and run a tournament.
+          </p>
           <button
             className="btn-primary btn-lg"
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate("/login")}
           >
-            Enter the Hall
+            Admin Sign In
           </button>
+          <p className="welcome-cta-alt">
+            Just here to check results?{" "}
+            <button
+              className="welcome-cta-link"
+              onClick={() => navigate("/tournaments")}
+            >
+              Browse tournaments →
+            </button>
+          </p>
         </Reveal>
       </section>
 

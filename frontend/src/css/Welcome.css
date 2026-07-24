@@ -83,10 +83,26 @@
   margin: 6px 0 22px;
 }
 
+.welcome-hero-ctas {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
 .welcome-hero-content .btn-lg {
   font-size: 1rem;
   padding: 14px 34px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.welcome-admin-cta {
+  background: rgba(246, 241, 231, 0.1);
+  border: 1px solid rgba(246, 241, 231, 0.45);
+  color: var(--w-ivory);
+}
+.welcome-admin-cta:hover {
+  background: rgba(246, 241, 231, 0.2);
 }
 
 .welcome-credit {
@@ -307,7 +323,27 @@
   font-family: var(--w-font-display);
   font-weight: 600;
   font-size: clamp(1.6rem, 3vw, 2.1rem);
+  margin: 0 0 10px;
+}
+.welcome-cta-sub {
+  color: var(--w-walnut);
   margin: 0 0 20px;
+}
+.welcome-cta-alt {
+  margin: 16px 0 0;
+  font-size: 0.9rem;
+  color: var(--w-mist);
+}
+.welcome-cta-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--w-felt);
+  font-weight: 600;
+  font-size: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .welcome-footer {

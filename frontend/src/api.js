@@ -3,6 +3,7 @@ const BASE = "/api";
 async function request(path, options = {}) {
   const res = await fetch(`${BASE}${path}`, {
     headers: { "Content-Type": "application/json" },
+    credentials: "include",
     ...options,
   });
   const data = await res.json().catch(() => ({}));
@@ -11,7 +12,16 @@ async function request(path, options = {}) {
 }
 
 export const api = {
+  login: (password) =>
+    request("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    }),
+  logout: () => request("/auth/logout", { method: "POST" }),
+  getAuthStatus: () => request("/auth/me"),
+
   listTournaments: () => request("/tournaments"),
+  listPublicTournaments: () => request("/tournaments/public"),
   getTournament: (id) => request(`/tournaments/${id}`),
   createTournament: (body) =>
     request("/tournaments", { method: "POST", body: JSON.stringify(body) }),
@@ -70,7 +80,7 @@ export const api = {
 };
 
 async function downloadFile(path) {
-  const res = await fetch(`${BASE}${path}`);
+  const res = await fetch(`${BASE}${path}`, { credentials: "include" });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
     throw new Error(data.error || `Request failed (${res.status})`);

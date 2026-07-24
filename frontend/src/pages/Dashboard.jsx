@@ -94,7 +94,7 @@ export default function Dashboard() {
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
   const welcomeMessage = useTypingEffect(
-    "Welcome to the Tournament Manager Dashboard! Here, you can view and manage all your tournaments in one convenient place. Create new tournaments, track progress, and see results at a glance. Let's get started by creating your first tournament!",
+    "Welcome to the Tournament Manager Dashboard! ",
     100,
   );
   const subMessage = useTypingEffect(

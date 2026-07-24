@@ -1,0 +1,185 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap");
+
+.lg-root {
+  --ink: #1c231f;
+  --parchment: #f4efe2;
+  --felt: #24483a;
+  --felt-light: #3a6b53;
+  --walnut: #402a1f;
+  --brass: #b8863a;
+  --claret: #7c3130;
+
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  color: var(--ink);
+  font-family: "Inter", system-ui, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+}
+
+.lg-root h1 {
+  font-family: "Fraunces", Georgia, serif;
+  letter-spacing: -0.01em;
+}
+
+.lg-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  background: var(--walnut);
+}
+.lg-bg-scene {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+.lg-bg-scene:nth-child(1) {
+  background: radial-gradient(
+    120% 90% at 15% 10%,
+    #5c3c28 0%,
+    #402a1f 55%,
+    #241811 100%
+  );
+}
+.lg-bg-scene:nth-child(2) {
+  background: radial-gradient(
+    120% 90% at 85% 15%,
+    #2f5a45 0%,
+    #24483a 55%,
+    #142720 100%
+  );
+}
+.lg-bg-scene:nth-child(3) {
+  background: radial-gradient(
+    120% 90% at 50% 90%,
+    #8a6a34 0%,
+    #4a3820 55%,
+    #241811 100%
+  );
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lg-bg-scene {
+    animation: lgCycle 24s infinite;
+  }
+  .lg-bg-scene:nth-child(1) {
+    animation-delay: 0s;
+  }
+  .lg-bg-scene:nth-child(2) {
+    animation-delay: 8s;
+  }
+  .lg-bg-scene:nth-child(3) {
+    animation-delay: 16s;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lg-bg-scene:nth-child(1) {
+    opacity: 1;
+  }
+}
+@keyframes lgCycle {
+  0% {
+    opacity: 0;
+  }
+  4% {
+    opacity: 1;
+  }
+  29% {
+    opacity: 1;
+  }
+  33% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.lg-card {
+  width: 100%;
+  max-width: 380px;
+  background: rgba(244, 239, 226, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(244, 239, 226, 0.35);
+  box-shadow: 0 16px 40px rgba(20, 15, 10, 0.25);
+  border-radius: 16px;
+  padding: 30px 32px;
+}
+
+.lg-eyebrow {
+  display: inline-block;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--brass);
+  background: rgba(184, 134, 58, 0.14);
+  border: 1px solid rgba(184, 134, 58, 0.4);
+  border-radius: 999px;
+  padding: 3px 12px;
+  margin-bottom: 10px;
+}
+
+.lg-title {
+  font-size: 1.5rem;
+  margin: 0 0 4px;
+}
+.lg-sub {
+  font-size: 0.85rem;
+  color: #6b665a;
+  margin: 0 0 22px;
+}
+
+.lg-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-bottom: 16px;
+}
+.lg-field span {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #6b665a;
+}
+.lg-field input {
+  border: 1px solid #d9d2c0;
+  border-radius: 7px;
+  padding: 10px 12px;
+  font-size: 1rem;
+  letter-spacing: 0.05em;
+}
+.lg-field input:focus {
+  outline: 2px solid var(--felt);
+  outline-offset: 1px;
+}
+
+.lg-error {
+  background: rgba(124, 49, 48, 0.1);
+  border: 1px solid rgba(124, 49, 48, 0.3);
+  color: var(--claret);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  margin-bottom: 16px;
+}
+
+.lg-submit {
+  width: 100%;
+  background: var(--brass);
+  border: none;
+  color: #241811;
+  font-weight: 600;
+  padding: 11px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+.lg-submit:disabled {
+  filter: grayscale(0.4);
+  cursor: default;
+}

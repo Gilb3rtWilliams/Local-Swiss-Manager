@@ -1,0 +1,100 @@
+/* ── Chessboard component ──────────────────────────────────────────────────
+   A literal, recognizable chessboard (checkered + real piece glyphs) rather
+   than an abstract diagram — unlike the bracket page's ink-line topology
+   drawings, organizers need to unambiguously read piece placement here.
+   Square/border colors AND piece fill/shadow colors both come from the
+   current theme selections (--c960-light/-dark/-border and
+   --c960-piece-*-fill/-shadow, set inline per-render by ChessBoard.jsx from
+   chessThemes.js) so board and pieces can each be recolored independently
+   via their own dropdown without touching this file. The var() fallbacks
+   below only matter if ChessBoard is ever rendered without going through
+   its own theme/pieceTheme props. */
+
+.c960-board-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 100%;
+}
+
+.c960-board-row {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+}
+
+.c960-rank-labels,
+.c960-file-labels {
+  display: flex;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.7rem;
+  color: var(--c960-border, var(--walnut, #6b4a34));
+  opacity: 0.7;
+}
+.c960-rank-labels {
+  flex-direction: column;
+  align-items: center;
+}
+.c960-rank-labels span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.c960-file-labels {
+  justify-content: space-around;
+}
+.c960-file-labels span {
+  display: flex;
+  justify-content: center;
+}
+
+.c960-board {
+  display: grid;
+  border: 3px solid var(--c960-border, var(--walnut, #6b4a34));
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 8px 22px rgba(20, 15, 10, 0.22);
+  max-width: 100%;
+  aspect-ratio: 1 / 1;
+}
+
+.c960-sq {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1 / 1;
+}
+.c960-light {
+  background: var(--c960-light, var(--parchment, #f4efe2));
+}
+.c960-dark {
+  background: var(--c960-dark, var(--walnut, #6b4a34));
+}
+
+.c960-piece {
+  font-size: var(--c960-piece-size, 2.2rem);
+  line-height: 1;
+  user-select: none;
+}
+.c960-piece-white {
+  color: var(--c960-piece-white-fill, #fdfaf3);
+  text-shadow: var(
+    --c960-piece-white-shadow,
+    0 0 1px #241811,
+    0 1px 2px rgba(0, 0, 0, 0.5)
+  );
+}
+.c960-piece-black {
+  color: var(--c960-piece-black-fill, #1b1a17);
+  text-shadow: var(
+    --c960-piece-black-shadow,
+    0 1px 1px rgba(255, 255, 255, 0.25)
+  );
+}
+
+.c960-compact .c960-board {
+  border-width: 2px;
+}
+.c960-compact .c960-piece {
+  font-size: 1rem;
+}

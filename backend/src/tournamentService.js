@@ -4,6 +4,7 @@ const store = require("./store");
 const roundRobin = require("./roundRobin");
 const bracketEngine = require("./bracket");
 const bughouse = require("./bughouse");
+const chess960 = require("./chess960");
 const excelExport = require("./excelExport");
 
 const db = store.load();
@@ -352,6 +353,7 @@ function createTournament(input) {
     dateTo = "",
     fideRated = false,
     isTest = false,
+    chess960: chess960Enabled = false,
   } = input;
 
   if (!name || !name.trim()) {
@@ -366,6 +368,19 @@ function createTournament(input) {
   }
   if (dateFrom && dateTo && dateTo < dateFrom) {
     const e = new Error("End date can't be before start date");
+    e.status = 400;
+    throw e;
+  }
+  if (
+    chess960Enabled &&
+    (system === "single_elimination" || system === "double_elimination")
+  ) {
+    // Brackets are drawn whole at creation (buildBracketState), not
+    // round-by-round via generateNextRound, which is the only place a
+    // Chess960 position gets rolled — so there's nowhere for it to hook in.
+    const e = new Error(
+      "Chess960 isn't available for elimination brackets yet — only Swiss and round-robin systems.",
+    );
     e.status = 400;
     throw e;
   }
@@ -385,6 +400,8 @@ function createTournament(input) {
     dateTo: dateTo || null,
     fideRated: Boolean(fideRated),
     isTest: Boolean(isTest),
+    chess960: Boolean(chess960Enabled),
+    currentChess960: null, // set by generateNextRound when chess960 is on
     registrationOpen: false,
     registrationToken: null,
     publicViewOpen: false,
@@ -525,6 +542,10 @@ function generateNextRound(id) {
   t.currentRound += 1;
   t.status = "active";
 
+  // A fresh position every round — same spirit as pairings themselves being
+  // regenerated each round, not carried over from the last one.
+  t.currentChess960 = t.chess960 ? chess960.randomChess960Position() : null;
+
   if (t.format === "team") {
     const teamPairings =
       (isRoundRobinSystem(t) && roundRobinPairsForRound(t)) ||
@@ -576,11 +597,42 @@ function generateNextRound(id) {
 }
 
 // ─── Results submission ─────────────────────────────────────────────────────
+// Forfeit codes read the same as a normal decisive result almost everywhere
+// (someone still won the board, the other lost) — the one exception is
+// 0F-0F, where *neither* side scores. Centralized here rather than inlined
+// at each call site so every place that needs "did white win this board?"
+// agrees on the same definition, including forfeits.
+const WHITE_WIN_RESULTS = new Set(["1-0", "1F-0F"]);
+const BLACK_WIN_RESULTS = new Set(["0-1", "0F-1F"]);
+const DRAW_RESULTS = new Set(["1/2-1/2"]);
+const DOUBLE_FORFEIT_RESULT = "0F-0F";
+const VALID_RESULTS = new Set([
+  ...WHITE_WIN_RESULTS,
+  ...BLACK_WIN_RESULTS,
+  ...DRAW_RESULTS,
+  DOUBLE_FORFEIT_RESULT,
+]);
+
+function assertValidResult(result) {
+  if (!VALID_RESULTS.has(result)) {
+    const e = new Error(
+      `"${result}" isn't a recognized result — expected one of ${[...VALID_RESULTS].join(", ")}`,
+    );
+    e.status = 400;
+    throw e;
+  }
+}
+
+function isDecisiveResult(result) {
+  return WHITE_WIN_RESULTS.has(result) || BLACK_WIN_RESULTS.has(result);
+}
+
 function scoreFromResult(result, side) {
   // side: 'white' | 'black'
-  if (result === "1-0") return side === "white" ? 1 : 0;
-  if (result === "0-1") return side === "white" ? 0 : 1;
-  return 0.5; // draw
+  if (WHITE_WIN_RESULTS.has(result)) return side === "white" ? 1 : 0;
+  if (BLACK_WIN_RESULTS.has(result)) return side === "white" ? 0 : 1;
+  if (result === DOUBLE_FORFEIT_RESULT) return 0; // both forfeit — nobody scores
+  return 0.5; // draw (1/2-1/2)
 }
 
 function applyGame(playersById, whiteId, blackId, result) {
@@ -627,16 +679,19 @@ function submitResults(id, resultsInput) {
       const pairing = t.currentPairings[r.pairIndex];
       if (!pairing || pairing.type !== "match") return;
       const board = pairing.boards.find((bd) => bd.boardNum === r.boardNum);
-      if (board && !board.sitOut) board.result = r.result;
+      if (board && !board.sitOut) {
+        assertValidResult(r.result);
+        board.result = r.result;
+      }
     });
 
     const incomplete = t.currentPairings.some((p) => {
       if (p.type !== "match") return false;
 
       if (t.variant === "bughouse") {
-        // A single decisive board ends a Bughouse match
+        // A single decisive board (including a forfeit) ends a Bughouse match
         const hasDecisive = p.boards.some(
-          (bd) => !bd.sitOut && (bd.result === "1-0" || bd.result === "0-1"),
+          (bd) => !bd.sitOut && isDecisiveResult(bd.result),
         );
         if (hasDecisive) return false;
       }
@@ -650,7 +705,11 @@ function submitResults(id, resultsInput) {
       throw e;
     }
 
-    const roundRecord = { round: t.currentRound, pairings: [] };
+    const roundRecord = {
+      round: t.currentRound,
+      chess960: t.currentChess960,
+      pairings: [],
+    };
 
     t.currentPairings.forEach((pairing) => {
       if (pairing.type === "bye") {
@@ -709,9 +768,11 @@ function submitResults(id, resultsInput) {
 
         // As defined in your bughouse.js: teamWhite is White on Board 1, Black on Board 2
         const teamWhiteWon =
-          (b1 && b1.result === "1-0") || (b2 && b2.result === "0-1");
+          (b1 && WHITE_WIN_RESULTS.has(b1.result)) ||
+          (b2 && BLACK_WIN_RESULTS.has(b2.result));
         const teamBlackWon =
-          (b1 && b1.result === "0-1") || (b2 && b2.result === "1-0");
+          (b1 && BLACK_WIN_RESULTS.has(b1.result)) ||
+          (b2 && WHITE_WIN_RESULTS.has(b2.result));
 
         if (teamWhiteWon) {
           whitePoints = 1;
@@ -753,7 +814,10 @@ function submitResults(id, resultsInput) {
   } else {
     resultsInput.forEach((r) => {
       const pairing = t.currentPairings[r.pairIndex];
-      if (pairing && pairing.type === "individual") pairing.result = r.result;
+      if (pairing && pairing.type === "individual") {
+        assertValidResult(r.result);
+        pairing.result = r.result;
+      }
     });
     const incomplete = t.currentPairings.some(
       (p) => p.type === "individual" && !p.result,
@@ -764,7 +828,11 @@ function submitResults(id, resultsInput) {
       throw e;
     }
 
-    const roundRecord = { round: t.currentRound, pairings: [] };
+    const roundRecord = {
+      round: t.currentRound,
+      chess960: t.currentChess960,
+      pairings: [],
+    };
     t.currentPairings.forEach((pairing) => {
       if (pairing.type === "bye") {
         const p = pById.get(pairing.white);
@@ -828,16 +896,19 @@ function submitBracketMatchResult(id, matchId, payload = {}) {
     const boardsInput = payload.boards || [];
     boardsInput.forEach((b) => {
       const board = m.boards.find((bd) => bd.boardNum === b.boardNum);
-      if (board && !board.sitOut) board.result = b.result;
+      if (board && !board.sitOut) {
+        assertValidResult(b.result);
+        board.result = b.result;
+      }
     });
 
-    // Bughouse: a single decisive board (1-0 or 0-1) ends the match
+    // Bughouse: a single decisive board (including a forfeit) ends the match
     // immediately — the other board doesn't need a result. Everything else
     // needs every board filled in before it counts as complete.
     let incomplete;
     if (t.variant === "bughouse") {
       const hasDecisive = m.boards.some(
-        (bd) => !bd.sitOut && (bd.result === "1-0" || bd.result === "0-1"),
+        (bd) => !bd.sitOut && isDecisiveResult(bd.result),
       );
       incomplete = hasDecisive
         ? false
@@ -880,9 +951,11 @@ function submitBracketMatchResult(id, matchId, payload = {}) {
 
       // CompetitorA is "teamWhite" (plays White on board 1)
       const teamAWon =
-        (b1 && b1.result === "1-0") || (b2 && b2.result === "0-1");
+        (b1 && WHITE_WIN_RESULTS.has(b1.result)) ||
+        (b2 && BLACK_WIN_RESULTS.has(b2.result));
       const teamBWon =
-        (b1 && b1.result === "0-1") || (b2 && b2.result === "1-0");
+        (b1 && BLACK_WIN_RESULTS.has(b1.result)) ||
+        (b2 && WHITE_WIN_RESULTS.has(b2.result));
 
       aPoints = teamAWon ? 1 : teamBWon ? 0 : 0.5;
       bPoints = teamBWon ? 1 : teamAWon ? 0 : 0.5;
@@ -1295,6 +1368,8 @@ function submitPublicRegistration(token, payload = {}) {
 // stay empty for those systems (see generateNextRound), so there'd be
 // nothing meaningful to show. Bracket sharing is a separate follow-up.
 
+function assertPublicViewSupported(t) {}
+
 function findByPublicViewToken(token) {
   const t = Object.values(db.tournaments).find(
     (x) => x.publicViewToken === token,
@@ -1309,6 +1384,7 @@ function findByPublicViewToken(token) {
 
 function enablePublicView(id) {
   const t = assertTournament(id);
+  assertPublicViewSupported(t);
   if (!t.publicViewToken) t.publicViewToken = uid();
   t.publicViewOpen = true;
   t.updatedAt = new Date().toISOString();
@@ -1355,9 +1431,43 @@ function getPublicResults(token) {
     standings: full.standings,
     teamStandings: full.teamStandings,
     crossTable: full.crossTable,
-    winner: full.winner,
     bracket: full.bracket,
+    winner: full.winner,
   };
+}
+
+// Public: a browsable list for spectators — now open to ALL tournaments
+// regardless of whether publicViewOpen is set.
+function listPublicTournaments() {
+  return (
+    Object.values(db.tournaments)
+      // Removed the t.publicViewOpen && t.publicViewToken filter so everything goes through
+      .map((t) => {
+        const full = serializeTournament(t);
+        return {
+          id: full.id, // Added internal ID for safety/flexibility
+          name: full.name,
+          federation: full.federation,
+          format: full.format,
+          variant: full.variant, // Useful if "real vs fake" is determined by a variant
+          system: full.system,
+          status: full.status,
+          currentRound: full.currentRound,
+          totalRounds: full.totalRounds,
+          competitorCount:
+            full.format === "team" ? full.teams.length : full.players.length,
+          winner: full.winner,
+          // Fallback to the tournament ID if a public token wasn't explicitly generated
+          publicViewToken: full.publicViewToken || full.id,
+          updatedAt: t.updatedAt,
+
+          // NOTE: If you have an explicit property for "real or fake" tournaments
+          // (e.g., t.isTesting or t.isFake), uncomment the line below to pass it to the frontend:
+          // isFake: t.isFake,
+        };
+      })
+      .sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""))
+  );
 }
 
 function updateTournamentDetails(id, updates = {}) {
@@ -1675,6 +1785,7 @@ function serializeTournament(t) {
 
   const rounds = t.rounds.map((rr) => ({
     round: rr.round,
+    chess960: rr.chess960 || null,
     pairings: rr.pairings.map((p) => {
       if (t.format === "team") {
         if (p.type === "bye")
@@ -1786,6 +1897,8 @@ function serializeTournament(t) {
     startingRankList,
     bracket: serializeBracket(t),
     winner: t.status === "finished" ? computeWinner(t) : null,
+    chess960: t.chess960,
+    currentChess960: t.currentChess960,
     registrationOpen: t.registrationOpen,
     registrationToken: t.registrationToken,
     publicViewOpen: t.publicViewOpen,
@@ -1877,6 +1990,7 @@ module.exports = {
   enablePublicView,
   disablePublicView,
   getPublicResults,
+  listPublicTournaments,
   exportStandingsWorkbook,
   singleRoundRobinSchedule: roundRobin.singleRoundRobinSchedule,
   doubleRoundRobinSchedule: roundRobin.doubleRoundRobinSchedule,

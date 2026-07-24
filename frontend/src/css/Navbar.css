@@ -76,6 +76,12 @@
 }
 
 .navbar-link {
+  /* Reset so this looks identical on the <button> Log Out uses 
+     as it does on the <Link> elements */
+  background: none;
+  border: none;
+  cursor: pointer;
+
   text-decoration: none;
   color: rgba(251, 247, 238, 0.82);
 
@@ -101,12 +107,25 @@
   color: #fbf7ee;
 }
 
+/* 
+   Specific targeting for the Log Out <button>. 
+   Since the other links are <a> tags, this isolates the logout action.
+*/
+button.navbar-link {
+  color: #d66460; /* A lighter, more legible derivation of --claret for dark backgrounds */
+}
+
+button.navbar-link:hover {
+  background: rgba(124, 49, 48, 0.15); /* Translucent --claret */
+  color: #ef7b76;
+}
+
 /* ===========================
    BUTTONS
 =========================== */
 
 .btn-primary {
-  /* Swapping SaaS blue for the dashboard's brass color */
+  /* Dashboard's brass color */
   background: var(--brass);
   color: #241811;
   border: 1px solid var(--brass);
@@ -117,7 +136,7 @@
 }
 
 .btn-primary:hover {
-  background: #cba059; /* A slightly lighter brass for hover */
+  background: #cba059; /* Lighter brass for hover */
   border-color: #cba059;
   transform: translateY(-1px);
 }

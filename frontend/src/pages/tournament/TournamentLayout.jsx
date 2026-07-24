@@ -9,6 +9,7 @@ import {
 import { api } from "../../api.js";
 import WinnerReveal from "../../components/WinnerReveal.jsx";
 import "../../css/TournamentLayout.css";
+import BackgroundSlideshow from "../../components/BackgroundSlideshow.jsx";
 
 function isElimination(t) {
   return t.system === "single_elimination" || t.system === "double_elimination";
@@ -29,6 +30,9 @@ function tabsFor(t) {
   } else {
     tabs.push({ to: "pairings", label: "Pairings" });
     tabs.push({ to: "rounds", label: "Round History" });
+  }
+  if (t.chess960) {
+    tabs.push({ to: "chess960", label: "Chess960" });
   }
   tabs.push({ to: "standings", label: "Standings" });
   return tabs;
