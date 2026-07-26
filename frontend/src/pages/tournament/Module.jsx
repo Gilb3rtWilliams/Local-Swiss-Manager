@@ -5,6 +5,15 @@ import BracketCanvas from "../../components/BracketCanvas.jsx";
 import "../../css/Bracket.css";
 
 const DRAW_VALUE = "1/2-1/2";
+const DECISIVE_RESULTS = new Set(["1-0", "0-1", "1F-0F", "0F-1F"]);
+
+function scoreFromResult(r, side) {
+  // side: "w" | "b"
+  if (r === "1-0" || r === "1F-0F") return side === "w" ? 1 : 0;
+  if (r === "0-1" || r === "0F-1F") return side === "w" ? 0 : 1;
+  if (r === "0F-0F") return 0; // both forfeit — nobody scores
+  return 0.5; // draw
+}
 
 function IndividualScoreForm({ match, onSubmit, busy, error }) {
   return (
@@ -33,7 +42,7 @@ function IndividualScoreForm({ match, onSubmit, busy, error }) {
   );
 }
 
-function TeamScoreForm({ match, onSubmit, busy, error }) {
+function TeamScoreForm({ match, isBughouse, onSubmit, busy, error }) {
   const activeBoards = match.boards.filter((b) => !b.sitOut);
   const [results, setResults] = useState(() =>
     Object.fromEntries(activeBoards.map((b) => [b.boardNum, b.result || ""])),
@@ -44,14 +53,28 @@ function TeamScoreForm({ match, onSubmit, busy, error }) {
     setResults((r) => ({ ...r, [boardNum]: value }));
   }
 
-  const allFilled = activeBoards.every((b) => results[b.boardNum]);
+  // Bughouse: once either board has a decisive result (a win, including by
+  // forfeit — a draw or double-forfeit doesn't count), the match is over
+  // for BOTH boards. The other board isn't needed and shouldn't block
+  // Submit, matching the backend's own hasDecisive short-circuit. Once a
+  // board is decisive, its own scoreFromResult() already yields a clean
+  // 1/0 split — no separate "winner-take-all" adjustment needed on top.
+  const decisiveBoardNum = isBughouse
+    ? activeBoards.find((b) => DECISIVE_RESULTS.has(results[b.boardNum]))
+        ?.boardNum
+    : null;
+  const neededBoards = decisiveBoardNum
+    ? activeBoards.filter((b) => b.boardNum === decisiveBoardNum)
+    : activeBoards;
+
+  const allFilled = neededBoards.every((b) => results[b.boardNum]);
   let aPoints = 0,
     bPoints = 0;
   if (allFilled) {
-    activeBoards.forEach((b) => {
+    neededBoards.forEach((b) => {
       const r = results[b.boardNum];
-      const wScore = r === "1-0" ? 1 : r === "0-1" ? 0 : 0.5;
-      const bScore = r === "0-1" ? 1 : r === "1-0" ? 0 : 0.5;
+      const wScore = scoreFromResult(r, "w");
+      const bScore = scoreFromResult(r, "b");
       if (
         b.white.teamId &&
         match.competitorA &&
@@ -68,7 +91,7 @@ function TeamScoreForm({ match, onSubmit, busy, error }) {
   const tied = allFilled && aPoints === bPoints;
 
   function handleSubmit() {
-    const boards = activeBoards.map((b) => ({
+    const boards = neededBoards.map((b) => ({
       boardNum: b.boardNum,
       result: results[b.boardNum],
     }));
@@ -92,32 +115,44 @@ function TeamScoreForm({ match, onSubmit, busy, error }) {
           </tr>
         </thead>
         <tbody>
-          {match.boards.map((b) => (
-            <tr key={b.boardNum}>
-              <td>{b.boardNum}</td>
-              {b.sitOut ? (
-                <td colSpan={3} className="muted">
-                  {(b.white || b.black)?.name} sits out this board
-                </td>
-              ) : (
-                <>
-                  <td>{b.white.name}</td>
-                  <td>
-                    <select
-                      value={results[b.boardNum] || ""}
-                      onChange={(e) => setResult(b.boardNum, e.target.value)}
-                    >
-                      <option value="">–</option>
-                      <option value="1-0">1 – 0</option>
-                      <option value={DRAW_VALUE}>½ – ½</option>
-                      <option value="0-1">0 – 1</option>
-                    </select>
+          {match.boards.map((b) => {
+            const lockedByOtherBoard =
+              decisiveBoardNum && decisiveBoardNum !== b.boardNum;
+            return (
+              <tr key={b.boardNum}>
+                <td>{b.boardNum}</td>
+                {b.sitOut ? (
+                  <td colSpan={3} className="muted">
+                    {(b.white || b.black)?.name} sits out this board
                   </td>
-                  <td>{b.black.name}</td>
-                </>
-              )}
-            </tr>
-          ))}
+                ) : lockedByOtherBoard ? (
+                  <td colSpan={3} className="muted">
+                    {b.white.name} vs {b.black.name} — match decided on Board{" "}
+                    {decisiveBoardNum}, this board doesn't count
+                  </td>
+                ) : (
+                  <>
+                    <td>{b.white.name}</td>
+                    <td>
+                      <select
+                        value={results[b.boardNum] || ""}
+                        onChange={(e) => setResult(b.boardNum, e.target.value)}
+                      >
+                        <option value="">–</option>
+                        <option value="1-0">1 – 0</option>
+                        <option value={DRAW_VALUE}>½ – ½</option>
+                        <option value="0-1">0 – 1</option>
+                        <option value="1F-0F">1F – 0F (Black forfeits)</option>
+                        <option value="0F-1F">0F – 1F (White forfeits)</option>
+                        <option value="0F-0F">0F – 0F (Both forfeit)</option>
+                      </select>
+                    </td>
+                    <td>{b.black.name}</td>
+                  </>
+                )}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
 
@@ -176,7 +211,15 @@ function TeamScoreForm({ match, onSubmit, busy, error }) {
   );
 }
 
-function ScoreModal({ match, format, onClose, onSubmit, busy, error }) {
+function ScoreModal({
+  match,
+  format,
+  isBughouse,
+  onClose,
+  onSubmit,
+  busy,
+  error,
+}) {
   if (!match) return null;
   return (
     <div className="bx-modal-backdrop" onClick={onClose}>
@@ -208,6 +251,7 @@ function ScoreModal({ match, format, onClose, onSubmit, busy, error }) {
         {format === "team" ? (
           <TeamScoreForm
             match={match}
+            isBughouse={isBughouse}
             onSubmit={onSubmit}
             busy={busy}
             error={error}
@@ -244,6 +288,7 @@ export default function Module() {
   }
 
   const isDouble = t.system === "double_elimination";
+  const isBughouse = t.variant === "bughouse";
   const openMatch = openMatchId
     ? b.matches.find((m) => m.id === openMatchId)
     : null;
@@ -293,6 +338,7 @@ export default function Module() {
       <ScoreModal
         match={openMatch}
         format={t.format}
+        isBughouse={isBughouse}
         onClose={closeModal}
         onSubmit={handleSubmit}
         busy={busy}

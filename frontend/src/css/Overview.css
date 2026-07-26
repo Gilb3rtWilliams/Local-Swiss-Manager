@@ -151,6 +151,99 @@
   margin: 12px 0;
 }
 
+/* ── Form layout ───────────────────────────────────────────────────────── */
+.ov-root .form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.ov-root .field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.ov-root .field-full {
+  grid-column: 1 / -1;
+}
+.ov-root .field-flex {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+.ov-root .checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.ov-root .checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 0.92rem;
+}
+
+/* ── Roster editor ─────────────────────────────────────────────────────── */
+.ov-root .roster-editor {
+  background: rgba(255, 253, 247, 0.9);
+  border: 1px solid rgba(64, 42, 31, 0.16);
+  border-radius: 14px;
+  padding: 18px;
+  margin-top: 18px;
+}
+.ov-root .roster-editor h3 {
+  margin: 0 0 14px;
+}
+.ov-root .team-box {
+  background: rgba(244, 239, 226, 0.8);
+  border: 1px solid rgba(64, 42, 31, 0.16);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+.ov-root .team-header {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-bottom: 12px;
+}
+.ov-root .team-player-grid {
+  display: grid;
+  gap: 12px;
+}
+.ov-root .player-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: flex-end;
+}
+.ov-root .player-row .field {
+  margin-bottom: 0;
+}
+.ov-root .player-row button {
+  align-self: flex-end;
+  padding: 8px 10px;
+}
+.ov-root .btn-sm {
+  font-size: 0.82rem;
+  padding: 8px 12px;
+  border-radius: 10px;
+}
+.ov-root .btn-primary.btn-sm {
+  background: var(--felt);
+  border-color: var(--felt);
+}
+.ov-root .btn-secondary.btn-sm {
+  background: rgba(244, 239, 226, 0.14);
+  border-color: rgba(244, 239, 226, 0.35);
+}
+.ov-root .btn-primary.btn-sm:hover:not(:disabled) {
+  background: var(--felt-light);
+}
+
 /* ── Finished / champion banner ───────────────────────────────────────── */
 .ov-root .finished-banner {
   background: linear-gradient(
@@ -168,6 +261,16 @@
 .ov-root .finished-banner p {
   color: rgba(251, 247, 238, 0.85);
   margin: 0 0 14px;
+}
+
+/* ── Responsive tweaks ─────────────────────────────────────────────────── */
+@media (max-width: 940px) {
+  .ov-root .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .ov-root .player-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {

@@ -339,7 +339,7 @@ function syncTeamFromCompetitor(team, comp) {
   team.byeRounds = comp.byeRounds;
 }
 
-// ─── Create ─────────────────────────────────────────────────────────────────
+// ─── Constants & Validation ─────────────────────────────────────────────────
 const VALID_SYSTEMS = [
   "swiss",
   "round_robin",
@@ -348,20 +348,60 @@ const VALID_SYSTEMS = [
   "double_elimination",
 ];
 
+const VALID_SCORING_SYSTEMS = ["standard", "3-1-0", "double_round"];
+const VALID_RATING_TYPES = ["standard", "rapid", "blitz"];
+
+const DEFAULT_TIEBREAKS = [
+  "buchholz_cut1",
+  "buchholz",
+  "sonneborn_berger",
+  "direct_encounter",
+];
+
+// ─── Create Tournament ──────────────────────────────────────────────────────
 function createTournament(input) {
   const {
+    // Core Identity
     name,
+    description = "",
+    category = "Open", // e.g., 'Open', 'U18', 'Women', 'Seniors'
+    venue = "", // Physical location or 'Online'
     federation = "",
-    format = "individual",
-    variant = "standard",
+
+    // System & Rules
+    format = "individual", // 'individual' | 'team'
+    variant = "standard", // 'standard' | 'bughouse' | 'league'
+    system = "swiss",
+    // scoringSystem, ratingType, and tiebreaks are accepted, validated, and
+    // stored below, but NOT YET enforced anywhere else in the app —
+    // swissEngine.js's sortedStandings()/buchholz()/sonnenbornBerger() use a
+    // fixed order and don't know about "buchholz_cut1" or "direct_encounter",
+    // and scoreFromResult() always scores 1/0.5/0 regardless of
+    // scoringSystem. Selecting anything other than the defaults here
+    // currently changes what's *displayed*, not what's *computed*. Treat
+    // these three as reserved for a follow-up, not as working features yet.
+    scoringSystem = "standard", // 'standard' (1/0.5/0) | '3-1-0' | 'double_round'
+    ratingType = "standard", // 'standard' | 'rapid' | 'blitz'
     timeControl = "",
+    tiebreaks = DEFAULT_TIEBREAKS,
     totalRounds,
+
+    // Byes & Governance — same caveat: accepted and stored, not yet read by
+    // the bye-assignment logic in swissEngine.js's generatePairings().
+    maxHalfPointByes = 2,
+    byeCutoffRound = null, // e.g., no byes allowed in the final 2 rounds
+
+    // Participants
     players = [],
     teams = [],
-    system = "swiss",
+
+    // Officials & Contacts
     organizerName = "",
+    organizerContact = "", // Phone or email for public listings
     chiefArbiter = "",
     deputyChiefArbiter = "",
+
+    // Dates & Flags
     dateFrom = "",
     dateTo = "",
     fideRated = false,
@@ -369,6 +409,7 @@ function createTournament(input) {
     chess960: chess960Enabled = false,
   } = input;
 
+  // 1. Strict Input Validation
   if (!name || !name.trim()) {
     const e = new Error("Tournament name is required");
     e.status = 400;
@@ -376,6 +417,16 @@ function createTournament(input) {
   }
   if (!VALID_SYSTEMS.includes(system)) {
     const e = new Error(`Invalid system "${system}"`);
+    e.status = 400;
+    throw e;
+  }
+  if (!VALID_SCORING_SYSTEMS.includes(scoringSystem)) {
+    const e = new Error(`Invalid scoring system "${scoringSystem}"`);
+    e.status = 400;
+    throw e;
+  }
+  if (fideRated && !VALID_RATING_TYPES.includes(ratingType)) {
+    const e = new Error(`Invalid FIDE rating type "${ratingType}"`);
     e.status = 400;
     throw e;
   }
@@ -398,39 +449,61 @@ function createTournament(input) {
     throw e;
   }
 
+  // 2. Tournament Object Initialization
   const t = {
     id: uid(),
     name: name.trim(),
-    federation,
+    description: description.trim(),
+    category: category.trim(),
+    venue: venue.trim(),
+    federation: federation.trim(),
+
     format, // 'individual' | 'team'
-    variant, // 'standard' | 'bughouse' | 'league' ...
+    variant, // 'standard' | 'bughouse' | 'league'
     system, // 'swiss' | 'round_robin' | 'double_round_robin' | 'single_elimination' | 'double_elimination'
-    timeControl,
+    scoringSystem, // reserved — see caveat above, not yet enforced
+    ratingType,
+    timeControl: timeControl.trim(),
+    tiebreaks: Array.isArray(tiebreaks) ? tiebreaks : DEFAULT_TIEBREAKS, // reserved — see caveat above
+
+    maxHalfPointByes: Number.isInteger(maxHalfPointByes) ? maxHalfPointByes : 2, // reserved — see caveat above
+    byeCutoffRound: Number.isInteger(byeCutoffRound) ? byeCutoffRound : null, // reserved — see caveat above
+
     organizerName: organizerName.trim(),
+    organizerContact: organizerContact.trim(),
     chiefArbiter: chiefArbiter.trim(),
     deputyChiefArbiter: deputyChiefArbiter.trim(),
+
     dateFrom: dateFrom || null,
     dateTo: dateTo || null,
     fideRated: Boolean(fideRated),
     isTest: Boolean(isTest),
     chess960: Boolean(chess960Enabled),
     currentChess960: null, // set by generateNextRound when chess960 is on
+
     registrationOpen: false,
     registrationToken: null,
     publicViewOpen: false,
     publicViewToken: null,
+
     totalRounds: null,
     currentRound: 0,
-    status: "setup",
+    status: "setup", // 'setup' | 'active' | 'finished' — matches computeWinner(),
+    // finalizeBracketIfDone(), and every frontend status check elsewhere in
+    // the app. Do NOT introduce "completed" as a status value; nothing else
+    // in the codebase checks for it, and a tournament left un-finalized
+    // because of a status-string mismatch is a silent, hard-to-notice bug.
     players: [],
     teams: [],
     rounds: [],
     currentPairings: null,
+
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     finishedAt: null,
   };
 
+  // 3. Competitor Processing (Team vs Individual)
   if (format === "team") {
     if (!Array.isArray(teams) || teams.length < 2) {
       const e = new Error("Need at least 2 teams for a team tournament");
@@ -443,8 +516,10 @@ function createTournament(input) {
         const comp = engine.newCompetitor(uid(), Number(p.rating) || 0);
         comp.name = p.name.trim();
         comp.teamId = teamId;
+        comp.status = "active"; // scaffolding for a future withdrawal feature — nothing reads this yet, but nothing breaks by it being here either
         return comp;
       });
+
       if (teamPlayers.length === 0) {
         const e = new Error(`Team "${teamInput.name}" needs at least 1 player`);
         e.status = 400;
@@ -457,13 +532,16 @@ function createTournament(input) {
         e.status = 400;
         throw e;
       }
+
       const avgRating = Math.round(
         teamPlayers.reduce((s, p) => s + p.rating, 0) / teamPlayers.length,
       );
+
       const team = {
         id: teamId,
         name: teamInput.name.trim(),
         rating: avgRating,
+        status: "active", // same scaffolding note as above
         score: 0,
         colorDiff: 0,
         lastColor: null,
@@ -473,6 +551,7 @@ function createTournament(input) {
         byeRounds: 0,
         playerIds: teamPlayers.map((p) => p.id),
       };
+
       t.teams.push(team);
       t.players.push(...teamPlayers);
     });
@@ -491,10 +570,12 @@ function createTournament(input) {
     players.forEach((p) => {
       const comp = engine.newCompetitor(uid(), Number(p.rating) || 0);
       comp.name = p.name.trim();
+      comp.status = "active"; // same scaffolding note as above
       t.players.push(comp);
     });
   }
 
+  // 4. Schedule Length & Seeding
   const competitorCount = format === "team" ? t.teams.length : t.players.length;
   t.totalRounds = isRoundRobinSystem(t)
     ? roundRobin.scheduleLength(competitorCount, system)
@@ -502,9 +583,11 @@ function createTournament(input) {
       ? Number(totalRounds)
       : engine.suggestedRounds(competitorCount);
 
+  // Initial rank assignment (locked in once t.status switches to 'active')
   assignStartingRanks(t.players);
   if (format === "team") assignStartingRanks(t.teams);
 
+  // 5. Immediate Bracket Generation for Elimination Events
   if (isEliminationSystem(t)) {
     // The full bracket is known the moment seeding is set — draw it now
     // rather than waiting for a "generate round" click, and resolve any
@@ -515,6 +598,7 @@ function createTournament(input) {
     t.status = "active";
   }
 
+  // 6. Persist and Return
   db.tournaments[t.id] = t;
   persist();
   return serializeTournament(t);
@@ -746,6 +830,26 @@ function submitResults(id, resultsInput) {
         blackPoints = 0;
       const boardResults = [];
 
+      // Bughouse: "a win for one teammate is a win for both." Back-fill the
+      // untouched board's result from the decided one *before* scoring, so
+      // the ordinary per-board applyGame loop below credits both players
+      // uniformly — no separate individual-scoring branch needed. Boards
+      // are cross-coupled by color (board 1's White partners board 2's
+      // Black), so this has to be the mirror of the decided result, not a
+      // literal copy: if White won board 1, White's *teammate* is Black on
+      // board 2, so board 2 backfills as a Black win, not a White win.
+      if (t.variant === "bughouse") {
+        const decided = pairing.boards.find(
+          (bd) => !bd.sitOut && isDecisiveResult(bd.result),
+        );
+        const other =
+          decided && pairing.boards.find((bd) => bd !== decided && !bd.sitOut);
+        if (decided && other && !other.result) {
+          other.result = WHITE_WIN_RESULTS.has(decided.result) ? "0-1" : "1-0";
+          other.derivedFromBoard = decided.boardNum;
+        }
+      }
+
       pairing.boards.forEach((board) => {
         // Safely skip sit-outs or abandoned Bughouse boards
         if (board.sitOut || !board.result) {
@@ -771,6 +875,7 @@ function submitResults(id, resultsInput) {
           white: board.white.id,
           black: board.black.id,
           result: board.result,
+          derivedFromBoard: board.derivedFromBoard || null,
         });
       });
 
@@ -938,6 +1043,21 @@ function submitBracketMatchResult(id, matchId, payload = {}) {
     const pById = byId(t.players);
     let aPoints = 0,
       bPoints = 0;
+
+    // Same rule as the Swiss/round-robin team path: a win for one teammate
+    // is a win for both. Back-fill before scoring so the ordinary per-board
+    // loop below credits both players uniformly.
+    if (t.variant === "bughouse") {
+      const decided = m.boards.find(
+        (bd) => !bd.sitOut && isDecisiveResult(bd.result),
+      );
+      const other =
+        decided && m.boards.find((bd) => bd !== decided && !bd.sitOut);
+      if (decided && other && !other.result) {
+        other.result = WHITE_WIN_RESULTS.has(decided.result) ? "0-1" : "1-0";
+        other.derivedFromBoard = decided.boardNum;
+      }
+    }
 
     m.boards.forEach((board) => {
       if (board.sitOut || !board.result) return; // Skip abandoned games
@@ -1485,6 +1605,113 @@ function listPublicTournaments() {
   );
 }
 
+function buildIndividualRoster(playersInput) {
+  if (!Array.isArray(playersInput) || playersInput.length < 2) {
+    const e = new Error("Need at least 2 players for an individual tournament");
+    e.status = 400;
+    throw e;
+  }
+  const cleaned = playersInput.map((p) => ({
+    name: p?.name?.trim(),
+    rating: Number(p?.rating) || 0,
+  }));
+  if (cleaned.some((p) => !p.name)) {
+    const e = new Error("Every player needs a name");
+    e.status = 400;
+    throw e;
+  }
+  const names = cleaned.map((p) => p.name.toLowerCase());
+  if (new Set(names).size !== names.length) {
+    const e = new Error("Duplicate player names are not allowed");
+    e.status = 400;
+    throw e;
+  }
+  return cleaned.map((p) => {
+    const comp = engine.newCompetitor(uid(), p.rating);
+    comp.name = p.name;
+    comp.status = "active";
+    return comp;
+  });
+}
+
+function buildTeamRoster(teamInput, variant) {
+  if (!Array.isArray(teamInput) || teamInput.length < 2) {
+    const e = new Error("Need at least 2 teams for a team tournament");
+    e.status = 400;
+    throw e;
+  }
+  const teamNames = new Set();
+  const teams = [];
+  const players = [];
+
+  teamInput.forEach((team) => {
+    const teamName = team?.name?.trim();
+    if (!teamName) {
+      const e = new Error("Every team needs a name");
+      e.status = 400;
+      throw e;
+    }
+    if (teamNames.has(teamName.toLowerCase())) {
+      const e = new Error(`Duplicate team name "${teamName}"`);
+      e.status = 400;
+      throw e;
+    }
+    teamNames.add(teamName.toLowerCase());
+
+    const playerList = Array.isArray(team.players) ? team.players : [];
+    if (playerList.length === 0) {
+      const e = new Error(`Team "${teamName}" needs at least 1 player`);
+      e.status = 400;
+      throw e;
+    }
+    if (variant === "bughouse" && playerList.length !== 2) {
+      const e = new Error(
+        `Bughouse requires exactly 2 players per team — team "${teamName}" has ${playerList.length}.`,
+      );
+      e.status = 400;
+      throw e;
+    }
+
+    const teamId = uid();
+    const teamPlayers = playerList.map((p) => {
+      const name = p?.name?.trim();
+      if (!name) {
+        const e = new Error(`Every player in team "${teamName}" needs a name`);
+        e.status = 400;
+        throw e;
+      }
+      const comp = engine.newCompetitor(uid(), Number(p?.rating) || 0);
+      comp.name = name;
+      comp.teamId = teamId;
+      comp.status = "active";
+      players.push(comp);
+      return comp;
+    });
+
+    const avgRating = Math.round(
+      teamPlayers.reduce((sum, player) => sum + player.rating, 0) /
+        teamPlayers.length,
+    );
+
+    teams.push({
+      id: teamId,
+      name: teamName,
+      rating: avgRating,
+      status: "active",
+      score: 0,
+      colorDiff: 0,
+      lastColor: null,
+      colorHistory: [],
+      opponents: new Set(),
+      results: {},
+      byeRounds: 0,
+      playerIds: teamPlayers.map((p) => p.id),
+    });
+  });
+
+  return { players, teams };
+}
+
 function updateTournamentDetails(id, updates = {}) {
   const t = assertTournament(id);
 
@@ -1661,6 +1888,7 @@ function serializeBracket(t) {
                 ? { id: b.black.id, name: b.black.name, teamId: b.black.teamId }
                 : null,
               result: b.result,
+              derivedFromBoard: b.derivedFromBoard || null,
             }))
           : null,
     })),
@@ -1828,6 +2056,7 @@ function serializeTournament(t) {
                   blackId: b.black,
                   blackName: nameOf(b.black),
                   result: b.result,
+                  derivedFromBoard: b.derivedFromBoard || null,
                 },
           ),
         };
@@ -2014,4 +2243,6 @@ module.exports = {
   doubleEliminationBracket: bracketEngine.doubleEliminationBracket,
   tournamentRoundRobinSchedule,
   tournamentScheduleLength,
+  buildIndividualRoster,
+  buildTeamRoster,
 };

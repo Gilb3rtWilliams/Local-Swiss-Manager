@@ -67,27 +67,55 @@ function SegmentedToggle({ name, value, onChange, options }) {
   );
 }
 
+const AVAILABLE_TIEBREAKS = [
+  { id: "buchholz_cut1", label: "Buchholz Cut 1" },
+  { id: "buchholz", label: "Buchholz" },
+  { id: "sonneborn_berger", label: "Sonneborn-Berger" },
+  { id: "direct_encounter", label: "Direct Encounter" },
+];
+
 export default function NewTournament() {
   const navigate = useNavigate();
 
+  // Core Identity
   const [name, setName] = useState("");
+  const [category, setCategory] = useState("Open");
+  const [venue, setVenue] = useState("");
+  const [description, setDescription] = useState("");
   const [federation, setFederation] = useState("");
+
+  // Officials & Contacts
   const [organizerName, setOrganizerName] = useState("");
+  const [organizerContact, setOrganizerContact] = useState("");
   const [chiefArbiter, setChiefArbiter] = useState("");
   const [deputyChiefArbiter, setDeputyChiefArbiter] = useState("");
+
+  // Schedule & Governance
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [fideRated, setFideRated] = useState(false);
+  const [ratingType, setRatingType] = useState("standard");
   const [isTest, setIsTest] = useState(false);
-  const [chess960, setChess960] = useState(false);
+  const [maxHalfPointByes, setMaxHalfPointByes] = useState(2);
+  const [byeCutoffRound, setByeCutoffRound] = useState("");
 
+  // Format, System & Rules
   const [format, setFormat] = useState("individual");
   const [variant, setVariant] = useState("standard");
   const [system, setSystem] = useState("swiss");
+  const [scoringSystem, setScoringSystem] = useState("standard");
   const [timeControl, setTimeControl] = useState("");
   const [autoRounds, setAutoRounds] = useState(true);
   const [totalRounds, setTotalRounds] = useState(5);
+  const [chess960, setChess960] = useState(false);
+  const [tiebreaks, setTiebreaks] = useState([
+    "buchholz_cut1",
+    "buchholz",
+    "sonneborn_berger",
+    "direct_encounter",
+  ]);
 
+  // Roster
   const [players, setPlayers] = useState([
     emptyPlayer(),
     emptyPlayer(),
@@ -98,6 +126,7 @@ export default function NewTournament() {
 
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const competitorCount =
     format === "team"
@@ -110,10 +139,6 @@ export default function NewTournament() {
     system === "single_elimination" || system === "double_elimination";
   const isFixedRounds = isRoundRobin || isElimination;
 
-  // Chess960 only hooks into round-by-round pairing generation — brackets
-  // are drawn whole at creation, so there's nowhere for a per-round
-  // position to attach. Keep the two in sync so a stale "on" value can't
-  // ride along if someone toggles Chess960 and then switches systems.
   useEffect(() => {
     if (isElimination && chess960) setChess960(false);
   }, [isElimination, chess960]);
@@ -125,6 +150,12 @@ export default function NewTournament() {
       : autoRounds
         ? suggestedRounds(Math.max(competitorCount, 2))
         : totalRounds;
+
+  function toggleTiebreak(id) {
+    setTiebreaks((prev) =>
+      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id],
+    );
+  }
 
   function updatePlayer(idx, field, value) {
     setPlayers((ps) =>
@@ -191,18 +222,27 @@ export default function NewTournament() {
 
     const payload = {
       name,
+      category,
+      venue,
+      description,
       federation,
       organizerName,
+      organizerContact,
       chiefArbiter,
       deputyChiefArbiter,
       dateFrom,
       dateTo,
       fideRated,
+      ratingType: fideRated ? ratingType : "standard",
       isTest,
+      maxHalfPointByes: Number(maxHalfPointByes) || 0,
+      byeCutoffRound: byeCutoffRound ? Number(byeCutoffRound) : null,
       chess960,
       format,
       variant,
       system,
+      scoringSystem,
+      tiebreaks,
       timeControl,
       totalRounds:
         isFixedRounds || autoRounds ? undefined : Number(totalRounds),
@@ -269,8 +309,9 @@ export default function NewTournament() {
             <h2>Tournament Details</h2>
 
             <div className="nt-panels">
+              {/* Panel 1: Basics & Location */}
               <div className="nt-panel">
-                <div className="nt-panel-label">Basics</div>
+                <div className="nt-panel-label">Basics &amp; Location</div>
                 <div className="form-grid">
                   <label className="field">
                     <span>Name</span>
@@ -280,6 +321,18 @@ export default function NewTournament() {
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Nyeri Spring Open"
                     />
+                  </label>
+                  <label className="field">
+                    <span>Category</span>
+                    <select
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                    >
+                      <option value="Open">Open</option>
+                      <option value="U18">U18 Youth</option>
+                      <option value="Women">Women&apos;s Division</option>
+                      <option value="Seniors">Seniors (50+)</option>
+                    </select>
                   </label>
                   <label className="field">
                     <span>Federation</span>
@@ -296,19 +349,29 @@ export default function NewTournament() {
                     </select>
                   </label>
                   <label className="field">
-                    <span>Time Control</span>
+                    <span>Venue / Location</span>
                     <input
                       type="text"
-                      value={timeControl}
-                      onChange={(e) => setTimeControl(e.target.value)}
-                      placeholder="90+30"
+                      value={venue}
+                      onChange={(e) => setVenue(e.target.value)}
+                      placeholder="Nyeri Club Hall or 'Online'"
+                    />
+                  </label>
+                  <label className="field field-full">
+                    <span>Rules &amp; Announcements</span>
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="No phones in the playing hall. Increment applies from move 1. Default time is 30 minutes."
+                      rows={3}
                     />
                   </label>
                 </div>
               </div>
 
+              {/* Panel 2: Officials & Contact */}
               <div className="nt-panel">
-                <div className="nt-panel-label">Officials</div>
+                <div className="nt-panel-label">Officials &amp; Contact</div>
                 <div className="form-grid">
                   <label className="field">
                     <span>Organizer</span>
@@ -317,6 +380,15 @@ export default function NewTournament() {
                       value={organizerName}
                       onChange={(e) => setOrganizerName(e.target.value)}
                       placeholder="Gilbert Williams"
+                    />
+                  </label>
+                  <label className="field">
+                    <span>Public Contact Info</span>
+                    <input
+                      type="text"
+                      value={organizerContact}
+                      onChange={(e) => setOrganizerContact(e.target.value)}
+                      placeholder="Email or phone for inquiries"
                     />
                   </label>
                   <label className="field">
@@ -340,8 +412,9 @@ export default function NewTournament() {
                 </div>
               </div>
 
+              {/* Panel 3: Schedule & Governance */}
               <div className="nt-panel">
-                <div className="nt-panel-label">Schedule &amp; Status</div>
+                <div className="nt-panel-label">Schedule &amp; Governance</div>
                 <div className="form-grid">
                   <label className="field">
                     <span>Date From</span>
@@ -387,8 +460,11 @@ export default function NewTournament() {
                 </div>
               </div>
 
+              {/* Panel 4: Format, System & Scoring */}
               <div className="nt-panel">
-                <div className="nt-panel-label">Format &amp; System</div>
+                <div className="nt-panel-label">
+                  Format, System &amp; Scoring
+                </div>
                 <div className="form-grid">
                   <label className="field">
                     <span>Format</span>
@@ -435,6 +511,15 @@ export default function NewTournament() {
                         Double Elimination
                       </option>
                     </select>
+                  </label>
+                  <label className="field">
+                    <span>Time Control</span>
+                    <input
+                      type="text"
+                      value={timeControl}
+                      onChange={(e) => setTimeControl(e.target.value)}
+                      placeholder="90+30"
+                    />
                   </label>
                   <label className="field">
                     <span>Rounds</span>
@@ -491,6 +576,99 @@ export default function NewTournament() {
                 </p>
               </div>
             </div>
+
+            <button
+              type="button"
+              className="nt-advanced-toggle"
+              onClick={() => setAdvancedOpen((o) => !o)}
+              aria-expanded={advancedOpen}
+            >
+              <span className="nt-advanced-toggle-label">
+                <span className="nt-advanced-chevron">
+                  {advancedOpen ? "▾" : "▸"}
+                </span>
+                Advanced Settings
+              </span>
+              <span className="nt-advanced-toggle-hint">
+                Rating type, byes, scoring, tiebreaks
+              </span>
+            </button>
+
+            {advancedOpen && (
+              <div className="nt-panel nt-advanced-panel">
+                <div className="form-grid">
+                  {fideRated && (
+                    <label className="field">
+                      <span>Rating Type</span>
+                      <select
+                        value={ratingType}
+                        onChange={(e) => setRatingType(e.target.value)}
+                      >
+                        <option value="standard">Standard</option>
+                        <option value="rapid">Rapid</option>
+                        <option value="blitz">Blitz</option>
+                      </select>
+                    </label>
+                  )}
+                  <label className="field">
+                    <span>Max 0.5-Point Byes</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="5"
+                      value={maxHalfPointByes}
+                      onChange={(e) => setMaxHalfPointByes(e.target.value)}
+                    />
+                  </label>
+                  <label className="field">
+                    <span>Bye Cutoff Round</span>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="None"
+                      value={byeCutoffRound}
+                      onChange={(e) => setByeCutoffRound(e.target.value)}
+                    />
+                  </label>
+                  <label className="field">
+                    <span>Scoring System</span>
+                    <select
+                      value={scoringSystem}
+                      onChange={(e) => setScoringSystem(e.target.value)}
+                    >
+                      <option value="standard">Standard (1 / 0.5 / 0)</option>
+                      <option value="3-1-0">3-1-0 Football Scoring</option>
+                      <option value="double_round">
+                        Double Win Points (2 / 1 / 0)
+                      </option>
+                    </select>
+                  </label>
+                  <label className="field field-full">
+                    <span>Active Tiebreaks (Click to toggle)</span>
+                    <div className="nt-chips">
+                      {AVAILABLE_TIEBREAKS.map((t) => {
+                        const active = tiebreaks.includes(t.id);
+                        return (
+                          <button
+                            type="button"
+                            key={t.id}
+                            className={`nt-chip ${active ? "active" : ""}`}
+                            onClick={() => toggleTiebreak(t.id)}
+                          >
+                            {t.label} {active ? "✓" : "+"}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </label>
+                </div>
+                <p className="hint" style={{ marginTop: 10 }}>
+                  These aren't wired up to pairing/scoring logic yet — set them
+                  now if you like, but they won't affect this tournament until
+                  that's built.
+                </p>
+              </div>
+            )}
           </div>
 
           {format === "individual" ? (

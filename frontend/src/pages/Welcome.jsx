@@ -319,28 +319,73 @@ export default function Welcome() {
         </Reveal>
       </section>
 
-      <section className="welcome-section welcome-versatility" id="versatility">
-        <Reveal className="welcome-section-head">
-          <p className="welcome-eyebrow">Beyond Chess</p>
-          <h2>Built for any head-to-head competition</h2>
-          <p className="welcome-lede">
-            The round robin and elimination engines don't know they're running a
-            chess tournament — no chess assumption is baked into the seeding or
-            bracket math. Run a five-a-side football knockout, a table-tennis
-            ladder, or a local esports cup with the same seeded brackets, the
-            same bracket-reset logic, and the same standings.
-          </p>
-        </Reveal>
+      <div className="welcome-tiebreaks">
+        <section className="welcome-section" id="tiebreaks">
+          <Reveal className="welcome-section-head">
+            <p className="welcome-eyebrow">Tie-break systems</p>
+            <h2>Buchholz and Sonneborn–Berger</h2>
+            <p className="welcome-lede">
+              Buchholz and Sonneborn–Berger are two distinct tie-breaking
+              systems used in chess tournaments to rank players who finish with
+              identical scores. They prioritize opponents' strength rather than
+              just raw game results, with Buchholz typically serving as the
+              primary tie-breaker in Swiss events and Sonneborn–Berger often
+              used in round-robin formats or as a secondary tie-breaker.
+            </p>
+          </Reveal>
 
-        <Reveal className="sport-row">
-          {SPORTS.map((s) => (
-            <div className="sport-chip" key={s.label}>
-              <span className="sport-chip-icon">{s.icon}</span>
-              <span>{s.label}</span>
-            </div>
-          ))}
-        </Reveal>
-      </section>
+          <div className="welcome-tiebreaks">
+            <Reveal className="format-card" delay={60}>
+              <h3>Buchholz Score</h3>
+              <p>
+                Buchholz Score measures the overall strength of a player's
+                schedule. It is calculated by summing the final tournament
+                scores of all opponents a player faced. Variations like Buchholz
+                Cut 1 drop the lowest-scoring opponent to mitigate the impact of
+                an exceptionally weak pairing.
+              </p>
+            </Reveal>
+
+            <Reveal className="format-card" delay={120}>
+              <h3>Sonneborn–Berger Score</h3>
+              <p>
+                Sonneborn–Berger Score (specifically the Neustadtl variant)
+                weights results by opponent strength. It is calculated by adding
+                the full final score of every opponent a player defeated and
+                half the final score of every opponent they drew with; losses
+                contribute zero. This system rewards players for scoring points
+                against stronger competition.
+              </p>
+            </Reveal>
+          </div>
+        </section>
+
+        <section
+          className="welcome-section welcome-versatility"
+          id="versatility"
+        >
+          <Reveal className="welcome-section-head">
+            <p className="welcome-eyebrow">Beyond Chess</p>
+            <h2>Built for any head-to-head competition</h2>
+            <p className="welcome-lede">
+              The round robin and elimination engines don't know they're running
+              a chess tournament — no chess assumption is baked into the seeding
+              or bracket math. Run a five-a-side football knockout, a
+              table-tennis ladder, or a local esports cup with the same seeded
+              brackets, the same bracket-reset logic, and the same standings.
+            </p>
+          </Reveal>
+
+          <Reveal className="sport-row">
+            {SPORTS.map((s) => (
+              <div className="sport-chip" key={s.label}>
+                <span className="sport-chip-icon">{s.icon}</span>
+                <span>{s.label}</span>
+              </div>
+            ))}
+          </Reveal>
+        </section>
+      </div>
 
       <section className="welcome-section welcome-cta">
         <Reveal>

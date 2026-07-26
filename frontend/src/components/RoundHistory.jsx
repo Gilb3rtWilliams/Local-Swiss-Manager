@@ -1,66 +1,108 @@
-export default function RoundHistory({ format, round }) {
+const DECISIVE_RESULTS = new Set(["1-0", "0-1", "1F-0F", "0F-1F"]);
+
+function formatResult(result) {
+  return result === "1/2-1/2" ? "½-½" : result;
+}
+
+export default function RoundHistory({ format, round, variant }) {
   if (!round) return <p className="muted">No completed rounds yet.</p>;
+
+  const isBughouse = variant === "bughouse";
 
   if (format === "team") {
     return (
       <div className="team-matches">
-        {round.pairings.map((p, i) => (
-          <div className="team-match-card" key={i}>
-            {p.type === "bye" ? (
-              <div className="team-match-bye">
-                <span className="player-name">{p.teamName}</span>
-                <span className="bye-result">BYE — full team +1 each</span>
-              </div>
-            ) : (
-              <>
-                <div className="team-match-header">
-                  <span className="team-tag white">{p.teamWhiteName}</span>
-                  <span className="vs">
-                    {p.whitePoints} – {p.blackPoints}
-                  </span>
-                  <span className="team-tag black">{p.teamBlackName}</span>
+        {round.pairings.map((p, i) => {
+          // There's no "abandoned" flag stored on the board that bughouse
+          // didn't need — it just never got a result. So a board with no
+          // result whose sibling board *did* get a decisive one is read as
+          // "the match was already decided," not "someone forgot this one."
+          const decisiveBoard = isBughouse
+            ? p.boards?.find((b) => !b.sitOut && DECISIVE_RESULTS.has(b.result))
+            : null;
+
+          return (
+            <div className="team-match-card" key={i}>
+              {p.type === "bye" ? (
+                <div className="team-match-bye">
+                  <span className="player-name">{p.teamName}</span>
+                  <span className="bye-result">BYE — full team +1 each</span>
                 </div>
-                <table className="pairing-table board-table">
-                  <thead>
-                    <tr>
-                      <th className="board-num">Bd</th>
-                      <th>White</th>
-                      <th>Black</th>
-                      <th>Result</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {p.boards.map((b) => (
-                      <tr key={b.boardNum}>
-                        <td className="board-num">{b.boardNum}</td>
-                        {b.sitOut ? (
-                          <td colSpan={3}>
-                            <span className="player-name">{b.playerName}</span>
-                            <span className="bye-result"> sat out</span>
-                          </td>
-                        ) : (
-                          <>
-                            <td>
-                              <span className="color-w" />
-                              <span className="player-name">{b.whiteName}</span>
-                            </td>
-                            <td>
-                              <span className="color-b" />
-                              <span className="player-name">{b.blackName}</span>
-                            </td>
-                            <td>
-                              <strong>{b.result}</strong>
-                            </td>
-                          </>
-                        )}
+              ) : (
+                <>
+                  <div className="team-match-header">
+                    <span className="team-tag white">{p.teamWhiteName}</span>
+                    <span className="vs">
+                      {p.whitePoints} – {p.blackPoints}
+                    </span>
+                    <span className="team-tag black">{p.teamBlackName}</span>
+                  </div>
+                  <table className="pairing-table board-table">
+                    <thead>
+                      <tr>
+                        <th className="board-num">Bd</th>
+                        <th>White</th>
+                        <th>Black</th>
+                        <th>Result</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </>
-            )}
-          </div>
-        ))}
+                    </thead>
+                    <tbody>
+                      {p.boards.map((b) => {
+                        const lockedByOtherBoard =
+                          decisiveBoard &&
+                          decisiveBoard.boardNum !== b.boardNum &&
+                          !b.result;
+
+                        return (
+                          <tr key={b.boardNum}>
+                            <td className="board-num">{b.boardNum}</td>
+                            {b.sitOut ? (
+                              <td colSpan={3}>
+                                <span className="player-name">
+                                  {b.playerName}
+                                </span>
+                                <span className="bye-result"> sat out</span>
+                              </td>
+                            ) : lockedByOtherBoard ? (
+                              <td colSpan={3}>
+                                <span className="player-name">
+                                  {b.whiteName} vs {b.blackName}
+                                </span>
+                                <span className="bughouse-decided">
+                                  {" "}
+                                  — match decided on Board{" "}
+                                  {decisiveBoard.boardNum}
+                                </span>
+                              </td>
+                            ) : (
+                              <>
+                                <td>
+                                  <span className="color-w" />
+                                  <span className="player-name">
+                                    {b.whiteName}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span className="color-b" />
+                                  <span className="player-name">
+                                    {b.blackName}
+                                  </span>
+                                </td>
+                                <td>
+                                  <strong>{formatResult(b.result)}</strong>
+                                </td>
+                              </>
+                            )}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </>
+              )}
+            </div>
+          );
+        })}
       </div>
     );
   }
@@ -100,7 +142,7 @@ export default function RoundHistory({ format, round }) {
                   <span className="player-name">{p.blackName}</span>
                 </td>
                 <td>
-                  <strong>{p.result}</strong>
+                  <strong>{formatResult(p.result)}</strong>
                 </td>
               </>
             )}

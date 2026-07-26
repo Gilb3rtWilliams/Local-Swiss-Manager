@@ -124,7 +124,7 @@
 
 /* ── Glass surfaces ───────────────────────────────────────────────────── */
 .tp-root .card {
-  background: rgba(244, 239, 226, 0.22);
+  background: rgba(231, 166, 1, 0.22);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border: 1px solid rgba(244, 239, 226, 0.35);
