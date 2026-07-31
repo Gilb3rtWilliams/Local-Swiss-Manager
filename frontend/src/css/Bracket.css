@@ -1,30 +1,44 @@
 /* ── Bracket page: design tokens ──────────────────────────────────────────
-   A chess bracket reads like an official pairing wall-chart, not a SaaS
-   dashboard: warm card-stock ivory, walnut-ink connector lines, brass seed
-   medallions, and a felt-green accent for whatever's live right now. The
-   losers bracket gets its own muted maroon so the eye never confuses the
-   two trees. Scoped under .bx-page so nothing here leaks into the rest of
-   the app. */
+   Dark slate canvas, glowing gold accents, high-contrast tree lines,
+   and clean monospaced layout. Scoped under .bx-page. */
 
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Cascadia+Code:wght@400;500;600;700&display=swap");
 
 .bx-page {
-  --bx-ivory: #f6f1e7;
-  --bx-card: #fffdf9;
-  --bx-ink: #211d18;
-  --bx-walnut: #6b4a34;
-  --bx-walnut-soft: #ddd0bd;
-  --bx-felt: #2b5d4f;
-  --bx-felt-soft: #dceae3;
-  --bx-brass: #a9803d;
-  --bx-brass-soft: #f1e4c4;
-  --bx-maroon: #8c3b3b;
-  --bx-maroon-soft: #f3e1de;
-  --bx-mist: #948a7c;
+  --bx-ivory: #13131a;
+  --bx-card: #191924;
+  --bx-ink: #e8e8e8;
+  --bx-walnut: #8a8a9a;
+  --bx-walnut-soft: #252532;
+  --bx-felt: #4caf50;
+  --bx-felt-soft: rgba(76, 175, 80, 0.15);
+  --bx-brass: #d4a853;
+  --bx-brass-soft: rgba(212, 168, 83, 0.15);
+  --bx-maroon: #f44336;
+  --bx-maroon-soft: rgba(244, 67, 54, 0.15);
+  --bx-mist: #6b6b7b;
 
-  --bx-font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
-  --bx-font-body: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
-  --bx-font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --bx-font-display: var(
+    --font-mono,
+    "SF Mono",
+    Monaco,
+    "Cascadia Code",
+    monospace
+  );
+  --bx-font-body: var(
+    --font-mono,
+    "SF Mono",
+    Monaco,
+    "Cascadia Code",
+    monospace
+  );
+  --bx-font-mono: var(
+    --font-mono,
+    "SF Mono",
+    Monaco,
+    "Cascadia Code",
+    monospace
+  );
 
   display: flex;
   flex-direction: column;
@@ -44,21 +58,26 @@
 
 .bx-champion-banner {
   position: relative;
-  background: linear-gradient(135deg, var(--bx-brass-soft), #fbf3df);
-  border: 1px solid #e6d3a0;
+  background: linear-gradient(
+    135deg,
+    rgba(212, 168, 83, 0.12),
+    rgba(19, 19, 26, 0.95)
+  );
+  border: 1px solid rgba(212, 168, 83, 0.4);
   border-radius: 14px;
   padding: 20px 26px;
   display: flex;
   align-items: center;
   gap: 16px;
   overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 .bx-champion-banner::after {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: 14px;
-  box-shadow: inset 0 0 0 1px rgba(169, 128, 61, 0.15);
+  box-shadow: inset 0 0 0 1px rgba(212, 168, 83, 0.2);
   pointer-events: none;
 }
 .bx-champion-icon {
@@ -66,13 +85,13 @@
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: var(--bx-card);
+  background: #13131a;
   border: 1.5px solid var(--bx-brass);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 1.35rem;
-  box-shadow: 0 2px 6px rgba(169, 128, 61, 0.25);
+  box-shadow: 0 0 12px rgba(212, 168, 83, 0.25);
 }
 .bx-champion-eyebrow {
   margin: 0;
@@ -86,9 +105,10 @@
 .bx-champion-banner h2 {
   margin: 2px 0 0;
   font-family: var(--bx-font-display);
-  font-weight: 600;
+  font-weight: 700;
   font-size: 1.4rem;
-  letter-spacing: -0.01em;
+  letter-spacing: 0.02em;
+  color: var(--bx-ink);
 }
 
 /* ── Canvas ──────────────────────────────────────────────────────────────── */
@@ -99,7 +119,11 @@
   border: 1px solid var(--bx-walnut-soft);
   border-radius: 14px;
   padding: 28px 32px 36px;
-  background-image: radial-gradient(circle at 0% 0%, rgba(255, 255, 255, 0.6), transparent 60%);
+  background-image: radial-gradient(
+    circle at 0% 0%,
+    rgba(212, 168, 83, 0.04),
+    transparent 60%
+  );
 }
 .bx-canvas {
   position: relative;
@@ -124,7 +148,7 @@
   font-family: var(--bx-font-mono);
   font-size: 0.68rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   font-weight: 600;
   color: var(--bx-mist);
 }
@@ -143,14 +167,14 @@
   font-family: var(--bx-font-mono);
   font-size: 0.66rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   font-weight: 600;
   color: var(--bx-maroon);
 }
 
 .bx-edge {
   fill: none;
-  stroke: var(--bx-walnut-soft);
+  stroke: #353545;
   stroke-width: 2;
   stroke-linejoin: round;
 }
@@ -162,42 +186,45 @@
   background: var(--bx-card);
   border: 1px solid var(--bx-walnut-soft);
   border-radius: 10px;
-  box-shadow: 0 1px 2px rgba(33, 29, 24, 0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   display: flex;
   flex-direction: column;
   justify-content: center;
   padding: 0 12px;
-  transition: box-shadow 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
 }
 .bx-card-clickable {
   cursor: pointer;
 }
 .bx-card-clickable:hover {
-  border-color: var(--bx-felt);
-  box-shadow: 0 6px 16px rgba(43, 93, 79, 0.16);
+  border-color: var(--bx-brass);
+  box-shadow: 0 6px 16px rgba(212, 168, 83, 0.15);
   transform: translateY(-1px);
 }
 .bx-card-clickable:focus-visible {
-  outline: 2px solid var(--bx-felt);
+  outline: 2px solid var(--bx-brass);
   outline-offset: 2px;
 }
 .bx-card.bx-badge-ready {
-  border-color: var(--bx-felt);
+  border-color: rgba(76, 175, 80, 0.5);
 }
 .bx-card.bx-badge-complete {
-  border-color: var(--bx-brass-soft);
+  border-color: var(--bx-walnut-soft);
 }
 .bx-card.bx-badge-bye,
 .bx-card.bx-badge-skipped {
   border-style: dashed;
-  opacity: 0.72;
+  opacity: 0.6;
 }
 
 .bx-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 0;
+  padding: 6px 0;
   min-width: 0;
 }
 .bx-row-empty {
@@ -206,7 +233,7 @@
 }
 .bx-row-winner .bx-name {
   font-weight: 700;
-  color: var(--bx-felt);
+  color: var(--bx-brass);
 }
 .bx-seed {
   flex: 0 0 auto;
@@ -221,7 +248,7 @@
   font-family: var(--bx-font-mono);
   font-size: 0.6rem;
   font-weight: 600;
-  color: var(--bx-walnut);
+  color: var(--bx-brass);
 }
 .bx-seed:empty {
   visibility: hidden;
@@ -243,7 +270,7 @@
 .bx-divider {
   height: 1px;
   background: var(--bx-walnut-soft);
-  opacity: 0.5;
+  opacity: 0.6;
   margin: 0 -12px;
 }
 
@@ -266,22 +293,21 @@
 }
 .bx-badge-complete.bx-status-tag {
   color: var(--bx-brass);
-  border: 1px solid var(--bx-brass-soft);
+  border: 1px solid var(--bx-brass);
 }
 .bx-badge-bye.bx-status-tag {
   color: var(--bx-maroon);
-  border: 1px solid var(--bx-maroon-soft);
+  border: 1px solid var(--bx-maroon);
 }
 
-/* ── Score-entry modal ─────────────────────────────────────────────────────
-   A fixed-height card layout means expanding a match's score form can't
-   nudge any other card in the bracket — so results are entered in a modal,
-   not inline. */
+/* ── Score-entry modal ───────────────────────────────────────────────────── */
 
 .bx-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(33, 29, 24, 0.5);
+  background: rgba(10, 10, 15, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -290,12 +316,13 @@
   animation: bx-fade-in 0.15s ease;
 }
 .bx-modal {
-  background: var(--bx-card);
-  border-radius: 14px;
-  padding: 22px 24px 24px;
+  background: #13131a;
+  border: 1px solid var(--bx-walnut-soft);
+  border-radius: 16px;
+  padding: 24px 26px 26px;
   width: 100%;
-  max-width: 420px;
-  box-shadow: 0 24px 64px rgba(33, 29, 24, 0.3);
+  max-width: 440px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
   animation: bx-modal-in 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 @keyframes bx-fade-in {
@@ -313,20 +340,21 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 14px;
-  padding-bottom: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
   border-bottom: 1px solid var(--bx-walnut-soft);
 }
 .bx-modal-title {
   font-family: var(--bx-font-display);
-  font-weight: 600;
-  font-size: 1.08rem;
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--bx-ink);
 }
 .bx-modal-subtitle {
   font-family: var(--bx-font-mono);
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--bx-mist);
   margin-top: 4px;
 }
@@ -337,38 +365,45 @@
   color: var(--bx-mist);
   cursor: pointer;
   line-height: 1;
-  padding: 4px;
+  padding: 6px;
   border-radius: 6px;
+  transition: all 0.2s ease;
 }
 .bx-modal-close:hover {
   color: var(--bx-ink);
-  background: var(--bx-ivory);
+  background: var(--bx-walnut-soft);
 }
 .bx-modal-hint {
-  color: var(--bx-walnut);
-  margin: 0 0 12px;
+  color: var(--bx-mist);
+  margin: 0 0 16px;
   font-size: 0.88rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 .bx-modal-buttons {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
+
 .bx-modal .btn-primary {
-  background: var(--bx-felt);
-  border-color: var(--bx-felt);
+  background: var(--bx-ink);
+  color: #13131a;
+  border-color: var(--bx-ink);
 }
 .bx-modal .btn-primary:hover:not(:disabled) {
-  background: #234c41;
+  background: #ffffff;
 }
+
 .bx-modal .btn-secondary {
   background: var(--bx-card);
   border: 1px solid var(--bx-walnut-soft);
   color: var(--bx-ink);
 }
 .bx-modal .btn-secondary:hover:not(:disabled) {
-  border-color: var(--bx-felt);
-  color: var(--bx-felt);
+  border-color: var(--bx-brass);
+  color: var(--bx-brass);
+  background: rgba(212, 168, 83, 0.05);
 }
 
 .bx-board-table {
@@ -379,26 +414,35 @@
 .bx-board-table th {
   text-align: left;
   font-family: var(--bx-font-mono);
-  font-size: 0.64rem;
+  font-size: 0.65rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--bx-mist);
   font-weight: 600;
-  padding: 4px 6px;
+  padding: 6px 8px;
 }
 .bx-board-table td {
-  padding: 6px;
+  padding: 8px;
   text-align: left;
   border-top: 1px solid var(--bx-walnut-soft);
 }
 .bx-board-table select {
   font-family: var(--bx-font-mono);
   font-size: 0.82rem;
+  background: #13131a;
+  color: var(--bx-ink);
+  border: 1px solid var(--bx-walnut-soft);
+  border-radius: 6px;
+  padding: 4px 6px;
 }
+.bx-board-table select:focus {
+  border-color: var(--bx-brass);
+}
+
 .bx-tiebreak {
-  margin-top: 10px;
-  padding: 10px 12px;
-  background: var(--bx-maroon-soft);
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: rgba(244, 67, 54, 0.1);
   border-radius: 8px;
-  border: 1px solid #e6c9c4;
+  border: 1px solid rgba(244, 67, 54, 0.3);
 }

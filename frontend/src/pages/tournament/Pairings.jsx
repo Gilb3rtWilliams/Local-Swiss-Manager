@@ -10,12 +10,6 @@ export default function Pairings() {
   const isTeam = t.format === "team";
   const isBughouse = t.variant === "bughouse";
 
-  // Mirrors the same "decisive board" detection PairingsTeam.jsx uses to
-  // lock the other board — kept in sync deliberately: once one board in a
-  // Bughouse match has a decisive result, the other board's input
-  // disappears entirely (it "doesn't count"), so it must also stop being
-  // counted here, or the submit button waits forever for a result that
-  // the UI no longer gives any way to enter.
   const DECISIVE_RESULTS = new Set(["1-0", "0-1", "1F-0F", "0F-1F"]);
   function boardsNeedingDecision(p) {
     const real = p.boards.filter((b) => !b.sitOut);
@@ -38,12 +32,35 @@ export default function Pairings() {
 
   if (!t.currentPairings) {
     return (
-      <div className="card">
-        <p className="muted">No round is currently open.</p>
+      <div
+        style={{
+          background: "#13131a",
+          border: "1px solid #252532",
+          borderRadius: 12,
+          padding: 40,
+          textAlign: "center",
+          color: "#8a8a9a",
+          fontFamily: "'SF Mono', Monaco, monospace",
+          fontSize: 14,
+        }}
+      >
+        <p style={{ margin: "0 0 16px 0" }}>No round is currently open.</p>
         <button
-          className="btn-primary"
-          style={{ marginTop: 10 }}
+          type="button"
           onClick={() => navigate(`/tournament/${t.id}/overview`)}
+          style={{
+            background: "#252532",
+            border: "1px solid #353545",
+            color: "#e8e8e8",
+            fontSize: 11,
+            fontWeight: 600,
+            letterSpacing: "0.05em",
+            padding: "10px 18px",
+            borderRadius: 8,
+            cursor: "pointer",
+            textTransform: "uppercase",
+            fontFamily: "inherit",
+          }}
         >
           Go generate the next round →
         </button>
@@ -123,17 +140,112 @@ export default function Pairings() {
     }
   }
 
+  const inputStyle = {
+    background: "#1a1a24",
+    border: "1px solid #353545",
+    color: "#e8e8e8",
+    padding: "10px 12px",
+    borderRadius: 8,
+    fontFamily: "inherit",
+    fontSize: 12,
+    outline: "none",
+    width: "100%",
+    boxSizing: "border-box",
+  };
+
+  const btnStyle = (disabled) => ({
+    background: disabled ? "#1a1a24" : "#252532",
+    border: `1px solid ${disabled ? "#252532" : "#353545"}`,
+    color: disabled ? "#6b6b7b" : "#e8e8e8",
+    fontSize: 11,
+    fontWeight: 600,
+    letterSpacing: "0.05em",
+    padding: "10px 18px",
+    borderRadius: 8,
+    cursor: disabled ? "not-allowed" : "pointer",
+    textTransform: "uppercase",
+    fontFamily: "inherit",
+    transition: "all 0.2s ease",
+  });
+
   return (
-    <div>
-      <div className="card">
-        <div className="section-header">
-          <h2>Round {t.currentRound} Pairings</h2>
-          <span className="round-badge">
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "24px",
+        fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
+        color: "#e8e8e8",
+        background:
+          "radial-gradient(circle at 50% 0%, #1f1f2e 0%, transparent 70%)",
+        padding: "8px 0",
+        borderRadius: "16px",
+      }}
+    >
+      <div
+        style={{
+          background: "#13131a",
+          border: "1px solid #252532",
+          borderRadius: 12,
+          padding: "24px",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 24,
+            borderBottom: "1px solid #252532",
+            paddingBottom: 12,
+            flexWrap: "wrap",
+            gap: 12,
+          }}
+        >
+          <h2
+            style={{
+              fontSize: 16,
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "#e8e8e8",
+              margin: 0,
+            }}
+          >
+            Round {t.currentRound} Pairings
+          </h2>
+          <span
+            style={{
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              padding: "4px 8px",
+              borderRadius: 4,
+              background: "#252532",
+              color: "#d4a853",
+              border: "1px solid #353545",
+            }}
+          >
             Round {t.currentRound} / {t.totalRounds}
           </span>
         </div>
 
-        {error && <div className="banner-error">{error}</div>}
+        {error && (
+          <div
+            style={{
+              background: "rgba(255, 107, 107, 0.1)",
+              border: "1px solid rgba(255, 107, 107, 0.3)",
+              color: "#ff6b6b",
+              padding: "12px 16px",
+              borderRadius: 8,
+              marginBottom: 20,
+              fontSize: 12,
+            }}
+          >
+            {error}
+          </div>
+        )}
 
         {isTeam ? (
           <PairingsTeam
@@ -150,37 +262,73 @@ export default function Pairings() {
           />
         )}
 
-        <div style={{ marginTop: 16 }}>
+        <div style={{ marginTop: 24 }}>
           <button
-            className="btn-primary"
+            type="button"
             disabled={!allSet || busy}
             onClick={handleSubmitResults}
+            style={btnStyle(!allSet || busy)}
           >
             {busy
-              ? "Submitting…"
+              ? "SUBMITTING…"
               : t.currentRound === t.totalRounds
-                ? "Finish Tournament"
-                : "Submit & Pair Next Round"}
+                ? "FINISH TOURNAMENT"
+                : "SUBMIT & PAIR NEXT ROUND"}
           </button>
         </div>
       </div>
 
       {t.currentRound <= 1 && t.status !== "finished" && (
-        <div className="card">
+        <div
+          style={{
+            background: "#13131a",
+            border: "1px solid #252532",
+            borderRadius: 12,
+            padding: "24px",
+          }}
+        >
           <div
-            className="section-header"
-            style={{ cursor: "pointer" }}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              cursor: "pointer",
+              marginBottom: lateOpen ? 20 : 0,
+              borderBottom: lateOpen ? "1px solid #252532" : "none",
+              paddingBottom: lateOpen ? 12 : 0,
+            }}
             onClick={() => setLateOpen((o) => !o)}
           >
-            <h2 style={{ color: "var(--muted)", fontSize: "1rem" }}>
+            <h2
+              style={{
+                color: "#8a8a9a",
+                fontSize: 14,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                margin: 0,
+              }}
+            >
               Late Registration
             </h2>
             <button
               type="button"
-              className="btn-secondary btn-sm"
               onClick={(e) => {
                 e.stopPropagation();
                 setLateOpen((o) => !o);
+              }}
+              style={{
+                background: "#252532",
+                border: "1px solid #353545",
+                color: "#e8e8e8",
+                fontSize: 10,
+                fontWeight: 600,
+                letterSpacing: "0.05em",
+                padding: "6px 12px",
+                borderRadius: 6,
+                cursor: "pointer",
+                textTransform: "uppercase",
+                fontFamily: "inherit",
               }}
             >
               {lateOpen ? "− Late Registration" : "+ Late Registration"}
@@ -189,18 +337,31 @@ export default function Pairings() {
           {lateOpen && (
             <form onSubmit={handleAddLate}>
               <p
-                className="muted"
-                style={{ marginBottom: 12, fontSize: "0.88rem" }}
+                style={{
+                  color: "#8a8a9a",
+                  fontSize: 12,
+                  lineHeight: 1.5,
+                  marginTop: 0,
+                  marginBottom: 16,
+                }}
               >
                 Add a competitor who missed the start. They receive a BYE (+1)
                 if Round 1 is already open, and join from the next round onward.
               </p>
-              <div className="player-row" style={{ marginBottom: 10 }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+                  gap: 12,
+                  marginBottom: 16,
+                }}
+              >
                 <input
                   type="text"
                   placeholder="Player name"
                   value={lateName}
                   onChange={(e) => setLateName(e.target.value)}
+                  style={inputStyle}
                 />
                 <input
                   type="number"
@@ -209,11 +370,13 @@ export default function Pairings() {
                   max="3500"
                   value={lateRating}
                   onChange={(e) => setLateRating(e.target.value)}
+                  style={inputStyle}
                 />
                 {isTeam && (
                   <select
                     value={lateTeam}
                     onChange={(e) => setLateTeam(e.target.value)}
+                    style={inputStyle}
                   >
                     <option value="">Choose team…</option>
                     {t.teams.map((team) => (
@@ -224,9 +387,32 @@ export default function Pairings() {
                   </select>
                 )}
               </div>
-              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                <button className="btn-secondary">Add Late Joiner</button>
-                {lateError && <span className="inline-error">{lateError}</span>}
+              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                <button
+                  type="submit"
+                  style={{
+                    background: "#252532",
+                    border: "1px solid #353545",
+                    color: "#e8e8e8",
+                    fontSize: 11,
+                    fontWeight: 600,
+                    letterSpacing: "0.05em",
+                    padding: "10px 18px",
+                    borderRadius: 8,
+                    cursor: "pointer",
+                    textTransform: "uppercase",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  Add Late Joiner
+                </button>
+                {lateError && (
+                  <span
+                    style={{ color: "#ff6b6b", fontSize: 11, fontWeight: 600 }}
+                  >
+                    {lateError}
+                  </span>
+                )}
               </div>
             </form>
           )}

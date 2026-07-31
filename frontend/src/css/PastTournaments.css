@@ -1,33 +1,33 @@
 /* ── Past Tournaments page: token system ──────────────────────────────────
-   Same "hall" material language as the rest of the app. Self-contained
-   since this is a standalone public route, same pattern as Register.jsx /
-   PublicResults.jsx.
+   Dark slate glassmorphism, glowing gold accents, and monospaced typography.
+   Self-contained scoped style rules for public tournament listings.
 ─────────────────────────────────────────────────────────────────────────── */
 
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Cascadia+Code:wght@400;500;600;700&display=swap");
 
 .pt-root {
-  --ink: #1c231f;
-  --parchment: #f4efe2;
-  --felt: #24483a;
-  --felt-light: #3a6b53;
-  --walnut: #402a1f;
-  --brass: #b8863a;
-  --claret: #7c3130;
+  --pt-bg: #1f1f2e;
+  --pt-card: rgba(19, 19, 26, 0.85);
+  --pt-border: #252532;
+  --pt-text: #e8e8e8;
+  --pt-muted: #8a8a9a;
+  --pt-accent: #d4a853;
+  --pt-active: #4caf50;
+  --pt-error: #f44336;
 
   position: relative;
   isolation: isolate;
   min-height: 100vh;
-  color: var(--ink);
-  font-family: "Inter", system-ui, sans-serif;
+  color: var(--pt-text);
+  font-family: var(--font-mono, "SF Mono", Monaco, "Cascadia Code", monospace);
   padding-bottom: 60px;
 }
 
 .pt-root h1,
 .pt-root h2,
 .pt-root h3 {
-  font-family: "Fraunces", Georgia, serif;
-  letter-spacing: -0.01em;
+  font-family: inherit;
+  letter-spacing: -0.02em;
 }
 
 /* ── Ambient background ───────────────────────────────────────────────── */
@@ -36,37 +36,42 @@
   inset: 0;
   z-index: -2;
   overflow: hidden;
-  background: var(--walnut);
+  background: var(--pt-bg);
 }
+
 .pt-bg-scene {
   position: absolute;
   inset: 0;
   opacity: 0;
 }
+
 .pt-bg-scene:nth-child(1) {
   background: radial-gradient(
     120% 90% at 15% 10%,
-    #5c3c28 0%,
-    #402a1f 55%,
-    #241811 100%
+    #2a2a3c 0%,
+    #1f1f2e 55%,
+    #13131a 100%
   );
 }
+
 .pt-bg-scene:nth-child(2) {
   background: radial-gradient(
     120% 90% at 85% 15%,
-    #2f5a45 0%,
-    #24483a 55%,
-    #142720 100%
+    #3a2e1e 0%,
+    #1f1f2e 55%,
+    #13131a 100%
   );
 }
+
 .pt-bg-scene:nth-child(3) {
   background: radial-gradient(
     120% 90% at 50% 90%,
-    #8a6a34 0%,
-    #4a3820 55%,
-    #241811 100%
+    #2d2517 0%,
+    #1b1b26 55%,
+    #0d0d12 100%
   );
 }
+
 @media (prefers-reduced-motion: no-preference) {
   .pt-bg-scene {
     animation: ptCycle 24s infinite;
@@ -81,11 +86,13 @@
     animation-delay: 16s;
   }
 }
+
 @media (prefers-reduced-motion: reduce) {
   .pt-bg-scene:nth-child(1) {
     opacity: 1;
   }
 }
+
 @keyframes ptCycle {
   0% {
     opacity: 0;
@@ -110,136 +117,168 @@
   margin: 0 auto;
   padding: 56px 24px 0;
 }
+
 .pt-eyebrow {
-  font-family: "IBM Plex Mono", monospace;
+  display: inline-block;
   font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--brass);
+  color: var(--pt-accent);
+  background: rgba(212, 168, 83, 0.1);
+  border: 1px solid rgba(212, 168, 83, 0.3);
+  border-radius: 999px;
+  padding: 4px 12px;
+  margin-bottom: 12px;
 }
+
 .pt-title {
-  color: #fbf7ee;
+  color: var(--pt-text);
   font-size: clamp(1.7rem, 4vw, 2.4rem);
-  margin: 6px 0 8px;
+  margin: 0 0 8px;
+  font-weight: 700;
 }
+
 .pt-sub {
-  color: rgba(251, 247, 238, 0.78);
-  font-size: 0.96rem;
+  color: var(--pt-muted);
+  font-size: 0.95rem;
   max-width: 560px;
   margin: 0 0 32px;
+  line-height: 1.5;
 }
+
 .pt-meta {
-  color: rgba(251, 247, 238, 0.7);
+  color: var(--pt-muted);
 }
+
 .pt-error {
-  background: rgba(124, 49, 48, 0.18);
-  border: 1px solid rgba(124, 49, 48, 0.4);
-  color: #ffd7cf;
+  background: rgba(244, 67, 54, 0.1);
+  border: 1px solid rgba(244, 67, 54, 0.3);
+  color: var(--pt-error);
   border-radius: 10px;
   padding: 12px 16px;
   margin-bottom: 20px;
+  font-size: 0.9rem;
 }
 
 .pt-empty {
-  background: rgba(244, 239, 226, 0.16);
-  border: 1px solid rgba(244, 239, 226, 0.28);
+  background: var(--pt-card);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--pt-border);
   border-radius: 14px;
   padding: 50px 24px;
   text-align: center;
-  color: #fbf7ee;
+  color: var(--pt-text);
 }
+
 .pt-empty-glyph {
   font-size: 2rem;
   margin-bottom: 8px;
-  opacity: 0.8;
+  color: var(--pt-accent);
 }
+
 .pt-empty p {
-  color: rgba(251, 247, 238, 0.72);
+  color: var(--pt-muted);
   margin: 6px 0 0;
 }
 
 /* ── Grid ─────────────────────────────────────────────────────────────── */
 .pt-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
 }
 
 .pt-card {
-  background: rgba(244, 239, 226, 0.22);
+  background: var(--pt-card);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(244, 239, 226, 0.35);
-  box-shadow: 0 12px 30px rgba(20, 15, 10, 0.18);
+  border: 1px solid var(--pt-border);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
   border-radius: 14px;
-  padding: 18px 20px;
+  padding: 20px;
   cursor: pointer;
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease,
-    border-color 0.15s ease;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
 }
+
 .pt-card:hover {
   transform: translateY(-2px);
-  border-color: var(--brass);
-  box-shadow: 0 16px 36px rgba(20, 15, 10, 0.26);
+  border-color: var(--pt-accent);
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.5),
+    0 0 15px rgba(212, 168, 83, 0.15);
 }
 
 .pt-card-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
+
 .pt-status {
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 0.66rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 2px 9px;
+  letter-spacing: 0.08em;
+  padding: 3px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(64, 42, 31, 0.25);
-  color: var(--walnut);
+  border: 1px solid var(--pt-border);
+  color: var(--pt-muted);
+  font-weight: 600;
 }
+
 .pt-status-finished {
-  background: var(--brass);
-  border-color: var(--brass);
-  color: #241811;
-  font-weight: 600;
+  background: rgba(212, 168, 83, 0.12);
+  border-color: rgba(212, 168, 83, 0.4);
+  color: var(--pt-accent);
 }
+
 .pt-status-active {
-  background: rgba(36, 72, 58, 0.14);
-  border-color: rgba(36, 72, 58, 0.4);
-  color: var(--felt);
-  font-weight: 600;
+  background: rgba(76, 175, 80, 0.12);
+  border-color: rgba(76, 175, 80, 0.4);
+  color: var(--pt-active);
 }
+
 .pt-system {
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 0.7rem;
-  color: #6b665a;
+  font-size: 0.72rem;
+  color: var(--pt-muted);
+  letter-spacing: 0.05em;
 }
 
 .pt-card-name {
-  font-size: 1.05rem;
-  margin: 0 0 8px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--pt-text);
+  margin: 0 0 10px;
+  line-height: 1.3;
 }
+
 .pt-card-meta {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   flex-wrap: wrap;
-  font-size: 0.8rem;
-  color: #5c5648;
-  margin-bottom: 8px;
+  font-size: 0.82rem;
+  color: var(--pt-muted);
+  margin-bottom: 12px;
 }
+
 .pt-card-progress {
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 0.76rem;
-  color: #6b665a;
+  font-size: 0.78rem;
+  color: var(--pt-muted);
+  margin-top: auto;
 }
+
 .pt-card-winner {
-  margin-top: 10px;
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--pt-border);
   font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--brass);
+  font-weight: 700;
+  color: var(--pt-accent);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }

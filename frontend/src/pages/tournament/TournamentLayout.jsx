@@ -8,7 +8,6 @@ import {
 } from "react-router-dom";
 import { api } from "../../api.js";
 import WinnerReveal from "../../components/WinnerReveal.jsx";
-import "../../css/TournamentLayout.css";
 import BackgroundSlideshow from "../../components/BackgroundSlideshow.jsx";
 
 function isElimination(t) {
@@ -21,11 +20,6 @@ function tabsFor(t) {
     { to: "overview", label: "Tournament" },
   ];
   if (isElimination(t)) {
-    // Elimination brackets pair themselves from the topology — there's no
-    // adaptive "current round" to show, and t.rounds never gets populated
-    // (results are recorded match-by-match, not round-by-round), so the
-    // Pairings and Round History tabs have nothing to show. The Bracket tab
-    // replaces both.
     tabs.push({ to: "module", label: "Bracket" });
   } else {
     tabs.push({ to: "pairings", label: "Pairings" });
@@ -67,52 +61,158 @@ export default function TournamentLayout() {
 
   if (error)
     return (
-      <div className="container tl-root">
-        <div className="banner-error">{error}</div>
+      <div
+        style={{
+          padding: "40px",
+          color: "#ff6b6b",
+          fontFamily: "'SF Mono', Monaco, monospace",
+          textAlign: "center",
+        }}
+      >
+        {error}
       </div>
     );
+
   if (!t)
     return (
-      <div className="container tl-root">
-        <p className="muted">Loading…</p>
+      <div
+        style={{
+          padding: "40px",
+          color: "#8a8a9a",
+          fontFamily: "'SF Mono', Monaco, monospace",
+          textAlign: "center",
+        }}
+      >
+        Loading…
       </div>
     );
 
   return (
-    <div className="container tl-root">
-      <div className="tl-bg" aria-hidden="true">
-        <div className="tl-bg-scene" />
-        <div className="tl-bg-scene" />
-        <div className="tl-bg-scene" />
-      </div>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "#0a0a0e",
+        color: "#e8e8e8",
+        fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {/* Ambient Background Layer */}
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background:
+            "radial-gradient(circle at 50% 0%, #1a1a2e 0%, transparent 60%), radial-gradient(circle at 100% 100%, #151520 0%, transparent 50%)",
+          zIndex: 0,
+          pointerEvents: "none",
+        }}
+      />
+      <BackgroundSlideshow />
 
-      <WinnerReveal t={t} />
+      <div
+        style={{
+          position: "relative",
+          zIndex: 1,
+          maxWidth: 1024,
+          margin: "0 auto",
+          padding: "40px 20px",
+        }}
+      >
+        <WinnerReveal t={t} />
 
-      <div className="tourney-header-row">
-        <div>
-          <h1 className="page-title">{t.name}</h1>
-          <p className="page-subtitle">
+        {/* Header Section */}
+        <div style={{ textAlign: "center", marginBottom: 40 }}>
+          <div
+            style={{
+              display: "inline-block",
+              border: "1px solid #353545",
+              padding: "6px 16px",
+              borderRadius: 20,
+              fontSize: 10,
+              fontWeight: 600,
+              letterSpacing: "0.15em",
+              textTransform: "uppercase",
+              color: "#8a8a9a",
+              marginBottom: 16,
+            }}
+          >
             {t.federation && `${t.federation} · `}
             {t.timeControl && `${t.timeControl} · `}
-            {t.format === "team" ? "Team" : "Individual"} tournament · Round{" "}
+            {t.format === "team" ? "Team" : "Individual"} · Round{" "}
             {t.currentRound}/{t.totalRounds} · {t.status}
-          </p>
+          </div>
+          <h1
+            style={{
+              fontSize: 32,
+              fontWeight: 800,
+              color: "#e8e8e8",
+              letterSpacing: "0.05em",
+              textTransform: "uppercase",
+              margin: 0,
+              textShadow: "0 2px 10px rgba(0,0,0,0.5)",
+            }}
+          >
+            {t.name}
+          </h1>
+        </div>
+
+        {/* Tabbed Navigation Control */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            flexWrap: "wrap",
+            gap: 8,
+            marginBottom: 40,
+            background: "#13131a",
+            padding: 8,
+            borderRadius: 16,
+            border: "1px solid #252532",
+            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4)",
+          }}
+        >
+          {tabsFor(t).map((tab) => (
+            <NavLink
+              key={tab.to}
+              to={`/tournament/${id}/${tab.to}`}
+              style={({ isActive }) => ({
+                padding: "10px 20px",
+                borderRadius: 10,
+                fontSize: 12,
+                fontWeight: 600,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                textDecoration: "none",
+                transition: "all 0.2s ease",
+                color: isActive ? "#fff" : "#8a8a9a",
+                background: isActive ? "#252532" : "transparent",
+                border: `1px solid ${isActive ? "#353545" : "transparent"}`,
+                boxShadow: isActive ? "0 2px 8px rgba(0,0,0,0.2)" : "none",
+              })}
+            >
+              {tab.label}
+            </NavLink>
+          ))}
+        </div>
+
+        {/* Content Outlet Container */}
+        <div
+          style={{
+            background: "rgba(19, 19, 26, 0.6)",
+            border: "1px solid #252532",
+            borderRadius: 16,
+            backdropFilter: "blur(10px)",
+            padding: "32px",
+          }}
+        >
+          <Outlet context={{ t, refresh }} />
         </div>
       </div>
-
-      <div className="sub-tabs">
-        {tabsFor(t).map((tab) => (
-          <NavLink
-            key={tab.to}
-            to={`/tournament/${id}/${tab.to}`}
-            className={({ isActive }) => `sub-tab ${isActive ? "active" : ""}`}
-          >
-            {tab.label}
-          </NavLink>
-        ))}
-      </div>
-
-      <Outlet context={{ t, refresh }} />
     </div>
   );
 }

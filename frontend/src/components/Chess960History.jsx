@@ -20,46 +20,121 @@ export default function Chess960History({
   if (!history || history.length === 0) return null;
 
   return (
-    <div className="card">
-      <div className="section-header">
-        <h2>{title}</h2>
+    <div
+      style={{
+        background: "#13131a",
+        border: "1px solid #252532",
+        borderRadius: 12,
+        padding: "24px",
+        fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          marginBottom: 20,
+          borderBottom: "1px solid #252532",
+          paddingBottom: 12,
+        }}
+      >
+        <h2
+          style={{
+            fontSize: 16,
+            fontWeight: 700,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: "#e8e8e8",
+            margin: 0,
+          }}
+        >
+          {title}
+        </h2>
       </div>
 
-      {/* Outer wrapper */}
-      <div className="c960-history-picker">
-        {/* Scroll container */}
-        <div className="c960-history-scroll">
-          {/* Track */}
-          <div className="c960-history-track">
-            {history.map((r) => (
+      {/* Scroll container */}
+      <div
+        style={{
+          display: "flex",
+          gap: 16,
+          overflowX: "auto",
+          paddingBottom: 16,
+          scrollbarWidth: "thin",
+          scrollbarColor: "#252532 transparent",
+        }}
+      >
+        {/* Track */}
+        {history.map((r) => {
+          const isActive = selectedRound === r.round;
+          return (
+            <div
+              key={r.round}
+              onClick={() => onSelectRound?.(r.round)}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 12,
+                background: isActive ? "#1a1a24" : "transparent",
+                border: `1px solid ${isActive ? "#5a5a6a" : "#252532"}`,
+                borderRadius: 10,
+                padding: 12,
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                flexShrink: 0,
+                boxShadow: isActive ? "0 4px 12px rgba(0,0,0,0.2)" : "none",
+              }}
+            >
+              {/* Card Header */}
               <div
-                key={r.round}
-                className={`c960-history-card ${
-                  selectedRound === r.round ? "active" : ""
-                }`}
-                onClick={() => onSelectRound?.(r.round)}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
               >
-                {/* Header */}
-                <div className="c960-card-header">
-                  <span className="c960-round-tag">ROUND {r.round}</span>
-
-                  <span className="c960-id-tag">#{r.chess960.id}</span>
-                </div>
-
-                {/* Chess board */}
-                <div className="c960-card-body">
-                  <ChessBoard
-                    backRank={r.chess960.backRank}
-                    size={size}
-                    theme={theme}
-                    pieceTheme={pieceTheme}
-                    compact={compact}
-                  />
-                </div>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: "0.08em",
+                    color: isActive ? "#d4a853" : "#6b6b7b",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  ROUND {r.round}
+                </span>
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: isActive ? "#e8e8e8" : "#8a8a9a",
+                  }}
+                >
+                  #{r.chess960.id}
+                </span>
               </div>
-            ))}
-          </div>
-        </div>
+
+              {/* Chess board */}
+              <div
+                style={{
+                  borderRadius: 6,
+                  overflow: "hidden",
+                  opacity: isActive ? 1 : 0.6,
+                  transition: "opacity 0.2s ease",
+                  border: "1px solid #1a1a24",
+                  pointerEvents: "none",
+                }}
+              >
+                <ChessBoard
+                  backRank={r.chess960.backRank}
+                  size={size}
+                  theme={theme}
+                  pieceTheme={pieceTheme}
+                  compact={compact}
+                />
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

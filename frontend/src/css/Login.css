@@ -1,19 +1,11 @@
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Cascadia+Code:wght@400;500;600;700&display=swap");
 
 .lg-root {
-  --ink: #1c231f;
-  --parchment: #f4efe2;
-  --felt: #24483a;
-  --felt-light: #3a6b53;
-  --walnut: #402a1f;
-  --brass: #b8863a;
-  --claret: #7c3130;
-
   position: relative;
   isolation: isolate;
   min-height: 100vh;
-  color: var(--ink);
-  font-family: "Inter", system-ui, sans-serif;
+  color: var(--text, #e8e8e8);
+  font-family: var(--font-mono, "SF Mono", Monaco, "Cascadia Code", monospace);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -21,44 +13,50 @@
 }
 
 .lg-root h1 {
-  font-family: "Fraunces", Georgia, serif;
-  letter-spacing: -0.01em;
+  font-family: inherit;
+  letter-spacing: -0.02em;
 }
 
+/* ─── Background & Ambient Light Animation ───────────────────────────── */
 .lg-bg {
   position: fixed;
   inset: 0;
   z-index: -2;
   overflow: hidden;
-  background: var(--walnut);
+  background: var(--bg, #1f1f2e);
 }
+
 .lg-bg-scene {
   position: absolute;
   inset: 0;
   opacity: 0;
 }
+
+/* Subtle dark slate & ambient gold glows */
 .lg-bg-scene:nth-child(1) {
   background: radial-gradient(
     120% 90% at 15% 10%,
-    #5c3c28 0%,
-    #402a1f 55%,
-    #241811 100%
+    #2a2a3c 0%,
+    #1f1f2e 55%,
+    #13131a 100%
   );
 }
+
 .lg-bg-scene:nth-child(2) {
   background: radial-gradient(
     120% 90% at 85% 15%,
-    #2f5a45 0%,
-    #24483a 55%,
-    #142720 100%
+    #3a2e1e 0%,
+    #1f1f2e 55%,
+    #13131a 100%
   );
 }
+
 .lg-bg-scene:nth-child(3) {
   background: radial-gradient(
     120% 90% at 50% 90%,
-    #8a6a34 0%,
-    #4a3820 55%,
-    #241811 100%
+    #2d2517 0%,
+    #1b1b26 55%,
+    #0d0d12 100%
   );
 }
 
@@ -76,11 +74,13 @@
     animation-delay: 16s;
   }
 }
+
 @media (prefers-reduced-motion: reduce) {
   .lg-bg-scene:nth-child(1) {
     opacity: 1;
   }
 }
+
 @keyframes lgCycle {
   0% {
     opacity: 0;
@@ -99,87 +99,111 @@
   }
 }
 
+/* ─── Login Card ─────────────────────────────────────────────────────── */
 .lg-card {
   width: 100%;
   max-width: 380px;
-  background: rgba(244, 239, 226, 0.92);
+  background: rgba(19, 19, 26, 0.85);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(244, 239, 226, 0.35);
-  box-shadow: 0 16px 40px rgba(20, 15, 10, 0.25);
+  border: 1px solid var(--border, #252532);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
   border-radius: 16px;
-  padding: 30px 32px;
+  padding: 32px;
 }
 
 .lg-eyebrow {
   display: inline-block;
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: var(--brass);
-  background: rgba(184, 134, 58, 0.14);
-  border: 1px solid rgba(184, 134, 58, 0.4);
+  letter-spacing: 0.12em;
+  color: var(--accent, #d4a853);
+  background: rgba(212, 168, 83, 0.1);
+  border: 1px solid rgba(212, 168, 83, 0.3);
   border-radius: 999px;
-  padding: 3px 12px;
-  margin-bottom: 10px;
+  padding: 4px 12px;
+  margin-bottom: 12px;
+  font-weight: 600;
 }
 
 .lg-title {
-  font-size: 1.5rem;
-  margin: 0 0 4px;
-}
-.lg-sub {
-  font-size: 0.85rem;
-  color: #6b665a;
-  margin: 0 0 22px;
+  font-size: 1.6rem;
+  margin: 0 0 6px;
+  color: var(--text, #e8e8e8);
+  letter-spacing: 0.02em;
 }
 
+.lg-sub {
+  font-size: 0.85rem;
+  color: var(--muted, #8a8a9a);
+  margin: 0 0 24px;
+  line-height: 1.4;
+}
+
+/* ─── Form Controls ──────────────────────────────────────────────────── */
 .lg-field {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  margin-bottom: 16px;
+  gap: 6px;
+  margin-bottom: 20px;
 }
+
 .lg-field span {
   font-size: 0.78rem;
   font-weight: 500;
-  color: #6b665a;
-}
-.lg-field input {
-  border: 1px solid #d9d2c0;
-  border-radius: 7px;
-  padding: 10px 12px;
-  font-size: 1rem;
+  color: var(--muted, #8a8a9a);
+  text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+
+.lg-field input {
+  background: var(--surface, #13131a);
+  border: 1px solid var(--border, #252532);
+  border-radius: 8px;
+  padding: 11px 14px;
+  font-size: 0.95rem;
+  color: var(--text, #e8e8e8);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
 .lg-field input:focus {
-  outline: 2px solid var(--felt);
-  outline-offset: 1px;
+  border-color: var(--accent, #d4a853);
 }
 
 .lg-error {
-  background: rgba(124, 49, 48, 0.1);
-  border: 1px solid rgba(124, 49, 48, 0.3);
-  color: var(--claret);
+  background: rgba(244, 67, 54, 0.1);
+  border: 1px solid rgba(244, 67, 54, 0.3);
+  color: var(--loss, #f44336);
   border-radius: 8px;
   padding: 10px 12px;
   font-size: 0.85rem;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .lg-submit {
   width: 100%;
-  background: var(--brass);
+  background: var(--accent, #d4a853);
   border: none;
-  color: #241811;
-  font-weight: 600;
-  padding: 11px;
+  color: #13131a;
+  font-weight: 700;
+  padding: 12px;
   border-radius: 8px;
   cursor: pointer;
   font-size: 0.95rem;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  letter-spacing: 0.02em;
 }
+
+.lg-submit:hover:not(:disabled) {
+  background: #e6bd6a;
+  transform: translateY(-1px);
+}
+
 .lg-submit:disabled {
-  filter: grayscale(0.4);
-  cursor: default;
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
 }

@@ -26,11 +26,6 @@ export default function Standings() {
     }
   }
 
-  // t.rounds is a Swiss/round-robin concept — bracket results are recorded
-  // match-by-match via submitBracketMatchResult(), which updates scores
-  // directly and never appends to t.rounds. Gating on t.rounds.length here
-  // would show "waiting for Round 1" forever, even after every match in the
-  // bracket has been decided.
   const hasResults = isElimination
     ? t.bracket &&
       t.bracket.matches.some(
@@ -43,54 +38,195 @@ export default function Standings() {
       ? "Standings will appear once the first bracket match is decided."
       : "Standings will appear once Round 1 results are submitted.";
     return (
-      <div className="card">
-        <p className="muted">{message}</p>
+      <div
+        style={{
+          background: "#13131a",
+          border: "1px solid #252532",
+          borderRadius: 12,
+          padding: 40,
+          textAlign: "center",
+          color: "#8a8a9a",
+          fontFamily: "'SF Mono', Monaco, monospace",
+          fontSize: 14,
+        }}
+      >
+        <p style={{ margin: 0 }}>{message}</p>
       </div>
     );
   }
 
   return (
-    <div>
-      <div className="section-header" style={{ marginBottom: 12 }}>
-        {isElimination ? (
-          <p className="muted" style={{ margin: 0 }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "24px",
+        fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
+        color: "#e8e8e8",
+        background:
+          "radial-gradient(circle at 50% 0%, #1f1f2e 0%, transparent 70%)",
+        padding: "8px 0",
+        borderRadius: "16px",
+      }}
+    >
+      {/* Top Bar with Export Action */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: isElimination ? "space-between" : "flex-end",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 16,
+          padding: "0 4px",
+        }}
+      >
+        {isElimination && (
+          <p
+            style={{
+              margin: 0,
+              color: "#8a8a9a",
+              fontSize: 12,
+              maxWidth: 600,
+              lineHeight: 1.5,
+            }}
+          >
             Reflects results recorded so far in the bracket — updated the moment
             each match is decided, independent of any other match. See the
             Bracket tab for who's still alive.
           </p>
-        ) : (
-          <span />
         )}
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            marginLeft: "auto",
+          }}
+        >
           <button
-            className="btn-secondary btn-sm"
+            type="button"
             disabled={exporting}
             onClick={handleExport}
+            style={{
+              background: "#252532",
+              border: "1px solid #353545",
+              color: "#e8e8e8",
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: "0.05em",
+              padding: "10px 18px",
+              borderRadius: 8,
+              cursor: exporting ? "not-allowed" : "pointer",
+              fontFamily: "inherit",
+              transition: "all 0.2s ease",
+              opacity: exporting ? 0.6 : 1,
+            }}
           >
-            {exporting ? "Exporting…" : "⬇ Download as Excel"}
+            {exporting ? "EXPORTING…" : "⬇ DOWNLOAD AS EXCEL"}
           </button>
-          {exportError && <span className="inline-error">{exportError}</span>}
+          {exportError && (
+            <span style={{ color: "#ff6b6b", fontSize: 11, fontWeight: 600 }}>
+              {exportError}
+            </span>
+          )}
         </div>
       </div>
 
-      <div className="two-col">
-        <div className="card">
-          <h2>Standings</h2>
+      {/* Main Tables Grid */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
+          gap: "24px",
+        }}
+      >
+        {/* Primary Standings Card */}
+        <div
+          style={{
+            background: "#13131a",
+            border: "1px solid #252532",
+            borderRadius: 12,
+            padding: "24px",
+            overflowX: "auto",
+          }}
+        >
+          <h2
+            style={{
+              fontSize: 16,
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "#e8e8e8",
+              marginTop: 0,
+              marginBottom: 20,
+              borderBottom: "1px solid #252532",
+              paddingBottom: 12,
+            }}
+          >
+            Standings
+          </h2>
           {isTeam && t.teamStandings ? (
             <TeamStandingsTable teamStandings={t.teamStandings} />
           ) : (
             <StandingsTable standings={t.standings} />
           )}
         </div>
-        <div className="card" style={{ overflowX: "auto" }}>
-          <h2>Cross Table</h2>
+
+        {/* Cross Table Card */}
+        <div
+          style={{
+            background: "#13131a",
+            border: "1px solid #252532",
+            borderRadius: 12,
+            padding: "24px",
+            overflowX: "auto",
+          }}
+        >
+          <h2
+            style={{
+              fontSize: 16,
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "#e8e8e8",
+              marginTop: 0,
+              marginBottom: 20,
+              borderBottom: "1px solid #252532",
+              paddingBottom: 12,
+            }}
+          >
+            Cross Table
+          </h2>
           <CrossTable crossTable={t.crossTable} />
         </div>
       </div>
 
+      {/* Individual Board Standings (Team Events Only) */}
       {isTeam && (
-        <div className="card">
-          <h2>Individual Board Standings</h2>
+        <div
+          style={{
+            background: "#13131a",
+            border: "1px solid #252532",
+            borderRadius: 12,
+            padding: "24px",
+            overflowX: "auto",
+          }}
+        >
+          <h2
+            style={{
+              fontSize: 16,
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "#e8e8e8",
+              marginTop: 0,
+              marginBottom: 20,
+              borderBottom: "1px solid #252532",
+              paddingBottom: 12,
+            }}
+          >
+            Individual Board Standings
+          </h2>
           <StandingsTable
             standings={t.standings}
             showTiebreaks={false}

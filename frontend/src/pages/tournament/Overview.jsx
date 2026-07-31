@@ -439,7 +439,7 @@ export default function Overview() {
   }
 
   return (
-    <div className="ov-root">
+    <div className="ov-root ambient-bg">
       <div className="card">
         <div className="section-header">
           <h2>Tournament Details</h2>
@@ -492,7 +492,7 @@ export default function Overview() {
         {error && <div className="banner-error">{error}</div>}
 
         {editOpen && (
-          <form onSubmit={handleSaveEdit} style={{ marginTop: 10 }}>
+          <form onSubmit={handleSaveEdit} style={{ marginTop: 14 }}>
             <div className="form-grid">
               <label className="field">
                 <span>Name</span>
@@ -886,7 +886,8 @@ export default function Overview() {
                 display: "flex",
                 gap: 10,
                 alignItems: "center",
-                marginTop: 14,
+                marginTop: 18,
+                flexWrap: "wrap",
               }}
             >
               <button className="btn-primary" disabled={editBusy}>
@@ -933,19 +934,12 @@ export default function Overview() {
               : "Enable a link players can use to register themselves, instead of typing every entry in by hand. Only available before Round 1 starts."}
           </p>
           {t.registrationOpen && registrationLink && (
-            <div style={{ display: "flex", gap: 8 }}>
+            <div className="share-link-row">
               <input
                 type="text"
                 readOnly
                 value={registrationLink}
                 onClick={(e) => e.target.select()}
-                style={{
-                  flex: 1,
-                  padding: "7px 10px",
-                  border: "1px solid #d9d2c0",
-                  borderRadius: 6,
-                  fontSize: "0.85rem",
-                }}
               />
               <button className="btn-secondary btn-sm" onClick={handleCopyLink}>
                 {copied ? "Copied ✓" : "Copy Link"}
@@ -985,19 +979,12 @@ export default function Overview() {
               : "Turn this on to share a read-only link where players and spectators can check pairings and standings themselves, any time during the event."}
         </p>
         {t.publicViewOpen && publicResultsLink && (
-          <div style={{ display: "flex", gap: 8 }}>
+          <div className="share-link-row">
             <input
               type="text"
               readOnly
               value={publicResultsLink}
               onClick={(e) => e.target.select()}
-              style={{
-                flex: 1,
-                padding: "7px 10px",
-                border: "1px solid #d9d2c0",
-                borderRadius: 6,
-                fontSize: "0.85rem",
-              }}
             />
             <button
               className="btn-secondary btn-sm"

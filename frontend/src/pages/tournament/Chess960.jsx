@@ -7,7 +7,6 @@ import {
   PIECE_THEMES,
   DEFAULT_PIECE_THEME,
 } from "../../components/chessThemes.js";
-import "../../css/Chess960.css";
 import Chess960History from "../../components/Chess960History.jsx";
 
 const THEME_STORAGE_KEY = "c960-board-theme";
@@ -18,15 +17,29 @@ function CopyFenButton({ fen }) {
   return (
     <button
       type="button"
-      className="btn-secondary btn-sm"
       onClick={() => {
         navigator.clipboard.writeText(fen).then(() => {
           setCopied(true);
           setTimeout(() => setCopied(false), 1500);
         });
       }}
+      style={{
+        background: "#252532",
+        border: "1px solid #353545",
+        color: "#e8e8e8",
+        fontSize: 11,
+        fontWeight: 600,
+        letterSpacing: "0.05em",
+        padding: "10px 18px",
+        borderRadius: 8,
+        cursor: "pointer",
+        textTransform: "uppercase",
+        transition: "all 0.2s ease",
+        whiteSpace: "nowrap",
+        fontFamily: "inherit",
+      }}
     >
-      {copied ? "Copied ✓" : "Copy FEN"}
+      {copied ? "COPIED ✓" : "COPY FEN"}
     </button>
   );
 }
@@ -72,8 +85,19 @@ export default function Chess960() {
 
   if (!t.chess960) {
     return (
-      <div className="card">
-        <p className="muted">This tournament isn't using Chess960.</p>
+      <div
+        style={{
+          background: "#13131a",
+          border: "1px solid #252532",
+          borderRadius: 12,
+          padding: 40,
+          textAlign: "center",
+          color: "#8a8a9a",
+          fontFamily: "'SF Mono', Monaco, monospace",
+          fontSize: 14,
+        }}
+      >
+        <p style={{ margin: 0 }}>This tournament isn't using Chess960.</p>
       </div>
     );
   }
@@ -92,17 +116,79 @@ export default function Chess960() {
     );
   }, [history]);
 
+  const selectStyle = {
+    background: "#1a1a24",
+    border: "1px solid #353545",
+    color: "#e8e8e8",
+    padding: "6px 12px",
+    borderRadius: 6,
+    fontFamily: "inherit",
+    fontSize: 12,
+    outline: "none",
+    cursor: "pointer",
+  };
+
   return (
-    <div className="c960-page">
-      <div className="card">
-        <div className="section-header">
-          <h2>Chess960 Starting Position</h2>
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "24px",
+        fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
+        color: "#e8e8e8",
+        background:
+          "radial-gradient(circle at 50% 0%, #1f1f2e 0%, transparent 70%)",
+        padding: "8px 0",
+        borderRadius: "16px",
+      }}
+    >
+      <div
+        style={{
+          background: "#13131a",
+          border: "1px solid #252532",
+          borderRadius: 12,
+          padding: "24px",
+        }}
+      >
+        {/* Header Section */}
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 24,
+            borderBottom: "1px solid #252532",
+            paddingBottom: 12,
+            gap: 16,
+          }}
+        >
+          <h2
+            style={{
+              fontSize: 16,
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "#e8e8e8",
+              margin: 0,
+            }}
+          >
+            Chess960 Starting Position
+          </h2>
+
+          <div
+            style={{
+              display: "flex",
+              gap: 10,
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
             <select
               value={theme}
               onChange={(e) => setTheme(e.target.value)}
               aria-label="Board theme"
-              style={{ width: "auto" }}
+              style={selectStyle}
             >
               {Object.entries(BOARD_THEMES).map(([key, th]) => (
                 <option key={key} value={key}>
@@ -114,7 +200,7 @@ export default function Chess960() {
               value={pieceTheme}
               onChange={(e) => setPieceTheme(e.target.value)}
               aria-label="Piece theme"
-              style={{ width: "auto" }}
+              style={selectStyle}
             >
               {Object.entries(PIECE_THEMES).map(([key, pt]) => (
                 <option key={key} value={key}>
@@ -123,7 +209,19 @@ export default function Chess960() {
               ))}
             </select>
             {current && (
-              <span className="round-badge">
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  padding: "4px 8px",
+                  borderRadius: 4,
+                  background: "#252532",
+                  color: "#d4a853",
+                  border: "1px solid #353545",
+                }}
+              >
                 Round {selectedRound ?? t.currentRound}
               </span>
             )}
@@ -131,43 +229,121 @@ export default function Chess960() {
         </div>
 
         {!current ? (
-          <p className="muted">
+          <p style={{ color: "#8a8a9a", fontSize: 14, margin: 0 }}>
             A fresh random position is drawn the moment Round 1 is generated —
             check back once pairings are up.
           </p>
         ) : (
-          <div className="c960-current-layout">
-            <ChessBoard
-              backRank={current.backRank}
-              size={460}
-              theme={theme}
-              pieceTheme={pieceTheme}
-            />
-            <div className="c960-meta">
-              <p className="c960-position-id">Position #{current.id}</p>
-              {current.id === 518 && (
-                <p className="c960-note">
-                  This round happens to have drawn the standard chess starting
-                  position — Chess960 includes it as one of its 960 legal
-                  arrangements.
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "32px",
+              alignItems: "flex-start",
+            }}
+          >
+            {/* Chessboard */}
+            <div
+              style={{
+                flexShrink: 0,
+                overflow: "hidden",
+                borderRadius: 8,
+                border: "1px solid #252532",
+              }}
+            >
+              <ChessBoard
+                backRank={current.backRank}
+                size={460}
+                theme={theme}
+                pieceTheme={pieceTheme}
+              />
+            </div>
+
+            {/* Meta Data & FEN */}
+            <div
+              style={{
+                flex: "1 1 300px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 16,
+              }}
+            >
+              <div>
+                <p
+                  style={{
+                    fontSize: 20,
+                    fontWeight: 700,
+                    color: "#e8e8e8",
+                    margin: "0 0 8px 0",
+                  }}
+                >
+                  Position #{current.id}
                 </p>
-              )}
-              <label className="field c960-fen-field">
-                <span>FEN</span>
-                <div className="c960-fen-row">
+                {current.id === 518 && (
+                  <p
+                    style={{
+                      color: "#d4a853",
+                      fontSize: 12,
+                      background: "rgba(212, 168, 83, 0.1)",
+                      padding: "8px 12px",
+                      borderRadius: 6,
+                      border: "1px solid rgba(212, 168, 83, 0.2)",
+                      margin: 0,
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    This round happens to have drawn the standard chess starting
+                    position — Chess960 includes it as one of its 960 legal
+                    arrangements.
+                  </p>
+                )}
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    color: "#8a8a9a",
+                  }}
+                >
+                  FEN String
+                </span>
+                <div style={{ display: "flex", gap: 8, alignItems: "stretch" }}>
                   <input
                     type="text"
                     readOnly
                     value={current.fen}
                     onClick={(e) => e.target.select()}
+                    style={{
+                      flex: 1,
+                      background: "#1a1a24",
+                      border: "1px solid #353545",
+                      color: "#e8e8e8",
+                      padding: "10px 12px",
+                      borderRadius: 8,
+                      fontFamily: "inherit",
+                      fontSize: 12,
+                      outline: "none",
+                    }}
                   />
                   <CopyFenButton fen={current.fen} />
                 </div>
-              </label>
-              <p className="hint">
-                Every board in Round {selectedRound ?? t.currentRound}
-                starts from this position — set boards up accordingly before
-                play begins.
+              </div>
+
+              <p
+                style={{
+                  color: "#6b6b7b",
+                  fontSize: 12,
+                  margin: 0,
+                  lineHeight: 1.5,
+                }}
+              >
+                Every board in Round {selectedRound ?? t.currentRound} starts
+                from this position — set boards up accordingly before play
+                begins.
               </p>
             </div>
           </div>

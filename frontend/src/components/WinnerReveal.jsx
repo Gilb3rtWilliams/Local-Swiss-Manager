@@ -10,20 +10,15 @@ const MEDALS = [
   { place: "3rd", cls: "wr-bronze", trophy: "🥉" },
 ];
 
-// Best-effort field access — standings/teamStandings shapes aren't fully
-// known here, so fall back gracefully rather than crash on a missing field.
 function scoreOf(c) {
   return c.score ?? c.points ?? c.pts ?? 0;
 }
 
-// Orchestrates the full "tournament just finished" celebration: a beat of
-// suspense, the winner's name landing with confetti + fireworks, then a
-// podium for the top 3. Owns its own timing/state — drop it in once and it
-// no-ops until t.status flips to "finished".
 export default function WinnerReveal({ t }) {
   const celebratedRef = useRef(false);
-  const [stage, setStage] = useState("idle"); // idle -> suspense -> reveal -> podium
+  const [stage, setStage] = useState("idle");
   const [dismissed, setDismissed] = useState(false);
+  const [triggerFlash, setTriggerFlash] = useState(false);
 
   useEffect(() => {
     if (t && t.status === "finished" && !celebratedRef.current) {
@@ -41,6 +36,7 @@ export default function WinnerReveal({ t }) {
     if (stage !== "suspense") return;
     const timer = setTimeout(() => {
       playFanfare();
+      setTriggerFlash(true);
       setStage("reveal");
     }, 1900);
     return () => clearTimeout(timer);
@@ -48,7 +44,7 @@ export default function WinnerReveal({ t }) {
 
   useEffect(() => {
     if (stage !== "reveal") return;
-    const timer = setTimeout(() => setStage("podium"), 1500);
+    const timer = setTimeout(() => setStage("podium"), 1600);
     return () => clearTimeout(timer);
   }, [stage]);
 
@@ -62,11 +58,13 @@ export default function WinnerReveal({ t }) {
 
   return (
     <>
-      {showEffects && <Confetti duration={20000} launchInterval={550} />}
-      {showEffects && <Fireworks duration={20000} launchInterval={550} />}
+      {showEffects && <Confetti duration={20000} />}
+      {showEffects && <Fireworks duration={20000} launchInterval={500} />}
 
       {!dismissed && (
-        <div className={`wr-overlay wr-stage-${stage}`}>
+        <div
+          className={`wr-overlay wr-stage-${stage} ${triggerFlash ? "wr-flash" : ""}`}
+        >
           {stage === "suspense" && (
             <div className="wr-suspense">
               <p className="wr-suspense-text">

@@ -7,10 +7,7 @@ export default function Navbar() {
   const navigate = useNavigate();
   const { authenticated, logout } = useAuth();
 
-  // Both the registration page and the public results/bracket view are
-  // public-facing — a prospective player or spectator shouldn't see admin
-  // controls, "Dashboard", "+ New Tournament", or a Log Out button for a
-  // session that isn't theirs.
+  // Hide Navbar on public-facing pages
   if (
     location.pathname === "/" ||
     location.pathname.startsWith("/register/") ||
