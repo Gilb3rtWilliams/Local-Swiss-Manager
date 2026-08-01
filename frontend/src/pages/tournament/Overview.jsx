@@ -1,20 +1,9 @@
 import { useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { api } from "../../api.js";
+import TournamentDetailsCard from "../../components/TournamentDetailsCard.jsx";
 import "../../css/Overview.css";
 
-const VARIANT_LABEL = {
-  standard: "Standard team match",
-  bughouse: "Bughouse",
-  league: "League (Team A vs Team B)",
-};
-const SYSTEM_LABEL = {
-  swiss: "Swiss",
-  round_robin: "Round Robin",
-  double_round_robin: "Double Round Robin",
-  single_elimination: "Single Elimination",
-  double_elimination: "Double Elimination",
-};
 const AVAILABLE_TIEBREAKS = [
   { id: "buchholz_cut1", label: "Buchholz Cut 1" },
   { id: "buchholz", label: "Buchholz" },
@@ -32,13 +21,14 @@ const SCORING_SYSTEMS = [
   { value: "3-1-0", label: "3-1-0" },
   { value: "double_round", label: "Double Round" },
 ];
+const FIDE_TITLES = ["", "GM", "IM", "FM", "CM", "WGM", "WIM", "WFM", "WCM"];
 
 let uidCounter = 0;
 function rowId() {
   return `row-${++uidCounter}`;
 }
 function emptyPlayer() {
-  return { key: rowId(), name: "", rating: "" };
+  return { key: rowId(), title: "", name: "", rating: "" };
 }
 function emptyTeam() {
   return { key: rowId(), name: "", players: [emptyPlayer(), emptyPlayer()] };
@@ -129,13 +119,16 @@ export default function Overview() {
     : null;
 
   function buildTeamRows() {
-    return t.teams.map((team) => ({
+    return (t.teams || []).map((team) => ({
       key: rowId(),
+      id: team.id,
       name: team.name,
-      players: t.players
+      players: (t.players || [])
         .filter((p) => p.teamId === team.id)
         .map((p) => ({
           key: rowId(),
+          id: p.id,
+          title: p.title || "",
           name: p.name,
           rating: p.rating ?? "",
         })),
@@ -170,8 +163,10 @@ export default function Overview() {
       setEditTeams(buildTeamRows());
     } else {
       setEditPlayers(
-        t.players.map((p) => ({
+        (t.players || []).map((p) => ({
           key: rowId(),
+          id: p.id,
+          title: p.title || "",
           name: p.name,
           rating: p.rating ?? "",
         })),
@@ -340,6 +335,7 @@ export default function Overview() {
             players: team.players
               .filter((p) => p.name.trim())
               .map((p) => ({
+                title: p.title ? p.title.trim() : null,
                 name: p.name.trim(),
                 rating: p.rating,
               })),
@@ -347,7 +343,33 @@ export default function Overview() {
         } else {
           updates.players = editPlayers
             .filter((p) => p.name.trim())
-            .map((p) => ({ name: p.name.trim(), rating: p.rating }));
+            .map((p) => ({
+              title: p.title ? p.title.trim() : null,
+              name: p.name.trim(),
+              rating: p.rating,
+            }));
+        }
+      } else {
+        if (isTeam) {
+          updates.playerEdits = editTeams.flatMap((team) =>
+            team.players
+              .filter((p) => p.id)
+              .map((p) => ({
+                id: p.id,
+                title: p.title ? p.title.trim() : null,
+                name: p.name.trim(),
+                rating: p.rating,
+              })),
+          );
+        } else {
+          updates.playerEdits = editPlayers
+            .filter((p) => p.id)
+            .map((p) => ({
+              id: p.id,
+              title: p.title ? p.title.trim() : null,
+              name: p.name.trim(),
+              rating: p.rating,
+            }));
         }
       }
 
@@ -441,58 +463,19 @@ export default function Overview() {
   return (
     <div className="ov-root ambient-bg">
       <div className="card">
-        <div className="section-header">
+        <div className="section-header" style={{ marginBottom: 16 }}>
           <h2>Tournament Details</h2>
           <button className="btn-secondary btn-sm" onClick={openEdit}>
             ✎ Edit Details
           </button>
         </div>
 
-        <div className="info-bar">
-          <div>
-            {isTeam ? "Teams" : "Players"}:{" "}
-            <span>{isTeam ? t.teams.length : t.players.length}</span>
-          </div>
-          <div>
-            System: <span>{SYSTEM_LABEL[t.system] || t.system}</span>
-          </div>
-          {isElimination ? (
-            <>
-              {t.bracket && (
-                <div>
-                  Bracket size: <span>{t.bracket.size}</span>
-                </div>
-              )}
-              {t.bracket?.champion && (
-                <div>
-                  Champion: <span>{t.bracket.champion.name}</span>
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              <div>
-                Total rounds: <span>{t.totalRounds}</span>
-              </div>
-              <div>
-                Current round: <span>{t.currentRound}</span>
-              </div>
-            </>
-          )}
-          <div>
-            Status: <span>{t.status}</span>
-          </div>
-          {isTeam && (
-            <div>
-              Variant: <span>{VARIANT_LABEL[t.variant] || t.variant}</span>
-            </div>
-          )}
-        </div>
+        <TournamentDetailsCard t={t} />
 
         {error && <div className="banner-error">{error}</div>}
 
         {editOpen && (
-          <form onSubmit={handleSaveEdit} style={{ marginTop: 14 }}>
+          <form onSubmit={handleSaveEdit} style={{ marginTop: 20 }}>
             <div className="form-grid">
               <label className="field">
                 <span>Name</span>
@@ -748,24 +731,36 @@ export default function Overview() {
                 )}
             </div>
 
-            {editableRoster && (
-              <div className="roster-editor">
-                <h3>Roster</h3>
-                {isTeam ? (
-                  <>
-                    {editTeams.map((team, teamIdx) => (
-                      <div key={team.key} className="team-box">
-                        <div className="team-header">
-                          <label className="field field-flex">
-                            <span>Team Name</span>
-                            <input
-                              type="text"
-                              value={team.name}
-                              onChange={(e) =>
-                                updateEditTeamName(teamIdx, e.target.value)
-                              }
-                            />
-                          </label>
+            <div className="roster-editor">
+              <h3>
+                Roster
+                {!editableRoster && (
+                  <span
+                    className="hint"
+                    style={{ marginLeft: 10, fontWeight: "normal" }}
+                  >
+                    (Tournament active: titles, names, &amp; ratings can be
+                    updated; starting ranks remain locked)
+                  </span>
+                )}
+              </h3>
+              {isTeam ? (
+                <>
+                  {editTeams.map((team, teamIdx) => (
+                    <div key={team.key} className="team-box">
+                      <div className="team-header">
+                        <label className="field field-flex">
+                          <span>Team Name</span>
+                          <input
+                            type="text"
+                            value={team.name}
+                            disabled={!editableRoster}
+                            onChange={(e) =>
+                              updateEditTeamName(teamIdx, e.target.value)
+                            }
+                          />
+                        </label>
+                        {editableRoster && (
                           <button
                             type="button"
                             className="btn-secondary btn-sm"
@@ -773,40 +768,64 @@ export default function Overview() {
                           >
                             Remove team
                           </button>
-                        </div>
-                        <div className="team-player-grid">
-                          {team.players.map((player, playerIdx) => (
-                            <div key={player.key} className="player-row">
-                              <label className="field">
-                                <span>Player</span>
-                                <input
-                                  type="text"
-                                  value={player.name}
-                                  onChange={(e) =>
-                                    updateEditTeamPlayer(
-                                      teamIdx,
-                                      playerIdx,
-                                      "name",
-                                      e.target.value,
-                                    )
-                                  }
-                                />
-                              </label>
-                              <label className="field">
-                                <span>Rating</span>
-                                <input
-                                  type="number"
-                                  value={player.rating}
-                                  onChange={(e) =>
-                                    updateEditTeamPlayer(
-                                      teamIdx,
-                                      playerIdx,
-                                      "rating",
-                                      e.target.value,
-                                    )
-                                  }
-                                />
-                              </label>
+                        )}
+                      </div>
+                      <div className="team-player-grid">
+                        {team.players.map((player, playerIdx) => (
+                          <div key={player.key} className="player-row">
+                            <label className="field field-title">
+                              <span>Title</span>
+                              <select
+                                value={player.title || ""}
+                                onChange={(e) =>
+                                  updateEditTeamPlayer(
+                                    teamIdx,
+                                    playerIdx,
+                                    "title",
+                                    e.target.value,
+                                  )
+                                }
+                              >
+                                {FIDE_TITLES.map((titleOpt) => (
+                                  <option key={titleOpt} value={titleOpt}>
+                                    {titleOpt || "-"}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+
+                            <label className="field field-name">
+                              <span>Player</span>
+                              <input
+                                type="text"
+                                value={player.name}
+                                onChange={(e) =>
+                                  updateEditTeamPlayer(
+                                    teamIdx,
+                                    playerIdx,
+                                    "name",
+                                    e.target.value,
+                                  )
+                                }
+                              />
+                            </label>
+
+                            <label className="field field-rating">
+                              <span>Rating</span>
+                              <input
+                                type="number"
+                                value={player.rating}
+                                onChange={(e) =>
+                                  updateEditTeamPlayer(
+                                    teamIdx,
+                                    playerIdx,
+                                    "rating",
+                                    e.target.value,
+                                  )
+                                }
+                              />
+                            </label>
+                            {editableRoster && (
                               <button
                                 type="button"
                                 className="btn-secondary btn-sm"
@@ -816,8 +835,10 @@ export default function Overview() {
                               >
                                 Remove
                               </button>
-                            </div>
-                          ))}
+                            )}
+                          </div>
+                        ))}
+                        {editableRoster && (
                           <button
                             type="button"
                             className="btn-primary btn-sm"
@@ -825,9 +846,11 @@ export default function Overview() {
                           >
                             Add player
                           </button>
-                        </div>
+                        )}
                       </div>
-                    ))}
+                    </div>
+                  ))}
+                  {editableRoster && (
                     <button
                       type="button"
                       className="btn-primary btn-sm"
@@ -835,31 +858,50 @@ export default function Overview() {
                     >
                       Add team
                     </button>
-                  </>
-                ) : (
-                  <>
-                    {editPlayers.map((player, idx) => (
-                      <div key={player.key} className="player-row">
-                        <label className="field">
-                          <span>Player</span>
-                          <input
-                            type="text"
-                            value={player.name}
-                            onChange={(e) =>
-                              updateEditPlayer(idx, "name", e.target.value)
-                            }
-                          />
-                        </label>
-                        <label className="field">
-                          <span>Rating</span>
-                          <input
-                            type="number"
-                            value={player.rating}
-                            onChange={(e) =>
-                              updateEditPlayer(idx, "rating", e.target.value)
-                            }
-                          />
-                        </label>
+                  )}
+                </>
+              ) : (
+                <>
+                  {editPlayers.map((player, idx) => (
+                    <div key={player.key} className="player-row">
+                      <label className="field field-title">
+                        <span>Title</span>
+                        <select
+                          value={player.title || ""}
+                          onChange={(e) =>
+                            updateEditPlayer(idx, "title", e.target.value)
+                          }
+                        >
+                          {FIDE_TITLES.map((titleOpt) => (
+                            <option key={titleOpt} value={titleOpt}>
+                              {titleOpt || "-"}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="field field-name">
+                        <span>Player Name</span>
+                        <input
+                          type="text"
+                          value={player.name}
+                          onChange={(e) =>
+                            updateEditPlayer(idx, "name", e.target.value)
+                          }
+                        />
+                      </label>
+
+                      <label className="field field-rating">
+                        <span>Rating</span>
+                        <input
+                          type="number"
+                          value={player.rating}
+                          onChange={(e) =>
+                            updateEditPlayer(idx, "rating", e.target.value)
+                          }
+                        />
+                      </label>
+                      {editableRoster && (
                         <button
                           type="button"
                           className="btn-secondary btn-sm"
@@ -867,8 +909,10 @@ export default function Overview() {
                         >
                           Remove
                         </button>
-                      </div>
-                    ))}
+                      )}
+                    </div>
+                  ))}
+                  {editableRoster && (
                     <button
                       type="button"
                       className="btn-primary btn-sm"
@@ -876,18 +920,17 @@ export default function Overview() {
                     >
                       Add player
                     </button>
-                  </>
-                )}
-              </div>
-            )}
+                  )}
+                </>
+              )}
+            </div>
 
             <div
               style={{
                 display: "flex",
                 gap: 10,
                 alignItems: "center",
-                marginTop: 18,
-                flexWrap: "wrap",
+                marginTop: 14,
               }}
             >
               <button className="btn-primary" disabled={editBusy}>
@@ -934,12 +977,19 @@ export default function Overview() {
               : "Enable a link players can use to register themselves, instead of typing every entry in by hand. Only available before Round 1 starts."}
           </p>
           {t.registrationOpen && registrationLink && (
-            <div className="share-link-row">
+            <div style={{ display: "flex", gap: 8 }}>
               <input
                 type="text"
                 readOnly
                 value={registrationLink}
                 onClick={(e) => e.target.select()}
+                style={{
+                  flex: 1,
+                  padding: "7px 10px",
+                  border: "1px solid #d9d2c0",
+                  borderRadius: 6,
+                  fontSize: "0.85rem",
+                }}
               />
               <button className="btn-secondary btn-sm" onClick={handleCopyLink}>
                 {copied ? "Copied ✓" : "Copy Link"}
@@ -979,12 +1029,19 @@ export default function Overview() {
               : "Turn this on to share a read-only link where players and spectators can check pairings and standings themselves, any time during the event."}
         </p>
         {t.publicViewOpen && publicResultsLink && (
-          <div className="share-link-row">
+          <div style={{ display: "flex", gap: 8 }}>
             <input
               type="text"
               readOnly
               value={publicResultsLink}
               onClick={(e) => e.target.select()}
+              style={{
+                flex: 1,
+                padding: "7px 10px",
+                border: "1px solid #d9d2c0",
+                borderRadius: 6,
+                fontSize: "0.85rem",
+              }}
             />
             <button
               className="btn-secondary btn-sm"

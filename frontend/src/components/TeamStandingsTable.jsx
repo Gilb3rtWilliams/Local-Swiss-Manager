@@ -16,7 +16,13 @@ export default function TeamStandingsTable({ teamStandings }) {
           <tr key={t.id}>
             <td className="rank-col">{i + 1}</td>
             <td className="player-name">{t.name}</td>
-            <td className="tiebreak-col">{t.playerCount}</td>
+            <td className="tiebreak-col">
+              {t.players?.length
+                ? t.players
+                    .map((p) => (p.title ? `${p.title} ${p.name}` : p.name))
+                    .join(", ")
+                : t.playerCount}
+            </td>
             <td className="score-col">{t.score}</td>
             <td className="tiebreak-col">{t.buchholz}</td>
             <td className="tiebreak-col">{t.sb}</td>

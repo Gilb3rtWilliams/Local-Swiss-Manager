@@ -4,6 +4,59 @@ export default function StartingRank() {
   const { t } = useOutletContext();
   const isTeam = t.format === "team";
 
+  const livePlayers = t.players || [];
+  const liveTeams = t.teams || [];
+
+  // Fail-safe player name resolver (ID match -> Rank match -> Snapshot fallback)
+  function resolvePlayerName(p) {
+    if (!p) return "";
+
+    if (p.id !== undefined && p.id !== null) {
+      const match = livePlayers.find((lp) => String(lp.id) === String(p.id));
+      if (match?.name) return match.name;
+    }
+
+    const rankVal = p.startingRank ?? p.rank;
+    if (rankVal !== undefined && rankVal !== null) {
+      const match = livePlayers.find(
+        (lp) => (lp.startingRank ?? lp.rank) === rankVal,
+      );
+      if (match?.name) return match.name;
+    }
+
+    return p.name || "";
+  }
+
+  // Fail-safe player title resolver
+  function resolvePlayerTitle(p) {
+    if (!p) return "";
+
+    if (p.id !== undefined && p.id !== null) {
+      const match = livePlayers.find((lp) => String(lp.id) === String(p.id));
+      if (match?.title) return match.title;
+    }
+
+    const rankVal = p.startingRank ?? p.rank;
+    if (rankVal !== undefined && rankVal !== null) {
+      const match = livePlayers.find(
+        (lp) => (lp.startingRank ?? lp.rank) === rankVal,
+      );
+      if (match?.title) return match.title;
+    }
+
+    return p.title || "";
+  }
+
+  // Fail-safe team name resolver
+  function resolveTeamName(team) {
+    if (!team) return "";
+    if (team.id !== undefined && team.id !== null) {
+      const match = liveTeams.find((lt) => String(lt.id) === String(team.id));
+      if (match?.name) return match.name;
+    }
+    return team.name || "";
+  }
+
   return (
     <div
       style={{
@@ -66,134 +119,160 @@ export default function StartingRank() {
           <div
             style={{ display: "flex", flexDirection: "column", gap: "20px" }}
           >
-            {t.startingRankList.map((team) => (
-              <div
-                key={team.id}
-                style={{
-                  background: "#181822",
-                  border: "1px solid #252532",
-                  borderRadius: 10,
-                  overflow: "hidden",
-                }}
-              >
-                {/* Team Header */}
+            {(t.startingRankList || []).map((team) => {
+              const teamName = resolveTeamName(team);
+
+              return (
                 <div
+                  key={team.id || team.rank || team.name}
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "12px 18px",
-                    background: "#13131a",
-                    borderBottom: "1px solid #252532",
+                    background: "#181822",
+                    border: "1px solid #252532",
+                    borderRadius: 10,
+                    overflow: "hidden",
                   }}
                 >
+                  {/* Team Header */}
                   <div
-                    style={{ display: "flex", alignItems: "center", gap: 12 }}
-                  >
-                    <span
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        letterSpacing: "0.08em",
-                        textTransform: "uppercase",
-                        padding: "4px 8px",
-                        borderRadius: 4,
-                        background: "#252532",
-                        color: "#d4a853",
-                        border: "1px solid #353545",
-                      }}
-                    >
-                      Seed {team.rank}
-                    </span>
-                    <span
-                      style={{
-                        fontWeight: 700,
-                        fontSize: 15,
-                        color: "#e8e8e8",
-                      }}
-                    >
-                      {team.name}
-                    </span>
-                  </div>
-                  <span
                     style={{
-                      fontSize: 11,
-                      color: "#8a8a9a",
-                      background: "transparent",
-                      border: "1px solid #252532",
-                      padding: "3px 8px",
-                      borderRadius: 4,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "12px 18px",
+                      background: "#13131a",
+                      borderBottom: "1px solid #252532",
                     }}
                   >
-                    avg {team.rating}
-                  </span>
-                </div>
-
-                {/* Team Players Roster */}
-                <div style={{ overflowX: "auto" }}>
-                  <table
-                    style={{
-                      width: "100%",
-                      borderCollapse: "collapse",
-                      textAlign: "left",
-                      fontSize: 12,
-                    }}
-                  >
-                    <thead>
-                      <tr
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 12 }}
+                    >
+                      <span
                         style={{
-                          borderBottom: "1px solid #252532",
-                          color: "#6b6b7b",
                           fontSize: 10,
-                          textTransform: "uppercase",
+                          fontWeight: 700,
                           letterSpacing: "0.08em",
+                          textTransform: "uppercase",
+                          padding: "4px 8px",
+                          borderRadius: 4,
+                          background: "#252532",
+                          color: "#d4a853",
+                          border: "1px solid #353545",
                         }}
                       >
-                        <th style={{ padding: "10px 18px", width: 60 }}>#</th>
-                        <th style={{ padding: "10px 18px" }}>Player</th>
-                        <th
-                          style={{ padding: "10px 18px", textAlign: "right" }}
-                        >
-                          Rating
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {team.players.map((p) => (
+                        Seed {team.rank}
+                      </span>
+                      <span
+                        style={{
+                          fontWeight: 700,
+                          fontSize: 15,
+                          color: "#e8e8e8",
+                        }}
+                      >
+                        {teamName}
+                      </span>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        color: "#8a8a9a",
+                        background: "transparent",
+                        border: "1px solid #252532",
+                        padding: "3px 8px",
+                        borderRadius: 4,
+                      }}
+                    >
+                      avg {team.rating}
+                    </span>
+                  </div>
+
+                  {/* Team Players Roster */}
+                  <div style={{ overflowX: "auto" }}>
+                    <table
+                      style={{
+                        width: "100%",
+                        borderCollapse: "collapse",
+                        textAlign: "left",
+                        fontSize: 12,
+                      }}
+                    >
+                      <thead>
                         <tr
-                          key={p.id}
-                          style={{ borderBottom: "1px solid #1f1f2a" }}
+                          style={{
+                            borderBottom: "1px solid #252532",
+                            color: "#6b6b7b",
+                            fontSize: 10,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.08em",
+                          }}
                         >
-                          <td
-                            style={{ padding: "10px 18px", color: "#6b6b7b" }}
-                          >
-                            {p.startingRank}
-                          </td>
-                          <td
-                            style={{
-                              padding: "10px 18px",
-                              fontWeight: 600,
-                              color: "#e8e8e8",
-                            }}
-                          >
-                            {p.name}
-                          </td>
-                          <td
+                          <th style={{ padding: "10px 18px", width: 60 }}>#</th>
+                          <th style={{ padding: "10px 18px" }}>Player</th>
+                          <th
                             style={{
                               padding: "10px 18px",
                               textAlign: "right",
-                              color: "#8a8a9a",
                             }}
                           >
-                            {p.rating}
-                          </td>
+                            Rating
+                          </th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {(team.players || []).map((p) => {
+                          const playerName = resolvePlayerName(p);
+                          const playerTitle = resolvePlayerTitle(p);
+
+                          return (
+                            <tr
+                              key={p.id || p.startingRank || p.name}
+                              style={{ borderBottom: "1px solid #1f1f2a" }}
+                            >
+                              <td
+                                style={{
+                                  padding: "10px 18px",
+                                  color: "#6b6b7b",
+                                }}
+                              >
+                                {p.startingRank}
+                              </td>
+                              <td
+                                style={{
+                                  padding: "10px 18px",
+                                  fontWeight: 600,
+                                  color: "#e8e8e8",
+                                }}
+                              >
+                                {playerTitle && (
+                                  <span
+                                    style={{
+                                      color: "#c25555",
+                                      marginRight: "6px",
+                                      fontWeight: 700,
+                                    }}
+                                  >
+                                    {playerTitle}
+                                  </span>
+                                )}
+                                {playerName}
+                              </td>
+                              <td
+                                style={{
+                                  padding: "10px 18px",
+                                  textAlign: "right",
+                                  color: "#8a8a9a",
+                                }}
+                              >
+                                {p.rating}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           /* Individual Players Starting Rank Table */
@@ -231,42 +310,61 @@ export default function StartingRank() {
                 </tr>
               </thead>
               <tbody>
-                {t.startingRankList.map((p) => (
-                  <tr key={p.id} style={{ borderBottom: "1px solid #1f1f2a" }}>
-                    <td style={{ padding: "12px 18px" }}>
-                      <span
+                {(t.startingRankList || []).map((p) => {
+                  const playerName = resolvePlayerName(p);
+                  const playerTitle = resolvePlayerTitle(p);
+
+                  return (
+                    <tr
+                      key={p.id || p.rank || p.name}
+                      style={{ borderBottom: "1px solid #1f1f2a" }}
+                    >
+                      <td style={{ padding: "12px 18px" }}>
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            color: "#d4a853",
+                            background: "#252532",
+                            padding: "3px 8px",
+                            borderRadius: 4,
+                          }}
+                        >
+                          #{p.rank}
+                        </span>
+                      </td>
+                      <td
                         style={{
-                          fontSize: 10,
-                          fontWeight: 700,
-                          color: "#d4a853",
-                          background: "#252532",
-                          padding: "3px 8px",
-                          borderRadius: 4,
+                          padding: "12px 18px",
+                          fontWeight: 600,
+                          color: "#e8e8e8",
                         }}
                       >
-                        #{p.rank}
-                      </span>
-                    </td>
-                    <td
-                      style={{
-                        padding: "12px 18px",
-                        fontWeight: 600,
-                        color: "#e8e8e8",
-                      }}
-                    >
-                      {p.name}
-                    </td>
-                    <td
-                      style={{
-                        padding: "12px 18px",
-                        textAlign: "right",
-                        color: "#8a8a9a",
-                      }}
-                    >
-                      {p.rating}
-                    </td>
-                  </tr>
-                ))}
+                        {playerTitle && (
+                          <span
+                            style={{
+                              color: "#c25555",
+                              marginRight: "6px",
+                              fontWeight: 700,
+                            }}
+                          >
+                            {playerTitle}
+                          </span>
+                        )}
+                        {playerName}
+                      </td>
+                      <td
+                        style={{
+                          padding: "12px 18px",
+                          textAlign: "right",
+                          color: "#8a8a9a",
+                        }}
+                      >
+                        {p.rating}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

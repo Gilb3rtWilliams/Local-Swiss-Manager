@@ -1,0 +1,215 @@
+/* ==========================================================================
+   TOURNAMENT DETAILS CARD (Dark Slate & Gold Theme)
+   Cohesive glassmorphic surfaces, crisp typography, and responsive panels.
+   ========================================================================== */
+
+@import url("https://fonts.googleapis.com/css2?family=Cascadia+Code:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap");
+
+.tdc-card {
+  --bg-dark: #13131a;
+  --card-bg: rgba(22, 22, 31, 0.75);
+  --card-border: #252532;
+  --panel-bg: rgba(26, 26, 36, 0.6);
+  --text-main: #e8e8e8;
+  --text-muted: #8a8a9a;
+  --accent-gold: #d4a853;
+  --font-mono: "Cascadia Code", "SF Mono", Monaco, monospace;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+
+  background: var(--card-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 24px;
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  margin-bottom: 24px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  box-sizing: border-box;
+}
+
+/* ── Header Area ──────────────────────────────────────────────────────── */
+.tdc-header {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.tdc-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.tdc-name {
+  font-family: var(--font-sans);
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: 0;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+/* ── Status Pill ──────────────────────────────────────────────────────── */
+.tdc-status {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--card-border);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.tdc-status-setup {
+  background: rgba(212, 168, 83, 0.12);
+  border-color: rgba(212, 168, 83, 0.35);
+  color: var(--accent-gold);
+}
+
+.tdc-status-active,
+.tdc-status-in_progress {
+  background: rgba(74, 222, 128, 0.12);
+  border-color: rgba(74, 222, 128, 0.35);
+  color: #4ade80;
+}
+
+.tdc-status-finished {
+  background: rgba(138, 138, 154, 0.12);
+  border-color: rgba(138, 138, 154, 0.3);
+  color: var(--text-muted);
+}
+
+/* ── Badges ───────────────────────────────────────────────────────────── */
+.tdc-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tdc-badge {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--card-border);
+  color: var(--text-main);
+}
+
+.tdc-badge-fide {
+  background: rgba(96, 165, 250, 0.12);
+  border-color: rgba(96, 165, 250, 0.35);
+  color: #60a5fa;
+}
+
+.tdc-badge-960 {
+  background: rgba(192, 132, 252, 0.12);
+  border-color: rgba(192, 132, 252, 0.35);
+  color: #c084fc;
+}
+
+.tdc-badge-test {
+  background: rgba(248, 113, 113, 0.12);
+  border-color: rgba(248, 113, 113, 0.35);
+  color: #f87171;
+}
+
+/* ── Grid Layout for Panels ───────────────────────────────────────────── */
+.tdc-panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+}
+
+.tdc-panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.tdc-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: rgba(19, 19, 26, 0.7);
+  border-bottom: 1px solid var(--card-border);
+}
+
+.tdc-panel-title {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent-gold);
+}
+
+.tdc-reserved-tag {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  background: rgba(212, 168, 83, 0.12);
+  color: var(--accent-gold);
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid rgba(212, 168, 83, 0.3);
+}
+
+.tdc-panel-body {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Field Labels & Values ────────────────────────────────────────────── */
+.tdc-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  font-size: 0.85rem;
+  gap: 12px;
+}
+
+.tdc-field-label {
+  color: var(--text-muted);
+  flex: 0 0 auto;
+}
+
+.tdc-field-value {
+  color: #ffffff;
+  font-weight: 500;
+  text-align: right;
+  word-break: break-word;
+}
+
+/* ── Responsive Stacking ──────────────────────────────────────────────── */
+@media (max-width: 560px) {
+  .tdc-card {
+    padding: 18px 16px;
+  }
+  .tdc-field {
+    flex-direction: column;
+    gap: 2px;
+  }
+  .tdc-field-value {
+    text-align: left;
+  }
+}

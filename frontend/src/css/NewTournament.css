@@ -15,6 +15,7 @@
   --nt-brass: #d4a853;
   --nt-felt: #4caf50;
   --nt-maroon: #f44336;
+  --nt-title-red: #c25555;
 
   position: relative;
   isolation: isolate;
@@ -475,6 +476,52 @@
   flex: 0 0 auto;
 }
 
+/* ── Name & Title Flex Container ──────────────────────────────────────── */
+.nt-roster-name-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+select.nt-roster-title {
+  flex: 0 0 75px;
+  padding: 7px 6px;
+  background: rgba(19, 19, 26, 0.6);
+  border: 1px solid var(--nt-border);
+  border-radius: 6px;
+  color: var(--nt-muted);
+  font-weight: 600;
+  text-align: center;
+  text-align-last: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+select.nt-roster-title:focus {
+  outline: none;
+  border-color: var(--nt-title-red);
+  box-shadow: 0 0 0 3px rgba(194, 85, 85, 0.18);
+}
+
+select.nt-roster-title.has-title {
+  font-weight: 700;
+  color: var(--nt-title-red);
+  border-color: rgba(194, 85, 85, 0.5);
+  background: rgba(194, 85, 85, 0.12);
+}
+
+select.nt-roster-title option {
+  background: var(--nt-card-solid);
+  color: var(--nt-text);
+  font-weight: 500;
+  text-align: left;
+}
+
+input.nt-roster-name {
+  flex: 1 1 auto;
+}
+
 .nt-roster-rating {
   text-align: center;
 }
@@ -627,5 +674,10 @@
   .nt-roster-legend {
     grid-template-columns: 28px 1fr 80px 30px;
     gap: 8px;
+  }
+
+  select.nt-roster-title {
+    flex: 0 0 65px;
+    padding: 7px 4px;
   }
 }

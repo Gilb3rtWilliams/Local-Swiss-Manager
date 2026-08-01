@@ -29,7 +29,7 @@ function rowId() {
 }
 
 function emptyPlayer() {
-  return { key: rowId(), name: "", rating: "" };
+  return { key: rowId(), title: "", name: "", rating: "" };
 }
 function emptyTeam() {
   return { key: rowId(), name: "", players: [emptyPlayer(), emptyPlayer()] };
@@ -73,6 +73,8 @@ const AVAILABLE_TIEBREAKS = [
   { id: "sonneborn_berger", label: "Sonneborn-Berger" },
   { id: "direct_encounter", label: "Direct Encounter" },
 ];
+
+const CHESS_TITLES = ["", "GM", "IM", "FM", "CM", "WGM", "WIM", "WFM", "WCM"];
 
 export default function NewTournament() {
   const navigate = useNavigate();
@@ -254,7 +256,11 @@ export default function NewTournament() {
           name: t.name.trim(),
           players: t.players
             .filter((p) => p.name.trim())
-            .map((p) => ({ name: p.name.trim(), rating: p.rating })),
+            .map((p) => ({
+              name: p.name.trim(),
+              title: p.title || null,
+              rating: p.rating,
+            })),
         }))
         .filter((t) => t.name);
       if (cleanTeams.length < 2) {
@@ -269,7 +275,11 @@ export default function NewTournament() {
     } else {
       const cleanPlayers = players
         .filter((p) => p.name.trim())
-        .map((p) => ({ name: p.name.trim(), rating: p.rating }));
+        .map((p) => ({
+          name: p.name.trim(),
+          title: p.title || null,
+          rating: p.rating,
+        }));
       if (cleanPlayers.length < 2) {
         setError("Add at least 2 players.");
         return;
@@ -691,15 +701,34 @@ export default function NewTournament() {
                 {players.map((p, idx) => (
                   <div className="nt-roster-row" key={p.key}>
                     <span className="nt-roster-idx">{idx + 1}</span>
-                    <input
-                      type="text"
-                      className="nt-roster-name"
-                      placeholder="Player name"
-                      value={p.name}
-                      onChange={(e) =>
-                        updatePlayer(idx, "name", e.target.value)
-                      }
-                    />
+
+                    <div className="nt-roster-name-group">
+                      <select
+                        className={`nt-roster-title ${
+                          p.title ? "has-title" : ""
+                        }`}
+                        value={p.title}
+                        onChange={(e) =>
+                          updatePlayer(idx, "title", e.target.value)
+                        }
+                      >
+                        {CHESS_TITLES.map((t) => (
+                          <option key={t} value={t}>
+                            {t || "—"}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="text"
+                        className="nt-roster-name"
+                        placeholder="Player name"
+                        value={p.name}
+                        onChange={(e) =>
+                          updatePlayer(idx, "name", e.target.value)
+                        }
+                      />
+                    </div>
+
                     <input
                       type="number"
                       className="nt-roster-rating"
@@ -785,20 +814,44 @@ export default function NewTournament() {
                       {t.players.map((p, pIdx) => (
                         <div className="nt-roster-row" key={p.key}>
                           <span className="nt-roster-idx">{pIdx + 1}</span>
-                          <input
-                            type="text"
-                            className="nt-roster-name"
-                            placeholder="Player name"
-                            value={p.name}
-                            onChange={(e) =>
-                              updateTeamPlayer(
-                                tIdx,
-                                pIdx,
-                                "name",
-                                e.target.value,
-                              )
-                            }
-                          />
+
+                          <div className="nt-roster-name-group">
+                            <select
+                              className={`nt-roster-title ${
+                                p.title ? "has-title" : ""
+                              }`}
+                              value={p.title}
+                              onChange={(e) =>
+                                updateTeamPlayer(
+                                  tIdx,
+                                  pIdx,
+                                  "title",
+                                  e.target.value,
+                                )
+                              }
+                            >
+                              {CHESS_TITLES.map((t) => (
+                                <option key={t} value={t}>
+                                  {t || "—"}
+                                </option>
+                              ))}
+                            </select>
+                            <input
+                              type="text"
+                              className="nt-roster-name"
+                              placeholder="Player name"
+                              value={p.name}
+                              onChange={(e) =>
+                                updateTeamPlayer(
+                                  tIdx,
+                                  pIdx,
+                                  "name",
+                                  e.target.value,
+                                )
+                              }
+                            />
+                          </div>
+
                           <input
                             type="number"
                             className="nt-roster-rating"

@@ -8,6 +8,7 @@ export default function StandingsTable({
       <thead>
         <tr>
           <th className="rank-col">#</th>
+          <th className="title-col">Title</th>
           <th>Player</th>
           {showTeam && <th>Team</th>}
           <th>Score</th>
@@ -19,6 +20,9 @@ export default function StandingsTable({
         {standings.map((p, i) => (
           <tr key={p.id}>
             <td className="rank-col">{i + 1}</td>
+            <td className="title-col">
+              {p.player?.title || p.title || null || ""}
+            </td>
             <td className="player-name">
               {p.name}{" "}
               {p.rating != null && (

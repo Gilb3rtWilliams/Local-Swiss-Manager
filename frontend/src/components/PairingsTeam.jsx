@@ -1,8 +1,8 @@
 import React from "react";
+import { useOutletContext } from "react-router-dom";
 
 const DECISIVE_RESULTS = new Set(["1-0", "0-1", "1F-0F", "0F-1F"]);
 
-// Extracted Result Buttons for cleaner code
 function ResultButtons({
   results,
   matchKey,
@@ -45,10 +45,20 @@ function ResultButtons({
   );
 }
 
-function BughouseMatch({ p, results, onSetBoardResult }) {
+function BughouseMatch({ p, results, onSetBoardResult, livePlayers }) {
   const decisiveBoard = p.boards.find(
     (b) => !b.sitOut && DECISIVE_RESULTS.has(results[`${p.idx}-${b.boardNum}`]),
   );
+
+  function resolveTitle(playerObj) {
+    if (!playerObj) return "";
+    if (playerObj.title) return playerObj.title;
+    if (playerObj.name) {
+      const match = livePlayers.find((lp) => lp.name === playerObj.name);
+      if (match?.title) return match.title;
+    }
+    return "";
+  }
 
   return (
     <div
@@ -132,7 +142,12 @@ function BughouseMatch({ p, results, onSetBoardResult }) {
         const teamAPlayer = teamAIsWhite ? b.white : b.black;
         const teamBPlayer = teamAIsWhite ? b.black : b.white;
 
+        const teamAPlayerTitle = resolveTitle(teamAPlayer);
+        const teamBPlayerTitle = resolveTitle(teamBPlayer);
+
         if (b.sitOut) {
+          const sitOutPlayer = b.white || b.black;
+          const sitOutTitle = resolveTitle(sitOutPlayer);
           return (
             <div
               key={b.boardNum}
@@ -145,7 +160,18 @@ function BughouseMatch({ p, results, onSetBoardResult }) {
               }}
             >
               <span style={{ color: "#a0a0b0" }}>
-                {(b.white || b.black)?.name}
+                {sitOutTitle && (
+                  <span
+                    style={{
+                      color: "#c25555",
+                      marginRight: "4px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {sitOutTitle}
+                  </span>
+                )}
+                {sitOutPlayer?.name}
               </span>{" "}
               sits out this round
             </div>
@@ -200,6 +226,17 @@ function BughouseMatch({ p, results, onSetBoardResult }) {
                     lineHeight: 1.2,
                   }}
                 >
+                  {teamAPlayerTitle && (
+                    <span
+                      style={{
+                        color: "#c25555",
+                        marginRight: "6px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {teamAPlayerTitle}
+                    </span>
+                  )}
                   {teamAPlayer.name}
                 </div>
                 <div
@@ -334,6 +371,17 @@ function BughouseMatch({ p, results, onSetBoardResult }) {
                     lineHeight: 1.2,
                   }}
                 >
+                  {teamBPlayerTitle && (
+                    <span
+                      style={{
+                        color: "#c25555",
+                        marginRight: "6px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {teamBPlayerTitle}
+                    </span>
+                  )}
                   {teamBPlayer.name}
                 </div>
                 <div
@@ -404,16 +452,26 @@ function BughouseMatch({ p, results, onSetBoardResult }) {
   );
 }
 
-// Fallback for standard team matches
-function TeamMatch({ p, results, onSetBoardResult, isBughouse }) {
+function TeamMatch({ p, results, onSetBoardResult, isBughouse, livePlayers }) {
   if (isBughouse) {
     return (
       <BughouseMatch
         p={p}
         results={results}
         onSetBoardResult={onSetBoardResult}
+        livePlayers={livePlayers}
       />
     );
+  }
+
+  function resolveTitle(playerObj) {
+    if (!playerObj) return "";
+    if (playerObj.title) return playerObj.title;
+    if (playerObj.name) {
+      const match = livePlayers.find((lp) => lp.name === playerObj.name);
+      if (match?.title) return match.title;
+    }
+    return "";
   }
 
   return (
@@ -435,13 +493,29 @@ function TeamMatch({ p, results, onSetBoardResult, isBughouse }) {
         <tbody>
           {p.boards.map((b) => {
             const key = `${p.idx}-${b.boardNum}`;
+            const whiteTitle = resolveTitle(b.white);
+            const blackTitle = resolveTitle(b.black);
+            const sitOutPlayer = b.white || b.black;
+            const sitOutTitle = resolveTitle(sitOutPlayer);
+
             return (
               <tr key={b.boardNum}>
                 <td className="board-num">{b.boardNum}</td>
                 {b.sitOut ? (
                   <td colSpan={3}>
                     <span className="player-name">
-                      {(b.white || b.black)?.name}
+                      {sitOutTitle && (
+                        <span
+                          style={{
+                            color: "#c25555",
+                            marginRight: "4px",
+                            fontWeight: 700,
+                          }}
+                        >
+                          {sitOutTitle}
+                        </span>
+                      )}
+                      {sitOutPlayer?.name}
                     </span>
                     <span className="bye-result"> sits out this round</span>
                   </td>
@@ -449,12 +523,38 @@ function TeamMatch({ p, results, onSetBoardResult, isBughouse }) {
                   <>
                     <td>
                       <span className="color-w" />
-                      <span className="player-name">{b.white.name}</span>{" "}
+                      <span className="player-name">
+                        {whiteTitle && (
+                          <span
+                            style={{
+                              color: "#c25555",
+                              marginRight: "4px",
+                              fontWeight: 700,
+                            }}
+                          >
+                            {whiteTitle}
+                          </span>
+                        )}
+                        {b.white.name}
+                      </span>{" "}
                       <span className="rating-tag">({b.white.rating})</span>
                     </td>
                     <td>
                       <span className="color-b" />
-                      <span className="player-name">{b.black.name}</span>{" "}
+                      <span className="player-name">
+                        {blackTitle && (
+                          <span
+                            style={{
+                              color: "#c25555",
+                              marginRight: "4px",
+                              fontWeight: 700,
+                            }}
+                          >
+                            {blackTitle}
+                          </span>
+                        )}
+                        {b.black.name}
+                      </span>{" "}
                       <span className="rating-tag">({b.black.rating})</span>
                     </td>
                     <td>
@@ -503,6 +603,10 @@ export default function PairingsTeam({
   onSetBoardResult,
   isBughouse,
 }) {
+  const outletContext = useOutletContext();
+  const t = outletContext?.t;
+  const livePlayers = t?.players || [];
+
   return (
     <div className="team-matches">
       {pairings.map((p) =>
@@ -564,6 +668,7 @@ export default function PairingsTeam({
             results={results}
             onSetBoardResult={onSetBoardResult}
             isBughouse={isBughouse}
+            livePlayers={livePlayers}
           />
         ),
       )}

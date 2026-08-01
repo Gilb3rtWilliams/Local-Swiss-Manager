@@ -1,4 +1,5 @@
 import React from "react";
+import { useOutletContext } from "react-router-dom";
 
 function ResultButtons({
   results,
@@ -44,6 +45,19 @@ function ResultButtons({
 }
 
 export default function PairingsIndividual({ pairings, results, onSetResult }) {
+  const outletContext = useOutletContext();
+  const t = outletContext?.t;
+  const livePlayers = t?.players || [];
+
+  function resolveTitle(playerObj, playerName) {
+    if (playerObj?.title) return playerObj.title;
+    if (playerName) {
+      const match = livePlayers.find((lp) => lp.name === playerName);
+      if (match?.title) return match.title;
+    }
+    return "";
+  }
+
   return (
     <div
       style={{
@@ -51,7 +65,6 @@ export default function PairingsIndividual({ pairings, results, onSetResult }) {
         flexDirection: "column",
         gap: "24px",
         fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
-        /* Ambient background effect applied to the parent container */
         background:
           "radial-gradient(circle at 50% 0%, #1f1f2e 0%, transparent 70%)",
         padding: "24px 0",
@@ -59,8 +72,8 @@ export default function PairingsIndividual({ pairings, results, onSetResult }) {
       }}
     >
       {pairings.map((p, i) => {
-        // BYE MATCH
         if (p.type === "bye") {
+          const byeTitle = resolveTitle(p.player, p.playerName);
           return (
             <div
               key={p.idx}
@@ -82,6 +95,17 @@ export default function PairingsIndividual({ pairings, results, onSetResult }) {
                   fontWeight: 700,
                 }}
               >
+                {byeTitle && (
+                  <span
+                    style={{
+                      color: "#c25555",
+                      marginRight: "6px",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {byeTitle}
+                  </span>
+                )}
                 {p.playerName}
               </div>
               <div
@@ -99,7 +123,9 @@ export default function PairingsIndividual({ pairings, results, onSetResult }) {
           );
         }
 
-        // STANDARD MATCH
+        const whiteTitle = resolveTitle(p.white, p.whiteName);
+        const blackTitle = resolveTitle(p.black, p.blackName);
+
         return (
           <div
             key={p.idx}
@@ -155,6 +181,17 @@ export default function PairingsIndividual({ pairings, results, onSetResult }) {
                       lineHeight: 1.2,
                     }}
                   >
+                    {whiteTitle && (
+                      <span
+                        style={{
+                          color: "#c25555",
+                          marginRight: "6px",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {whiteTitle}
+                      </span>
+                    )}
                     {p.whiteName}
                   </div>
                   <div
@@ -251,6 +288,17 @@ export default function PairingsIndividual({ pairings, results, onSetResult }) {
                       lineHeight: 1.2,
                     }}
                   >
+                    {blackTitle && (
+                      <span
+                        style={{
+                          color: "#c25555",
+                          marginRight: "6px",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {blackTitle}
+                      </span>
+                    )}
                     {p.blackName}
                   </div>
                   <div

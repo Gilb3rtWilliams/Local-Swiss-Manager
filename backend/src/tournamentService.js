@@ -6,6 +6,7 @@ const bracketEngine = require("./bracket");
 const bughouse = require("./bughouse");
 const chess960 = require("./chess960");
 const excelExport = require("./excelExport");
+const { title } = require("process");
 
 const db = store.load();
 function persist() {
@@ -515,6 +516,7 @@ function createTournament(input) {
       const teamPlayers = (teamInput.players || []).map((p) => {
         const comp = engine.newCompetitor(uid(), Number(p.rating) || 0);
         comp.name = p.name.trim();
+        comp.title = p.title ? p.title.trim() : null;
         comp.teamId = teamId;
         comp.status = "active"; // scaffolding for a future withdrawal feature — nothing reads this yet, but nothing breaks by it being here either
         return comp;
@@ -570,6 +572,7 @@ function createTournament(input) {
     players.forEach((p) => {
       const comp = engine.newCompetitor(uid(), Number(p.rating) || 0);
       comp.name = p.name.trim();
+      comp.title = p.title ? p.title.trim() : null;
       comp.status = "active"; // same scaffolding note as above
       t.players.push(comp);
     });
@@ -616,7 +619,7 @@ function assignStartingRanks(list) {
 }
 
 // ─── Round generation ───────────────────────────────────────────────────────
-function generateNextRound(id) {
+function generateNextRound(id, updates = {}) {
   const t = assertTournament(id);
   if (isEliminationSystem(t)) {
     const e = new Error(
@@ -686,6 +689,30 @@ function generateNextRound(id) {
       black: pair.black ? pair.black.id : null,
       result: undefined,
     }));
+
+    // Apply Targeted Name Changes (Permitted at any time)
+    // Expects frontend to send: updates.nameEdits = [{ id: "player-123", newName: "John Doe" }]
+    if (updates.nameEdits && Array.isArray(updates.nameEdits)) {
+      updates.nameEdits.forEach((edit) => {
+        // 1. Update in the main players array
+        const player = t.players.find((p) => p.id === edit.id);
+        if (player) {
+          if (edit.newName !== undefined) player.name = edit.newName;
+          if (edit.newTitle !== undefined) player.title = edit.newTitle;
+        }
+
+        // 2. If this is a team tournament, also update the name inside the team's roster array
+        if (t.format === "team" && t.teams) {
+          t.teams.forEach((team) => {
+            const teamMember = team.players.find((p) => p.id === edit.id);
+            if (teamMember) {
+              if (edit.newName !== undefined) teamMember.name = edit.newName;
+              if (edit.newTitle !== undefined) teamMember.title = edit.newTitle;
+            }
+          });
+        }
+      });
+    }
   }
 
   t.updatedAt = new Date().toISOString();
@@ -1186,7 +1213,7 @@ function validateBughouseTeams(id) {
 }
 
 // ─── Late registration ──────────────────────────────────────────────────────
-function addLatePlayer(id, { name, rating, teamId }) {
+function addLatePlayer(id, { name, title, rating, teamId }) {
   const t = assertTournament(id);
   if (isRoundRobinSystem(t)) {
     const e = new Error(
@@ -1229,6 +1256,7 @@ function addLatePlayer(id, { name, rating, teamId }) {
 
   const comp = engine.newCompetitor(uid(), Number(rating) || 0);
   comp.name = name.trim();
+  comp.title = title ? title.trim() : null;
   comp.startingRank = t.players.length + 1;
 
   if (t.format === "team") {
@@ -1422,6 +1450,7 @@ function submitPublicRegistration(token, payload = {}) {
     const teamPlayers = players.map((p) => {
       const comp = engine.newCompetitor(uid(), Number(p.rating) || 0);
       comp.name = p.name.trim();
+      comp.title = p.title ? p.title.trim() : null;
       comp.teamId = teamId;
       comp.startingRank = t.players.length + 1;
       return comp;
@@ -1455,7 +1484,7 @@ function submitPublicRegistration(token, payload = {}) {
   }
 
   // Individual format
-  const { name, rating } = payload;
+  const { name, title, rating } = payload;
   if (!name || !name.trim()) {
     const e = new Error("Name is required");
     e.status = 400;
@@ -1470,6 +1499,7 @@ function submitPublicRegistration(token, payload = {}) {
   }
   const comp = engine.newCompetitor(uid(), Number(rating) || 0);
   comp.name = name.trim();
+  comp.title = title ? title.trim() : null;
   comp.startingRank = t.players.length + 1;
   t.players.push(comp);
   if (t.currentPairings) {
@@ -1613,6 +1643,7 @@ function buildIndividualRoster(playersInput) {
   }
   const cleaned = playersInput.map((p) => ({
     name: p?.name?.trim(),
+    title: p?.title?.trim() || null,
     rating: Number(p?.rating) || 0,
   }));
   if (cleaned.some((p) => !p.name)) {
@@ -1682,6 +1713,7 @@ function buildTeamRoster(teamInput, variant) {
       }
       const comp = engine.newCompetitor(uid(), Number(p?.rating) || 0);
       comp.name = name;
+      comp.title = p?.title?.trim() || null;
       comp.teamId = teamId;
       comp.status = "active";
       players.push(comp);
@@ -1715,6 +1747,24 @@ function buildTeamRoster(teamInput, variant) {
 function updateTournamentDetails(id, updates = {}) {
   const t = assertTournament(id);
 
+  // These determine how pairings/brackets get generated — changing them
+  // mid-event doesn't relabel data, it invalidates everything already
+  // computed from the old value. Rejected by comparing against the CURRENT
+  // value, not just checking whether the field is present: a form that
+  // echoes back the tournament's existing (unchanged) chess960/format/system
+  // value alongside real edits shouldn't trip this — only an actual attempt
+  // to change one of them should. Still fails loudly for a genuine change,
+  // which is the case this guard exists to catch.
+  for (const locked of ["format", "system", "variant", "chess960"]) {
+    if (updates[locked] !== undefined && updates[locked] !== t[locked]) {
+      const e = new Error(
+        `"${locked}" can't be changed after creation — it determines how pairings/brackets are generated.`,
+      );
+      e.status = 400;
+      throw e;
+    }
+  }
+
   if (updates.name !== undefined) {
     if (!updates.name.trim()) {
       const e = new Error("Tournament name is required");
@@ -1725,7 +1775,120 @@ function updateTournamentDetails(id, updates = {}) {
   }
   if (updates.federation !== undefined) t.federation = updates.federation;
   if (updates.timeControl !== undefined) t.timeControl = updates.timeControl;
-  if (updates.variant !== undefined) t.variant = updates.variant;
+
+  if (updates.description !== undefined) {
+    t.description = updates.description.trim();
+  }
+  if (updates.category !== undefined) {
+    t.category = updates.category.trim();
+  }
+  if (updates.venue !== undefined) {
+    t.venue = updates.venue.trim();
+  }
+
+  if (updates.organizerName !== undefined) {
+    t.organizerName = updates.organizerName.trim();
+  }
+  if (updates.organizerContact !== undefined) {
+    t.organizerContact = updates.organizerContact.trim();
+  }
+  if (updates.chiefArbiter !== undefined) {
+    t.chiefArbiter = updates.chiefArbiter.trim();
+  }
+  if (updates.deputyChiefArbiter !== undefined) {
+    t.deputyChiefArbiter = updates.deputyChiefArbiter.trim();
+  }
+  if (updates.fideRated !== undefined) {
+    t.fideRated = Boolean(updates.fideRated);
+  }
+  if (updates.isTest !== undefined) {
+    t.isTest = Boolean(updates.isTest);
+  }
+
+  if (updates.scoringSystem !== undefined) {
+    if (!VALID_SCORING_SYSTEMS.includes(updates.scoringSystem)) {
+      const e = new Error(`Invalid scoring system "${updates.scoringSystem}"`);
+      e.status = 400;
+      throw e;
+    }
+    t.scoringSystem = updates.scoringSystem;
+  }
+  if (updates.ratingType !== undefined) {
+    // Use the *effective* fideRated (the value being set in this same call,
+    // if any, otherwise the tournament's current value) — not t.fideRated
+    // read after a possibly-still-pending mutation above.
+    const effectiveFideRated =
+      updates.fideRated !== undefined
+        ? Boolean(updates.fideRated)
+        : t.fideRated;
+    if (
+      effectiveFideRated &&
+      !VALID_RATING_TYPES.includes(updates.ratingType)
+    ) {
+      const e = new Error(`Invalid FIDE rating type "${updates.ratingType}"`);
+      e.status = 400;
+      throw e;
+    }
+    t.ratingType = updates.ratingType;
+  }
+  if (updates.tiebreaks !== undefined) {
+    t.tiebreaks = Array.isArray(updates.tiebreaks)
+      ? updates.tiebreaks
+      : DEFAULT_TIEBREAKS;
+  }
+  if (updates.maxHalfPointByes !== undefined) {
+    t.maxHalfPointByes = Number.isInteger(updates.maxHalfPointByes)
+      ? updates.maxHalfPointByes
+      : t.maxHalfPointByes;
+  }
+  if (updates.byeCutoffRound !== undefined) {
+    t.byeCutoffRound = Number.isInteger(updates.byeCutoffRound)
+      ? updates.byeCutoffRound
+      : null;
+  }
+
+  // ─── ADD THIS: Player Rating & Details Updates ─────────────────────────────
+  // Expects updates.playerEdits = [{ id: "player-123", rating: 1850 }]
+  if (updates.playerEdits && Array.isArray(updates.playerEdits)) {
+    updates.playerEdits.forEach((edit) => {
+      const player = t.players.find((p) => p.id === edit.id);
+      if (player) {
+        if (edit.rating !== undefined) {
+          player.rating = Number(edit.rating) || 0; // Update current rating
+          // Note: player.startingRank is intentionally NOT updated here
+        }
+        if (edit.name !== undefined) player.name = edit.name.trim();
+        if (edit.title !== undefined)
+          player.title = edit.title ? edit.title.trim() : null;
+      }
+    });
+
+    // If it's a team event, recalculate team average ratings without altering starting ranks
+    if (t.format === "team" && t.teams) {
+      t.teams.forEach((team) => {
+        const teamPlayers = t.players.filter((p) => p.teamId === team.id);
+        if (teamPlayers.length > 0) {
+          team.rating = Math.round(
+            teamPlayers.reduce((s, p) => s + p.rating, 0) / teamPlayers.length,
+          );
+        }
+      });
+    }
+  }
+
+  if (updates.dateFrom !== undefined || updates.dateTo !== undefined) {
+    const newDateFrom =
+      updates.dateFrom !== undefined ? updates.dateFrom || null : t.dateFrom;
+    const newDateTo =
+      updates.dateTo !== undefined ? updates.dateTo || null : t.dateTo;
+    if (newDateFrom && newDateTo && newDateTo < newDateFrom) {
+      const e = new Error("End date can't be before start date");
+      e.status = 400;
+      throw e;
+    }
+    t.dateFrom = newDateFrom;
+    t.dateTo = newDateTo;
+  }
 
   if (updates.totalRounds !== undefined) {
     if (t.status === "finished") {
@@ -1899,6 +2062,7 @@ function serializeTournament(t) {
   const playersOut = t.players.map((p) => ({
     id: p.id,
     name: p.name,
+    title: p.title || null,
     rating: p.rating,
     score: p.score,
     teamId: p.teamId || null,
@@ -1974,9 +2138,15 @@ function serializeTournament(t) {
       const maxGainPerRound = Math.max(team.playerIds.length, 1);
       const inContention =
         c.score + remainingRounds * maxGainPerRound >= leaderScore;
+      // <-- ADD THIS TO RESOLVE PLAYERS WITH TITLES
+      const resolvedPlayers = team.playerIds
+        .map((id) => t.players.find((p) => p.id === id))
+        .filter(Boolean) // Safely remove undefined
+        .map((p) => ({ name: p.name, title: p.title || null }));
       return {
         id: team.id,
         name: team.name,
+
         score: engine.formatScore(c.score),
         inContention,
         buchholz: inContention ? engine.buchholz(c, byIdMap).toFixed(1) : null,
@@ -1984,6 +2154,7 @@ function serializeTournament(t) {
           ? engine.sonnenbornBerger(c, byIdMap).toFixed(2)
           : null,
         playerCount: team.playerIds.length,
+        players: resolvedPlayers,
       };
     });
     // Individual board standings within the team event.
@@ -1991,6 +2162,7 @@ function serializeTournament(t) {
     standings = sortedPlayers.map((p) => ({
       id: p.id,
       name: p.name,
+      title: p.title || null,
       rating: p.rating,
       teamId: p.teamId,
       teamName: teamNameOf(p.teamId),
@@ -2010,6 +2182,7 @@ function serializeTournament(t) {
       return {
         id: p.id,
         name: p.name,
+        title: p.title || null,
         rating: p.rating,
         score: engine.formatScore(p.score),
         inContention,
@@ -2085,6 +2258,7 @@ function serializeTournament(t) {
             rank: x.startingRank,
             id: x.id,
             name: x.name,
+            title: x.title || null,
             rating: x.rating,
             players: t.players
               .filter((p) => p.teamId === x.id)
@@ -2114,11 +2288,27 @@ function serializeTournament(t) {
   return {
     id: t.id,
     name: t.name,
+    description: t.description,
+    category: t.category,
+    venue: t.venue,
     federation: t.federation,
     format: t.format,
     variant: t.variant,
     system: t.system,
+    scoringSystem: t.scoringSystem,
+    ratingType: t.ratingType,
     timeControl: t.timeControl,
+    tiebreaks: t.tiebreaks,
+    maxHalfPointByes: t.maxHalfPointByes,
+    byeCutoffRound: t.byeCutoffRound,
+    organizerName: t.organizerName,
+    organizerContact: t.organizerContact,
+    chiefArbiter: t.chiefArbiter,
+    deputyChiefArbiter: t.deputyChiefArbiter,
+    dateFrom: t.dateFrom,
+    dateTo: t.dateTo,
+    fideRated: t.fideRated,
+    isTest: t.isTest,
     totalRounds: t.totalRounds,
     currentRound: t.currentRound,
     status: t.status,

@@ -323,7 +323,7 @@
   align-items: flex-end;
 }
 
-/* ── Roster editor ─────────────────────────────────────────────────────── */
+/* ── Roster editor & Player Title Updates ─────────────────────────────── */
 .ov-root .roster-editor {
   background: rgba(15, 15, 22, 0.6);
   border: 1px solid var(--card-border);
@@ -359,9 +359,10 @@
   gap: 12px;
 }
 
+/* Updated Player Row Grid to accommodate Title, Name, Rating, and Remove */
 .ov-root .player-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) auto;
+  grid-template-columns: 85px minmax(0, 2fr) 110px auto;
   gap: 10px;
   align-items: flex-end;
   margin-bottom: 8px;
@@ -369,6 +370,11 @@
 
 .ov-root .player-row .field {
   margin-bottom: 0;
+}
+
+.ov-root .player-row .field-title select {
+  font-weight: 600;
+  color: var(--accent-gold);
 }
 
 .ov-root .player-row button {
@@ -404,7 +410,7 @@
     grid-template-columns: 1fr;
   }
   .ov-root .player-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: 75px minmax(0, 1.5fr) 95px auto;
   }
   .ov-root .checkbox-grid {
     grid-template-columns: 1fr;
@@ -417,5 +423,12 @@
   }
   .ov-root .share-link-row {
     flex-direction: column;
+  }
+  .ov-root .player-row {
+    grid-template-columns: 80px 1fr auto;
+  }
+  .ov-root .player-row .field-name {
+    grid-column: 1 / -1;
+    order: -1;
   }
 }
