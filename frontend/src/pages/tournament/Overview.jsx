@@ -56,7 +56,7 @@ function SegmentedToggle({ name, value, onChange, options }) {
 }
 
 export default function Overview() {
-  const { t, refresh } = useOutletContext();
+  const { t, refresh, setTournament } = useOutletContext();
   const navigate = useNavigate();
   const isTeam = t.format === "team";
   const isElimination =
@@ -105,11 +105,33 @@ export default function Overview() {
   const [editError, setEditError] = useState("");
   const [editBusy, setEditBusy] = useState(false);
 
+  const [lateNewPlayer, setLateNewPlayer] = useState(emptyPlayer());
+  const [lateNewTeamPlayers, setLateNewTeamPlayers] = useState({});
+  const [rosterBusy, setRosterBusy] = useState(false);
+  const [rosterError, setRosterError] = useState("");
+
   const registrationEligible =
     !isElimination &&
     t.system !== "round_robin" &&
     t.system !== "double_round_robin" &&
     t.currentRound <= 1;
+
+  // Formats whose schedule/draw is fixed for the full field up front can
+  // never safely gain or lose players, at any round. Only relevant once the
+  // initial roster setup is done (editableRoster covers that earlier phase
+  // with its own bulk flow).
+  const rosterFormatMutable =
+    !editableRoster &&
+    !isElimination &&
+    t.system !== "round_robin" &&
+    t.system !== "double_round_robin" &&
+    t.variant !== "bughouse";
+
+  // Adding is allowed at any point in the tournament. Removing keeps its own
+  // round-1 cutoff, mirroring the backend: past that point a player may
+  // already have results/pairings baked into a round.
+  const lateAddEligible = rosterFormatMutable;
+  const lateDeleteEligible = rosterFormatMutable && t.currentRound <= 1;
 
   const registrationLink = t.registrationToken
     ? `${window.location.origin}/register/${t.registrationToken}`
@@ -118,12 +140,12 @@ export default function Overview() {
     ? `${window.location.origin}/results/${t.publicViewToken}`
     : null;
 
-  function buildTeamRows() {
-    return (t.teams || []).map((team) => ({
+  function buildTeamRows(source = t) {
+    return (source.teams || []).map((team) => ({
       key: rowId(),
       id: team.id,
       name: team.name,
-      players: (t.players || [])
+      players: (source.players || [])
         .filter((p) => p.teamId === team.id)
         .map((p) => ({
           key: rowId(),
@@ -132,6 +154,16 @@ export default function Overview() {
           name: p.name,
           rating: p.rating ?? "",
         })),
+    }));
+  }
+
+  function buildPlayerRows(source = t) {
+    return (source.players || []).map((p) => ({
+      key: rowId(),
+      id: p.id,
+      title: p.title || "",
+      name: p.name,
+      rating: p.rating ?? "",
     }));
   }
 
@@ -162,16 +194,11 @@ export default function Overview() {
     if (isTeam) {
       setEditTeams(buildTeamRows());
     } else {
-      setEditPlayers(
-        (t.players || []).map((p) => ({
-          key: rowId(),
-          id: p.id,
-          title: p.title || "",
-          name: p.name,
-          rating: p.rating ?? "",
-        })),
-      );
+      setEditPlayers(buildPlayerRows());
     }
+    setLateNewPlayer(emptyPlayer());
+    setLateNewTeamPlayers({});
+    setRosterError("");
     setEditError("");
     setEditOpen(true);
   }
@@ -250,6 +277,98 @@ export default function Overview() {
     setEditTiebreaks((prev) =>
       prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id],
     );
+  }
+
+  function updateLateTeamDraft(teamId, field, value) {
+    setLateNewTeamPlayers((prev) => ({
+      ...prev,
+      [teamId]: { ...(prev[teamId] || emptyPlayer()), [field]: value },
+    }));
+  }
+
+  // These four act immediately against the server (unlike the rest of the
+  // roster editor, which stages local changes for the batched "Save
+  // Changes" submit) since addLatePlayer/deletePlayer each mutate and
+  // persist one player at a time. Each call already gets back the fresh
+  // tournament in its response, so we push that straight into the shared
+  // `t` via setTournament rather than firing a second, unawaited
+  // getTournament round-trip through refresh() — that second fetch landing
+  // late (or after a tab switch) was why Starting Rank kept showing stale
+  // data even though this page looked right.
+  async function handleAddLatePlayer() {
+    if (!lateNewPlayer.name.trim()) {
+      setRosterError("Player name is required.");
+      return;
+    }
+    setRosterBusy(true);
+    setRosterError("");
+    try {
+      const updated = await api.addLatePlayer(t.id, {
+        title: lateNewPlayer.title ? lateNewPlayer.title.trim() : null,
+        name: lateNewPlayer.name.trim(),
+        rating: lateNewPlayer.rating,
+      });
+      setEditPlayers(buildPlayerRows(updated));
+      setLateNewPlayer(emptyPlayer());
+      setTournament(updated);
+    } catch (err) {
+      setRosterError(err.message);
+    } finally {
+      setRosterBusy(false);
+    }
+  }
+
+  async function handleDeletePlayer(playerId) {
+    setRosterBusy(true);
+    setRosterError("");
+    try {
+      const updated = await api.deletePlayer(t.id, playerId);
+      setEditPlayers(buildPlayerRows(updated));
+      setTournament(updated);
+    } catch (err) {
+      setRosterError(err.message);
+    } finally {
+      setRosterBusy(false);
+    }
+  }
+
+  async function handleAddLateTeamPlayer(teamId) {
+    const draft = lateNewTeamPlayers[teamId] || emptyPlayer();
+    if (!draft.name.trim()) {
+      setRosterError("Player name is required.");
+      return;
+    }
+    setRosterBusy(true);
+    setRosterError("");
+    try {
+      const updated = await api.addLatePlayer(t.id, {
+        title: draft.title ? draft.title.trim() : null,
+        name: draft.name.trim(),
+        rating: draft.rating,
+        teamId,
+      });
+      setEditTeams(buildTeamRows(updated));
+      setLateNewTeamPlayers((prev) => ({ ...prev, [teamId]: emptyPlayer() }));
+      setTournament(updated);
+    } catch (err) {
+      setRosterError(err.message);
+    } finally {
+      setRosterBusy(false);
+    }
+  }
+
+  async function handleDeleteTeamPlayer(playerId) {
+    setRosterBusy(true);
+    setRosterError("");
+    try {
+      const updated = await api.deletePlayer(t.id, playerId);
+      setEditTeams(buildTeamRows(updated));
+      setTournament(updated);
+    } catch (err) {
+      setRosterError(err.message);
+    } finally {
+      setRosterBusy(false);
+    }
   }
 
   async function handleSaveEdit(e) {
@@ -734,16 +853,34 @@ export default function Overview() {
             <div className="roster-editor">
               <h3>
                 Roster
-                {!editableRoster && (
+                {rosterFormatMutable && (
                   <span
                     className="hint"
                     style={{ marginLeft: 10, fontWeight: "normal" }}
                   >
-                    (Tournament active: titles, names, &amp; ratings can be
-                    updated; starting ranks remain locked)
+                    (Titles, names, &amp; ratings can always be updated. Players
+                    can be added at any point in the tournament
+                    {lateDeleteEligible
+                      ? ", and removed until Round 2 begins"
+                      : "; removal is locked once Round 2 begins"}
+                    .)
+                  </span>
+                )}
+                {!editableRoster && !rosterFormatMutable && (
+                  <span
+                    className="hint"
+                    style={{ marginLeft: 10, fontWeight: "normal" }}
+                  >
+                    (Titles, names, &amp; ratings can be updated; the roster
+                    itself is locked)
                   </span>
                 )}
               </h3>
+              {rosterError && (
+                <div className="inline-error" style={{ marginBottom: 10 }}>
+                  {rosterError}
+                </div>
+              )}
               {isTeam ? (
                 <>
                   {editTeams.map((team, teamIdx) => (
@@ -836,6 +973,18 @@ export default function Overview() {
                                 Remove
                               </button>
                             )}
+                            {lateDeleteEligible && player.id && (
+                              <button
+                                type="button"
+                                className="btn-secondary btn-sm"
+                                disabled={rosterBusy}
+                                onClick={() =>
+                                  handleDeleteTeamPlayer(player.id)
+                                }
+                              >
+                                {rosterBusy ? "Removing…" : "Remove"}
+                              </button>
+                            )}
                           </div>
                         ))}
                         {editableRoster && (
@@ -846,6 +995,71 @@ export default function Overview() {
                           >
                             Add player
                           </button>
+                        )}
+                        {lateAddEligible && (
+                          <div className="player-row">
+                            <label className="field field-title">
+                              <span>Title</span>
+                              <select
+                                value={lateNewTeamPlayers[team.id]?.title || ""}
+                                onChange={(e) =>
+                                  updateLateTeamDraft(
+                                    team.id,
+                                    "title",
+                                    e.target.value,
+                                  )
+                                }
+                              >
+                                {FIDE_TITLES.map((titleOpt) => (
+                                  <option key={titleOpt} value={titleOpt}>
+                                    {titleOpt || "-"}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+
+                            <label className="field field-name">
+                              <span>New Player</span>
+                              <input
+                                type="text"
+                                placeholder="Name"
+                                value={lateNewTeamPlayers[team.id]?.name || ""}
+                                onChange={(e) =>
+                                  updateLateTeamDraft(
+                                    team.id,
+                                    "name",
+                                    e.target.value,
+                                  )
+                                }
+                              />
+                            </label>
+
+                            <label className="field field-rating">
+                              <span>Rating</span>
+                              <input
+                                type="number"
+                                value={
+                                  lateNewTeamPlayers[team.id]?.rating ?? ""
+                                }
+                                onChange={(e) =>
+                                  updateLateTeamDraft(
+                                    team.id,
+                                    "rating",
+                                    e.target.value,
+                                  )
+                                }
+                              />
+                            </label>
+
+                            <button
+                              type="button"
+                              className="btn-primary btn-sm"
+                              disabled={rosterBusy}
+                              onClick={() => handleAddLateTeamPlayer(team.id)}
+                            >
+                              {rosterBusy ? "Adding…" : "Add player"}
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -910,6 +1124,16 @@ export default function Overview() {
                           Remove
                         </button>
                       )}
+                      {lateDeleteEligible && player.id && (
+                        <button
+                          type="button"
+                          className="btn-secondary btn-sm"
+                          disabled={rosterBusy}
+                          onClick={() => handleDeletePlayer(player.id)}
+                        >
+                          {rosterBusy ? "Removing…" : "Remove"}
+                        </button>
+                      )}
                     </div>
                   ))}
                   {editableRoster && (
@@ -920,6 +1144,66 @@ export default function Overview() {
                     >
                       Add player
                     </button>
+                  )}
+                  {lateAddEligible && (
+                    <div className="player-row">
+                      <label className="field field-title">
+                        <span>Title</span>
+                        <select
+                          value={lateNewPlayer.title || ""}
+                          onChange={(e) =>
+                            setLateNewPlayer((p) => ({
+                              ...p,
+                              title: e.target.value,
+                            }))
+                          }
+                        >
+                          {FIDE_TITLES.map((titleOpt) => (
+                            <option key={titleOpt} value={titleOpt}>
+                              {titleOpt || "-"}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="field field-name">
+                        <span>New Player Name</span>
+                        <input
+                          type="text"
+                          placeholder="Name"
+                          value={lateNewPlayer.name}
+                          onChange={(e) =>
+                            setLateNewPlayer((p) => ({
+                              ...p,
+                              name: e.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+
+                      <label className="field field-rating">
+                        <span>Rating</span>
+                        <input
+                          type="number"
+                          value={lateNewPlayer.rating}
+                          onChange={(e) =>
+                            setLateNewPlayer((p) => ({
+                              ...p,
+                              rating: e.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+
+                      <button
+                        type="button"
+                        className="btn-primary btn-sm"
+                        disabled={rosterBusy}
+                        onClick={handleAddLatePlayer}
+                      >
+                        {rosterBusy ? "Adding…" : "Add player"}
+                      </button>
+                    </div>
                   )}
                 </>
               )}

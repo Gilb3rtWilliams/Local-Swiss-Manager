@@ -210,7 +210,7 @@ export default function TournamentLayout() {
             padding: "32px",
           }}
         >
-          <Outlet context={{ t, refresh }} />
+          <Outlet context={{ t, refresh, setTournament: setT }} />
         </div>
       </div>
     </div>

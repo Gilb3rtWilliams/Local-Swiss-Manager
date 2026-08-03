@@ -1213,6 +1213,11 @@ function validateBughouseTeams(id) {
 }
 
 // ─── Late registration ──────────────────────────────────────────────────────
+// A player can be added at any point in the tournament's life — round 1,
+// mid-event, even after several rounds — as long as the format's schedule
+// isn't fixed up front. round-robin/elimination/bughouse are blocked
+// permanently (not just "early"), since their whole structure is drawn for
+// a fixed field and there's no round-based cutoff that would make it safe.
 function addLatePlayer(id, { name, title, rating, teamId }) {
   const t = assertTournament(id);
   if (isRoundRobinSystem(t)) {
@@ -1233,11 +1238,6 @@ function addLatePlayer(id, { name, title, rating, teamId }) {
     const e = new Error(
       "Late registration isn't supported for bughouse — every team must stay at exactly 2 players for board pairing to work.",
     );
-    e.status = 409;
-    throw e;
-  }
-  if (t.currentRound > 1) {
-    const e = new Error("Late registration only allowed during round 1");
     e.status = 409;
     throw e;
   }
@@ -1294,6 +1294,92 @@ function addLatePlayer(id, { name, title, rating, teamId }) {
   return serializeTournament(t);
 }
 
+// Renumbers startingRank 1..N for the given list, preserving each entry's
+// existing relative order rather than re-sorting by rating (that re-sort is
+// only appropriate at creation time, via assignStartingRanks). Used after a
+// player is removed so ranks stay contiguous.
+function compactStartingRanks(list) {
+  [...list]
+    .sort((a, b) => (a.startingRank ?? Infinity) - (b.startingRank ?? Infinity))
+    .forEach((c, i) => {
+      c.startingRank = i + 1;
+    });
+}
+
+// ─── Remove player ──────────────────────────────────────────────────────────
+// Blocked for the same structurally-fixed formats as addLatePlayer
+// (round-robin/elimination/bughouse). Unlike adding, removal keeps its own
+// round-1 cutoff: past that point a player may already have results and
+// pairings baked into rounds, and unwinding those safely isn't handled here.
+function deletePlayer(id, playerId) {
+  const t = assertTournament(id);
+  if (isRoundRobinSystem(t)) {
+    const e = new Error(
+      "Players can't be removed from a round-robin tournament — the schedule is fixed for the full field before Round 1.",
+    );
+    e.status = 409;
+    throw e;
+  }
+  if (isEliminationSystem(t)) {
+    const e = new Error(
+      "Players can't be removed from an elimination bracket — the draw is fixed for the full field before Round 1.",
+    );
+    e.status = 409;
+    throw e;
+  }
+  if (t.variant === "bughouse") {
+    const e = new Error(
+      "Players can't be removed from bughouse — every team must stay at exactly 2 players for board pairing to work.",
+    );
+    e.status = 409;
+    throw e;
+  }
+  if (t.currentRound > 1) {
+    const e = new Error("Players can only be removed during round 1");
+    e.status = 409;
+    throw e;
+  }
+
+  const player = t.players.find((p) => p.id === playerId);
+  if (!player) {
+    const e = new Error("Player not found");
+    e.status = 404;
+    throw e;
+  }
+
+  if (t.currentPairings) {
+    const pairing = t.currentPairings.find(
+      (p) => p.white === playerId || p.black === playerId,
+    );
+    if (pairing) {
+      if (pairing.type !== "bye") {
+        const e = new Error(
+          "Can't remove a player who's already paired this round — submit or clear the round first.",
+        );
+        e.status = 409;
+        throw e;
+      }
+      // It's this player's own bye pairing for the open round — reverse the
+      // bye credit that was granted for it and drop the pairing entry.
+      player.score -= 1;
+      player.byeRounds -= 1;
+      t.currentPairings = t.currentPairings.filter((p) => p !== pairing);
+    }
+  }
+
+  if (t.format === "team" && player.teamId) {
+    const team = t.teams.find((x) => x.id === player.teamId);
+    if (team) team.playerIds = team.playerIds.filter((pid) => pid !== playerId);
+  }
+
+  t.players = t.players.filter((p) => p.id !== playerId);
+  compactStartingRanks(t.players);
+
+  t.updatedAt = new Date().toISOString();
+  persist();
+  return serializeTournament(t);
+}
+
 // ─── Extend tournament (add an extra round after it finished) ─────────────
 function addExtraRound(id) {
   const t = assertTournament(id);
@@ -1319,10 +1405,11 @@ function addExtraRound(id) {
 
 // ─── Self-registration links ────────────────────────────────────────────────
 // Lets the organizer share a link so players/teams can add themselves,
-// instead of the organizer typing every entry in by hand. Reuses the same
-// eligibility window as addLatePlayer: round-robin/elimination fields are
-// fixed up front, and registration closes once the tournament is past
-// Round 1 (mirrors addLatePlayer's own "currentRound > 1" cutoff).
+// instead of the organizer typing every entry in by hand. Blocked for the
+// same structurally-fixed formats as addLatePlayer (round-robin/elimination),
+// and — unlike organizer-driven addLatePlayer — closes once the tournament
+// is past Round 1, since an unattended public link staying open indefinitely
+// isn't something an organizer necessarily wants.
 
 function findByRegistrationToken(token) {
   const t = Object.values(db.tournaments).find(
@@ -1876,6 +1963,114 @@ function updateTournamentDetails(id, updates = {}) {
     }
   }
 
+  // ─── Full roster replacement (setup-phase roster editor) ────────────────
+  // The editor on the frontend only sends updates.players / updates.teams
+  // while the roster is still editable — i.e. before Round 1 exists — and
+  // sends the WHOLE roster each time (add/remove/edit are all expressed as
+  // "here is the new list"), same shape as createTournament's own players/
+  // teams input. Mirrors the frontend's own `editableRoster` gate
+  // (status === "setup" && currentRound === 0) so a stale request can't
+  // blow away a roster that already has rounds/results tied to it.
+  if (updates.players !== undefined || updates.teams !== undefined) {
+    if (!(t.status === "setup" && t.currentRound === 0)) {
+      const e = new Error(
+        "The full roster can only be replaced before Round 1 — use the add/remove player actions instead.",
+      );
+      e.status = 409;
+      throw e;
+    }
+
+    if (t.format === "team") {
+      if (!Array.isArray(updates.teams) || updates.teams.length < 2) {
+        const e = new Error("Need at least 2 teams for a team tournament");
+        e.status = 400;
+        throw e;
+      }
+      const newTeams = [];
+      const newPlayers = [];
+      updates.teams.forEach((teamInput) => {
+        const teamId = uid();
+        const teamPlayers = (teamInput.players || []).map((p) => {
+          const comp = engine.newCompetitor(uid(), Number(p.rating) || 0);
+          comp.name = p.name.trim();
+          comp.title = p.title ? p.title.trim() : null;
+          comp.teamId = teamId;
+          comp.status = "active";
+          return comp;
+        });
+        if (teamPlayers.length === 0) {
+          const e = new Error(
+            `Team "${teamInput.name}" needs at least 1 player`,
+          );
+          e.status = 400;
+          throw e;
+        }
+        if (t.variant === "bughouse" && teamPlayers.length !== 2) {
+          const e = new Error(
+            `Bughouse requires exactly 2 players per team — team "${teamInput.name}" has ${teamPlayers.length}.`,
+          );
+          e.status = 400;
+          throw e;
+        }
+        const avgRating = Math.round(
+          teamPlayers.reduce((s, p) => s + p.rating, 0) / teamPlayers.length,
+        );
+        newTeams.push({
+          id: teamId,
+          name: teamInput.name.trim(),
+          rating: avgRating,
+          status: "active",
+          score: 0,
+          colorDiff: 0,
+          lastColor: null,
+          colorHistory: [],
+          opponents: new Set(),
+          results: {},
+          byeRounds: 0,
+          playerIds: teamPlayers.map((p) => p.id),
+        });
+        newPlayers.push(...teamPlayers);
+      });
+      t.teams = newTeams;
+      t.players = newPlayers;
+      assignStartingRanks(t.players);
+      assignStartingRanks(t.teams);
+    } else {
+      if (!Array.isArray(updates.players) || updates.players.length < 2) {
+        const e = new Error("Need at least 2 players");
+        e.status = 400;
+        throw e;
+      }
+      const names = updates.players.map((p) => p.name.trim().toLowerCase());
+      if (new Set(names).size !== names.length) {
+        const e = new Error("Duplicate player names");
+        e.status = 400;
+        throw e;
+      }
+      t.players = updates.players.map((p) => {
+        const comp = engine.newCompetitor(uid(), Number(p.rating) || 0);
+        comp.name = p.name.trim();
+        comp.title = p.title ? p.title.trim() : null;
+        comp.status = "active";
+        return comp;
+      });
+      assignStartingRanks(t.players);
+    }
+
+    // Re-suggest total rounds for the new field size, same as creation time
+    // — only ever raises it, never silently shrinks a value the organizer
+    // already set. An explicit updates.totalRounds later in this function
+    // (if the form also sent one) still wins over this suggestion.
+    const competitorCount =
+      t.format === "team" ? t.teams.length : t.players.length;
+    const suggested = isRoundRobinSystem(t)
+      ? roundRobin.scheduleLength(competitorCount, t.system)
+      : engine.suggestedRounds(competitorCount);
+    if (isRoundRobinSystem(t) || suggested > t.totalRounds) {
+      t.totalRounds = suggested;
+    }
+  }
+
   if (updates.dateFrom !== undefined || updates.dateTo !== undefined) {
     const newDateFrom =
       updates.dateFrom !== undefined ? updates.dateFrom || null : t.dateFrom;
@@ -2409,6 +2604,7 @@ module.exports = {
   generateNextRound,
   submitResults,
   addLatePlayer,
+  deletePlayer,
   addExtraRound,
   updateTournamentDetails,
   deleteTournament,

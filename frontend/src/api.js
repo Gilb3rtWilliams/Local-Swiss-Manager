@@ -43,6 +43,8 @@ export const api = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+  deletePlayer: (id, playerId) =>
+    request(`/tournaments/${id}/players/${playerId}`, { method: "DELETE" }),
   extendTournament: (id) =>
     request(`/tournaments/${id}/extend`, { method: "POST" }),
 
