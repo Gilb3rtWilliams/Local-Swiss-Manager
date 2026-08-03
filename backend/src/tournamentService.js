@@ -1010,6 +1010,261 @@ function submitResults(id, resultsInput) {
   return serializeTournament(t);
 }
 
+// ─── Standings recomputation (shared by editResult & deleteRound) ──────────
+// Both "edit a past result" and "delete a round" mutate t.rounds after the
+// fact, which invalidates every derived stat (score, colorDiff, opponents,
+// head-to-head results, byeRounds) for every player/team — those were built
+// incrementally by applyGame()/submitResults() and there's no cheap way to
+// patch just the delta. Instead we reset every competitor to a blank slate
+// and replay t.rounds from round 1 forward, reusing the exact same scoring
+// primitives (applyGame, the bughouse match-point override) that
+// submitResults() uses when a round is first submitted. This guarantees
+// standings/tiebreaks/cross-table are always consistent with whatever is
+// currently stored in t.rounds, no matter how it was arrived at.
+//
+// Note this does NOT touch already-generated pairings for rounds later than
+// the one edited/deleted — exactly like a real arbiter fixing a scoresheet
+// after the fact, correcting history doesn't retroactively unpair rounds
+// that were already played on the old numbers.
+function resetCompetitorState(c) {
+  c.score = 0;
+  c.colorDiff = 0;
+  c.lastColor = null;
+  c.colorHistory = [];
+  c.opponents = new Set();
+  c.results = {};
+  c.byeRounds = 0;
+}
+
+function recomputeStandingsFromRounds(t) {
+  t.players.forEach(resetCompetitorState);
+  if (t.format === "team") t.teams.forEach(resetCompetitorState);
+
+  const pById = byId(t.players);
+  const tById = t.format === "team" ? byId(t.teams) : null;
+
+  t.rounds.forEach((roundRecord) => {
+    if (t.format === "team") {
+      roundRecord.pairings.forEach((pairing) => {
+        if (pairing.type === "bye") {
+          const team = tById.get(pairing.team);
+          if (!team) return; // defensive: referenced team no longer exists
+          team.score += 1;
+          team.byeRounds += 1;
+          team.colorHistory.push(null);
+          t.players
+            .filter((p) => p.teamId === team.id)
+            .forEach((p) => {
+              p.score += 1;
+              p.byeRounds += 1;
+            });
+          return;
+        }
+
+        const teamWhite = tById.get(pairing.teamWhite);
+        const teamBlack = tById.get(pairing.teamBlack);
+        if (!teamWhite || !teamBlack) return; // defensive
+
+        // Re-derive board-level (player) stats and match points from
+        // whatever results are currently stored on the boards — this is the
+        // single source of truth after an edit, so we don't re-run bughouse
+        // backfill here, just score what's there.
+        let whitePoints = 0,
+          blackPoints = 0;
+        pairing.boards.forEach((board) => {
+          if (board.sitOut || !board.result) return;
+          if (!pById.has(board.white) || !pById.has(board.black)) return;
+          const { wScore, bScore } = applyGame(
+            pById,
+            board.white,
+            board.black,
+            board.result,
+          );
+          whitePoints += wScore;
+          blackPoints += bScore;
+        });
+
+        if (t.variant === "bughouse") {
+          const b1 = pairing.boards[0];
+          const b2 = pairing.boards[1];
+          const teamWhiteWon =
+            (b1 && WHITE_WIN_RESULTS.has(b1.result)) ||
+            (b2 && BLACK_WIN_RESULTS.has(b2.result));
+          const teamBlackWon =
+            (b1 && BLACK_WIN_RESULTS.has(b1.result)) ||
+            (b2 && WHITE_WIN_RESULTS.has(b2.result));
+          whitePoints = teamWhiteWon ? 1 : teamBlackWon ? 0 : 0.5;
+          blackPoints = teamBlackWon ? 1 : teamWhiteWon ? 0 : 0.5;
+        }
+
+        pairing.whitePoints = whitePoints;
+        pairing.blackPoints = blackPoints;
+
+        teamWhite.opponents.add(teamBlack.id);
+        teamBlack.opponents.add(teamWhite.id);
+        teamWhite.colorHistory.push("W");
+        teamBlack.colorHistory.push("B");
+        teamWhite.lastColor = "W";
+        teamBlack.lastColor = "B";
+        teamWhite.colorDiff++;
+        teamBlack.colorDiff--;
+        teamWhite.score += whitePoints;
+        teamBlack.score += blackPoints;
+        teamWhite.results[teamBlack.id] = whitePoints;
+        teamBlack.results[teamWhite.id] = blackPoints;
+      });
+    } else {
+      roundRecord.pairings.forEach((pairing) => {
+        if (pairing.type === "bye") {
+          const p = pById.get(pairing.white);
+          if (!p) return; // defensive
+          p.score += 1;
+          p.byeRounds += 1;
+          p.colorHistory.push(null);
+          return;
+        }
+        if (!pById.has(pairing.white) || !pById.has(pairing.black)) return;
+        applyGame(pById, pairing.white, pairing.black, pairing.result);
+      });
+    }
+  });
+}
+
+// ─── Edit a previously-submitted result ─────────────────────────────────────
+// Lets the organizer correct a scoresheet mistake in ANY past round — not
+// just the most recent one — since standings are always rebuilt from
+// t.rounds afterward. Only round-based systems (Swiss/round-robin) are
+// supported; elimination brackets record results on the match graph itself
+// (see submitBracketMatchResult) and aren't touched here.
+//
+// edit shape:
+//   individual: { pairIndex, result }
+//   team:       { pairIndex, boardNum, result }
+function editResult(id, roundNumber, edit = {}) {
+  const t = assertTournament(id);
+  if (isEliminationSystem(t)) {
+    const e = new Error(
+      "This is a bracket tournament — there's no round to edit. Bracket match results are corrected by resubmitting that match.",
+    );
+    e.status = 400;
+    throw e;
+  }
+
+  const roundRecord = t.rounds.find((r) => r.round === roundNumber);
+  if (!roundRecord) {
+    const e = new Error(`Round ${roundNumber} hasn't been played yet`);
+    e.status = 404;
+    throw e;
+  }
+
+  if (t.format === "team") {
+    const { pairIndex, boardNum, result } = edit;
+    const pairing = roundRecord.pairings[pairIndex];
+    if (!pairing || pairing.type !== "match") {
+      const e = new Error(
+        "No editable match at that pairIndex (byes don't have a result to edit)",
+      );
+      e.status = 400;
+      throw e;
+    }
+    const board = pairing.boards.find((bd) => bd.boardNum === boardNum);
+    if (!board || board.sitOut) {
+      const e = new Error(`No editable board ${boardNum} in that match`);
+      e.status = 400;
+      throw e;
+    }
+    assertValidResult(result);
+    board.result = result;
+    board.derivedFromBoard = null; // now an explicit, independently-set result
+  } else {
+    const { pairIndex, result } = edit;
+    const pairing = roundRecord.pairings[pairIndex];
+    if (!pairing || pairing.type !== "individual") {
+      const e = new Error(
+        "No editable game at that pairIndex (byes don't have a result to edit)",
+      );
+      e.status = 400;
+      throw e;
+    }
+    assertValidResult(result);
+    pairing.result = result;
+  }
+
+  recomputeStandingsFromRounds(t);
+
+  t.updatedAt = new Date().toISOString();
+  persist();
+  return serializeTournament(t);
+}
+
+// ─── Delete a round ──────────────────────────────────────────────────────
+// Only the most recently completed round can be deleted (or the currently
+// open, not-yet-submitted round, which is simply cancelled) — Swiss/
+// round-robin pairings for round N+1 are generated from the standings after
+// round N, so deleting an earlier round out from under a later one would
+// leave that later round's pairings resting on numbers that no longer
+// exist. To go back further, delete rounds one at a time from the end.
+//
+// After deleting, t.currentRound drops back so the organizer can call
+// generateNextRound() again to draw fresh pairings for that round.
+function deleteRound(id, roundNumber) {
+  const t = assertTournament(id);
+  if (isEliminationSystem(t)) {
+    const e = new Error(
+      "This is a bracket tournament — it doesn't have rounds to delete.",
+    );
+    e.status = 400;
+    throw e;
+  }
+  if (!Number.isInteger(roundNumber) || roundNumber < 1) {
+    const e = new Error("Invalid round number");
+    e.status = 400;
+    throw e;
+  }
+
+  // Currently open, unsubmitted round: cancel it rather than "delete" it —
+  // there are no results or standings to unwind yet.
+  if (t.currentPairings) {
+    if (roundNumber !== t.currentRound) {
+      const e = new Error(
+        `Round ${t.currentRound} is still open — finish or cancel it before deleting round ${roundNumber}.`,
+      );
+      e.status = 409;
+      throw e;
+    }
+    t.currentPairings = null;
+    t.currentRound -= 1;
+    t.currentChess960 = null;
+    t.updatedAt = new Date().toISOString();
+    persist();
+    return serializeTournament(t);
+  }
+
+  const lastRound = t.rounds[t.rounds.length - 1];
+  if (!lastRound || lastRound.round !== roundNumber) {
+    const e = new Error(
+      lastRound
+        ? `Only the most recently completed round (round ${lastRound.round}) can be deleted. Delete rounds from the end backwards.`
+        : "There are no completed rounds to delete.",
+    );
+    e.status = 409;
+    throw e;
+  }
+
+  t.rounds.pop();
+  t.currentRound -= 1;
+  if (t.status === "finished") {
+    t.status = "active";
+    t.finishedAt = null;
+  }
+
+  recomputeStandingsFromRounds(t);
+
+  t.updatedAt = new Date().toISOString();
+  persist();
+  return serializeTournament(t);
+}
+
 // ─── Bracket result submission ──────────────────────────────────────────────
 // One match at a time, unlike the round-batch submitResults() above. Accepts:
 //   individual: { winner: "A" | "B" }
@@ -2603,6 +2858,8 @@ module.exports = {
   createTournament,
   generateNextRound,
   submitResults,
+  editResult,
+  deleteRound,
   addLatePlayer,
   deletePlayer,
   addExtraRound,

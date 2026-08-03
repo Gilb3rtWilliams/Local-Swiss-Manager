@@ -38,6 +38,15 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ results }),
     }),
+  editResult: (id, round, payload) =>
+    request(`/tournaments/${id}/rounds/${round}/results`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  deleteRound: (id, round) =>
+    request(`/tournaments/${id}/rounds/${round}`, { method: "DELETE" }),
+  generateNextRound: (id) =>
+    request(`/tournaments/${id}/round`, { method: "POST" }),
   addLatePlayer: (id, body) =>
     request(`/tournaments/${id}/players`, {
       method: "POST",

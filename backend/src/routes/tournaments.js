@@ -64,6 +64,18 @@ router.post(
   requireAdmin,
   wrap((req) => svc.submitResults(req.params.id, req.body.results || [])),
 );
+router.patch(
+  "/:id/rounds/:round/results",
+  requireAdmin,
+  wrap((req) =>
+    svc.editResult(req.params.id, parseInt(req.params.round, 10), req.body),
+  ),
+);
+router.delete(
+  "/:id/rounds/:round",
+  requireAdmin,
+  wrap((req) => svc.deleteRound(req.params.id, parseInt(req.params.round, 10))),
+);
 router.post(
   "/:id/players",
   requireAdmin,

@@ -1,10 +1,26 @@
 const DECISIVE_RESULTS = new Set(["1-0", "0-1", "1F-0F", "0F-1F"]);
 
+const RESULT_OPTIONS = [
+  { value: "1-0", label: "1-0" },
+  { value: "0-1", label: "0-1" },
+  { value: "1/2-1/2", label: "½-½" },
+  { value: "1F-0F", label: "1F-0F" },
+  { value: "0F-1F", label: "0F-1F" },
+  { value: "0F-0F", label: "0F-0F" },
+];
+
 function formatResult(result) {
   return result === "1/2-1/2" ? "½-½" : result;
 }
 
-export default function RoundHistory({ format, round, variant }) {
+export default function RoundHistory({
+  format,
+  round,
+  variant,
+  isEditing = false,
+  onResultChange,
+  loading = false,
+}) {
   if (!round) return <p className="muted">No completed rounds yet.</p>;
 
   const isBughouse = variant === "bughouse";
@@ -89,7 +105,34 @@ export default function RoundHistory({ format, round, variant }) {
                                   </span>
                                 </td>
                                 <td>
-                                  <strong>{formatResult(b.result)}</strong>
+                                  {isEditing ? (
+                                    <select
+                                      className="result-select"
+                                      value={b.result || ""}
+                                      disabled={loading}
+                                      onChange={(e) =>
+                                        onResultChange?.(
+                                          i,
+                                          e.target.value,
+                                          b.boardNum,
+                                        )
+                                      }
+                                    >
+                                      <option value="" disabled>
+                                        Select
+                                      </option>
+                                      {RESULT_OPTIONS.map((opt) => (
+                                        <option
+                                          key={opt.value}
+                                          value={opt.value}
+                                        >
+                                          {opt.label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  ) : (
+                                    <strong>{formatResult(b.result)}</strong>
+                                  )}
                                 </td>
                               </>
                             )}
@@ -142,7 +185,25 @@ export default function RoundHistory({ format, round, variant }) {
                   <span className="player-name">{p.blackName}</span>
                 </td>
                 <td>
-                  <strong>{formatResult(p.result)}</strong>
+                  {isEditing ? (
+                    <select
+                      className="result-select"
+                      value={p.result || ""}
+                      disabled={loading}
+                      onChange={(e) => onResultChange?.(i, e.target.value)}
+                    >
+                      <option value="" disabled>
+                        Select
+                      </option>
+                      {RESULT_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <strong>{formatResult(p.result)}</strong>
+                  )}
                 </td>
               </>
             )}
