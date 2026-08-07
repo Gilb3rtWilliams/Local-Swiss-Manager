@@ -135,8 +135,8 @@ export default function Standings() {
       {/* Main Tables Grid */}
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
+          display: "flex",
+          flexDirection: "column",
           gap: "24px",
         }}
       >

@@ -65,16 +65,93 @@ const INITIAL_REVIEWS = [
   },
 ];
 
-function Stars({ value }) {
+// Small outline icons for the stat strip — hand-rolled inline so the
+// dashboard doesn't pull in an icon library just for four glyphs.
+function IconFlag() {
   return (
-    <span
-      aria-label={`${value} out of 5 stars`}
-      style={{ color: "#d4a853", fontSize: 14, letterSpacing: 2 }}
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
+      <path d="M4.5 17V3" />
+      <path d="M4.5 4h10l-2.5 3 2.5 3h-10" />
+    </svg>
+  );
+}
+
+function IconTarget() {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+    >
+      <circle cx="10" cy="10" r="6.5" />
+      <circle cx="10" cy="10" r="2.5" />
+    </svg>
+  );
+}
+
+function IconCheck() {
+  return (
+    <svg
+      viewBox="0 0 20 20"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M4 10.5l4 4 8-9" />
+    </svg>
+  );
+}
+
+function IconPawn() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor">
+      <circle cx="10" cy="6" r="3" />
+      <path d="M7.2 9.6h5.6l1.6 4.4H5.6l1.6-4.4z" />
+      <rect x="4.2" y="15" width="11.6" height="2.1" rx="1.05" />
+    </svg>
+  );
+}
+
+function Stars({ value, onChange }) {
+  if (onChange) {
+    return (
+      <div className="dash-star-picker">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <span
+            key={n}
+            className={n <= value ? "filled" : ""}
+            onClick={() => onChange(n)}
+          >
+            ★
+          </span>
+        ))}
+      </div>
+    );
+  }
+  return (
+    <span className="dash-review-stars" aria-label={`${value} out of 5 stars`}>
       {"★".repeat(value)}
       {"☆".repeat(5 - value)}
     </span>
   );
+}
+
+// ACTIVE gets the teal treatment; anything still in setup gets the amber
+// "not started" treatment; everything else (finished) reads as neutral.
+function statusPillClass(status) {
+  if (status === "finished") return "status-pill status-pill-finished";
+  if (status === "setup") return "status-pill status-pill-setup";
+  return "status-pill status-pill-active";
 }
 
 export default function Dashboard() {
@@ -92,14 +169,7 @@ export default function Dashboard() {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
-  const welcomeMessage = useTypingEffect(
-    "Welcome to the Tournament Manager Dashboard! ",
-    100,
-  );
-  const subMessage = useTypingEffect(
-    "Every tournament you've run, in one place.",
-    100,
-  );
+  const heroTitle = useTypingEffect("Tournament Manager Dashboard", 60);
 
   useEffect(() => {
     refresh();
@@ -140,6 +210,15 @@ export default function Dashboard() {
     return { total: tournaments.length, active, finished, players };
   }, [tournaments]);
 
+  const statItems = stats
+    ? [
+        { icon: <IconFlag />, value: stats.total, label: "Total tournaments" },
+        { icon: <IconTarget />, value: stats.active, label: "In progress" },
+        { icon: <IconCheck />, value: stats.finished, label: "Finished" },
+        { icon: <IconPawn />, value: stats.players, label: "Competitors" },
+      ]
+    : [];
+
   function submitReview(e) {
     e.preventDefault();
     if (!reviewName.trim() || !reviewQuote.trim()) return;
@@ -162,308 +241,98 @@ export default function Dashboard() {
     }, 1800);
   }
 
-  const primaryBtnStyle = {
-    background: "#252532",
-    border: "1px solid #353545",
-    color: "#e8e8e8",
-    fontSize: 11,
-    fontWeight: 600,
-    letterSpacing: "0.05em",
-    padding: "10px 18px",
-    borderRadius: 8,
-    cursor: "pointer",
-    textTransform: "uppercase",
-    fontFamily: "inherit",
-    transition: "all 0.2s ease",
-    display: "inline-flex",
-    alignItem: "center",
-    gap: 6,
-  };
-
-  const secondaryBtnStyle = {
-    background: "#1a1a24",
-    border: "1px solid #353545",
-    color: "#e8e8e8",
-    fontSize: 11,
-    fontWeight: 600,
-    letterSpacing: "0.05em",
-    padding: "10px 18px",
-    borderRadius: 8,
-    cursor: "pointer",
-    textTransform: "uppercase",
-    fontFamily: "inherit",
-    transition: "all 0.2s ease",
-  };
-
-  const chipStyle = (active) => ({
-    background: active ? "#252532" : "#1a1a24",
-    border: `1px solid ${active ? "#5a5a6a" : "#353545"}`,
-    color: active ? "#fff" : "#8a8a9a",
-    fontSize: 11,
-    fontWeight: 600,
-    padding: "6px 14px",
-    borderRadius: 6,
-    cursor: "pointer",
-    fontFamily: "inherit",
-    transition: "all 0.2s ease",
-  });
-
-  const inputStyle = {
-    background: "#1a1a24",
-    border: "1px solid #353545",
-    color: "#e8e8e8",
-    padding: "10px 12px",
-    borderRadius: 8,
-    fontFamily: "inherit",
-    fontSize: 12,
-    outline: "none",
-    width: "100%",
-    boxSizing: "border-box",
-  };
-
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "32px",
-        fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
-        color: "#e8e8e8",
-        background:
-          "radial-gradient(circle at 50% 0%, #1f1f2e 0%, transparent 70%)",
-        padding: "16px 0",
-        borderRadius: "16px",
-        minHeight: "100vh",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "1200px",
-          width: "100%",
-          margin: "0 auto",
-          padding: "0 20px",
-          boxSizing: "border-box",
-          display: "flex",
-          flexDirection: "column",
-          gap: 32,
-        }}
-      >
-        {/* Header */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: 16,
-            background: "#13131a",
-            border: "1px solid #252532",
-            borderRadius: 12,
-            padding: 24,
-          }}
-        >
-          <div>
-            <h1
-              style={{
-                fontSize: 20,
-                fontWeight: 700,
-                color: "#e8e8e8",
-                margin: "0 0 8px 0",
-                lineHeight: 1.4,
-              }}
-            >
-              {welcomeMessage}
+    <div className="dash-root">
+      <div className="dash-bg" />
+      <div className="dash-container">
+        {/* Hero: title, primary action, and the stat strip in one card */}
+        <div className="dash-hero card">
+          <div className="dash-hero-top">
+            <h1 className="dash-hero-title">
+              <span className="dash-accent-bar" aria-hidden="true" />
+              {heroTitle}
             </h1>
-            <p style={{ color: "#8a8a9a", fontSize: 13, margin: 0 }}>
-              {subMessage}
-            </p>
-          </div>
-          <button style={primaryBtnStyle} onClick={() => navigate("/new")}>
-            + New Tournament
-          </button>
-        </div>
-
-        {/* Stats Row */}
-        {stats && stats.total > 0 && (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-              gap: 16,
-            }}
-          >
-            {[
-              { label: "Total tournaments", value: stats.total },
-              { label: "In progress", value: stats.active },
-              { label: "Finished", value: stats.finished },
-              { label: "Competitors managed", value: stats.players },
-            ].map((stat, idx) => (
-              <div
-                key={idx}
-                style={{
-                  background: "#13131a",
-                  border: "1px solid #252532",
-                  borderRadius: 12,
-                  padding: 20,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 6,
-                }}
-              >
-                <strong
-                  style={{ fontSize: 24, fontWeight: 700, color: "#d4a853" }}
-                >
-                  {stat.value}
-                </strong>
-                <span
-                  style={{
-                    fontSize: 11,
-                    color: "#8a8a9a",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                  }}
-                >
-                  {stat.label}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {error && (
-          <div
-            style={{
-              background: "rgba(255, 107, 107, 0.1)",
-              border: "1px solid rgba(255, 107, 107, 0.3)",
-              color: "#ff6b6b",
-              padding: "12px 16px",
-              borderRadius: 8,
-              fontSize: 12,
-            }}
-          >
-            {error}
-          </div>
-        )}
-
-        {/* Tournaments Section */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              borderBottom: "1px solid #252532",
-              paddingBottom: 12,
-            }}
-          >
-            <h2
-              style={{
-                fontSize: 16,
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: "#e8e8e8",
-                margin: 0,
-              }}
-            >
-              Your Tournaments
-            </h2>
+            <button className="btn-primary" onClick={() => navigate("/new")}>
+              + New Tournament
+            </button>
           </div>
 
-          {tournaments && tournaments.length > 0 && (
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 20,
-                alignItems: "center",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span
-                  style={{
-                    fontSize: 11,
-                    color: "#6b6b7b",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                  }}
-                >
-                  Format:
-                </span>
-                {["all", "individual", "team"].map((f) => (
-                  <button
-                    key={f}
-                    type="button"
-                    style={chipStyle(formatFilter === f)}
-                    onClick={() => setFormatFilter(f)}
-                  >
-                    {f === "all" ? "All" : FORMAT_LABEL[f]}
-                  </button>
-                ))}
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span
-                  style={{
-                    fontSize: 11,
-                    color: "#6b6b7b",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                  }}
-                >
-                  Status:
-                </span>
-                {[
-                  ["all", "All"],
-                  ["active", "In progress"],
-                  ["finished", "Finished"],
-                ].map(([val, label]) => (
-                  <button
-                    key={val}
-                    type="button"
-                    style={chipStyle(statusFilter === val)}
-                    onClick={() => setStatusFilter(val)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+          {stats && stats.total > 0 && (
+            <div className="dash-stats">
+              {statItems.map((item) => (
+                <div className="dash-stat" key={item.label}>
+                  <span className="dash-stat-icon" aria-hidden="true">
+                    {item.icon}
+                  </span>
+                  <div className="dash-stat-body">
+                    <strong>{item.value}</strong>
+                    <span>{item.label}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
+        </div>
+
+        {error && <div className="card dash-error-card">{error}</div>}
+
+        {/* Tournaments Section */}
+        <div className="dash-section">
+          <div className="dash-section-head">
+            <h2>
+              <span className="dash-accent-bar" aria-hidden="true" />
+              Your Tournaments
+            </h2>
+
+            {tournaments && tournaments.length > 0 && (
+              <div className="dash-filters" style={{ marginBottom: 0 }}>
+                <div className="dash-filter-group">
+                  <span className="dash-filter-label">Format:</span>
+                  {["all", "individual", "team"].map((f) => (
+                    <button
+                      key={f}
+                      type="button"
+                      className={`dash-chip ${formatFilter === f ? "active" : ""}`}
+                      onClick={() => setFormatFilter(f)}
+                    >
+                      {f === "all" ? "All" : FORMAT_LABEL[f]}
+                    </button>
+                  ))}
+                </div>
+                <div className="dash-filter-group">
+                  <span className="dash-filter-label">Status:</span>
+                  {[
+                    ["all", "All"],
+                    ["active", "In progress"],
+                    ["finished", "Finished"],
+                  ].map(([val, label]) => (
+                    <button
+                      key={val}
+                      type="button"
+                      className={`dash-chip ${statusFilter === val ? "active" : ""}`}
+                      onClick={() => setStatusFilter(val)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
           {tournaments === null && (
-            <p style={{ color: "#8a8a9a", fontSize: 13 }}>Loading…</p>
+            <p className="dash-section-note">Loading…</p>
           )}
 
           {tournaments && tournaments.length === 0 && (
-            <div
-              style={{
-                background: "#13131a",
-                border: "1px solid #252532",
-                borderRadius: 12,
-                padding: 48,
-                textAlign: "center",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 12,
-              }}
-            >
-              <div style={{ fontSize: 32, color: "#d4a853" }}>♟</div>
-              <h2
-                style={{
-                  fontSize: 16,
-                  fontWeight: 700,
-                  color: "#e8e8e8",
-                  margin: 0,
-                }}
-              >
-                No tournaments yet
-              </h2>
-              <p style={{ color: "#8a8a9a", fontSize: 13, margin: 0 }}>
+            <div className="card dash-empty-card">
+              <div className="dash-empty-icon">♟</div>
+              <h2 className="dash-empty-title">No tournaments yet</h2>
+              <p className="dash-section-note">
                 Create your first tournament to generate Round 1 pairings.
               </p>
               <button
-                style={{ ...primaryBtnStyle, marginTop: 8 }}
+                className="btn-primary dash-mt-16"
                 onClick={() => navigate("/new")}
               >
                 + New Tournament
@@ -472,344 +341,132 @@ export default function Dashboard() {
           )}
 
           {filtered && filtered.length === 0 && tournaments.length > 0 && (
-            <div
-              style={{
-                background: "#13131a",
-                border: "1px solid #252532",
-                borderRadius: 12,
-                padding: 24,
-                textAlign: "center",
-                color: "#8a8a9a",
-                fontSize: 13,
-              }}
-            >
+            <div className="card dash-section-note dash-note-card">
               No tournaments match these filters.
             </div>
           )}
 
           {filtered && filtered.length > 0 && (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-                gap: 20,
-              }}
-            >
-              {filtered.map((t) => (
-                <div
-                  key={t.id}
-                  onClick={() => navigate(`/tournament/${t.id}`)}
-                  style={{
-                    background: "#13131a",
-                    border: "1px solid #252532",
-                    borderRadius: 12,
-                    padding: 20,
-                    cursor: "pointer",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 12,
-                    transition: "all 0.2s ease",
-                    position: "relative",
-                  }}
-                >
+            <div className="tourney-grid tourney-grid-layout">
+              {filtered.map((t) => {
+                const totalRounds = t.totalRounds || 1;
+                const roundProgress = Math.min(
+                  100,
+                  Math.max(0, (t.currentRound / totalRounds) * 100),
+                );
+
+                return (
                   <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
+                    key={t.id}
+                    className="card tourney-card tourney-card-layout"
+                    onClick={() => navigate(`/tournament/${t.id}`)}
                   >
-                    <span
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        letterSpacing: "0.08em",
-                        textTransform: "uppercase",
-                        padding: "3px 8px",
-                        borderRadius: 4,
-                        background:
-                          t.status === "finished" ? "#1f2e1f" : "#2e271f",
-                        color: t.status === "finished" ? "#6bc76b" : "#d4a853",
-                        border: `1px solid ${t.status === "finished" ? "#2f4a2f" : "#4a3f2f"}`,
-                      }}
-                    >
-                      {t.status}
-                    </span>
-                    <button
-                      onClick={(e) => handleDelete(e, t.id)}
-                      title="Delete"
-                      style={{
-                        background: "transparent",
-                        border: "none",
-                        color: "#6b6b7b",
-                        cursor: "pointer",
-                        fontSize: 14,
-                        padding: 4,
-                      }}
-                    >
-                      ✕
-                    </button>
-                  </div>
-
-                  <h3
-                    style={{
-                      fontSize: 15,
-                      fontWeight: 700,
-                      color: "#e8e8e8",
-                      margin: 0,
-                      lineHeight: 1.3,
-                    }}
-                  >
-                    {t.name}
-                  </h3>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 4,
-                      fontSize: 11,
-                      color: "#8a8a9a",
-                    }}
-                  >
-                    <span>
-                      {FORMAT_LABEL[t.format]}
-                      {t.variant && t.variant !== "standard"
-                        ? ` · ${VARIANT_LABEL[t.variant] || t.variant}`
-                        : ""}
-                    </span>
-                    {t.federation && <span>{t.federation}</span>}
-                    {t.timeControl && <span>{t.timeControl}</span>}
-                  </div>
-
-                  <div
-                    style={{
-                      borderTop: "1px solid #252532",
-                      paddingTop: 10,
-                      marginTop: 4,
-                      fontSize: 11,
-                      color: "#6b6b7b",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <span>
-                      Round {t.currentRound} / {t.totalRounds}
-                    </span>
-                    <span>
-                      {t.competitorCount}{" "}
-                      {t.format === "team" ? "teams" : "players"}
-                    </span>
-                  </div>
-
-                  {t.status === "finished" && t.winner && (
-                    <div
-                      style={{
-                        background: "rgba(212, 168, 83, 0.1)",
-                        border: "1px solid rgba(212, 168, 83, 0.2)",
-                        color: "#d4a853",
-                        fontSize: 11,
-                        padding: "6px 10px",
-                        borderRadius: 6,
-                        fontWeight: 600,
-                      }}
-                    >
-                      🏆 {t.winner}
+                    <div className="tourney-card-header">
+                      <span className={statusPillClass(t.status)}>
+                        {t.status}
+                      </span>
+                      <button
+                        className="btn-delete"
+                        onClick={(e) => handleDelete(e, t.id)}
+                        title="Delete"
+                      >
+                        ✕
+                      </button>
                     </div>
-                  )}
-                </div>
-              ))}
+
+                    <h3 className="tourney-title">{t.name}</h3>
+
+                    <div className="tourney-meta">
+                      <div className="tourney-tags">
+                        <span className="tourney-chip tourney-chip-neutral">
+                          {FORMAT_LABEL[t.format]}
+                        </span>
+                        {t.variant && t.variant !== "standard" && (
+                          <span className="tourney-chip tourney-chip-variant">
+                            {VARIANT_LABEL[t.variant] || t.variant}
+                          </span>
+                        )}
+                        {t.timeControl && (
+                          <span className="tourney-chip tourney-chip-time">
+                            {t.timeControl}
+                          </span>
+                        )}
+                        {t.federation && (
+                          <span className="tourney-federation">
+                            {t.federation}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="tourney-progress">
+                        <div
+                          className={`tourney-progress-fill ${t.status === "finished" ? "is-muted" : ""}`}
+                          style={{ width: `${roundProgress}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="tourney-footer">
+                      <span>
+                        Round {t.currentRound} / {t.totalRounds}
+                      </span>
+                      <span>
+                        {t.competitorCount}{" "}
+                        {t.format === "team" ? "teams" : "players"}
+                      </span>
+                    </div>
+
+                    {t.status === "finished" && t.winner && (
+                      <div className="tourney-winner">🏆 {t.winner}</div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
 
         {/* News Section */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 16,
-            marginTop: 12,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              borderBottom: "1px solid #252532",
-              paddingBottom: 12,
-            }}
-          >
-            <h2
-              style={{
-                fontSize: 16,
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: "#e8e8e8",
-                margin: 0,
-              }}
-            >
+        <div className="dash-section">
+          <div className="dash-section-head">
+            <h2>
+              <span className="dash-accent-bar" aria-hidden="true" />
               From the Kenyan Chess World
             </h2>
-            <span
-              style={{ fontSize: 11, color: "#6b6b7b", fontStyle: "italic" }}
-            >
+            <span className="dash-section-note">
               Sample content — edit anytime
             </span>
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-              gap: 16,
-            }}
-          >
+          <div className="dash-news-grid">
             {NEWS_ITEMS.map((item) => (
-              <div
-                key={item.title}
-                style={{
-                  background: "#13131a",
-                  border: "1px solid #252532",
-                  borderRadius: 12,
-                  padding: 20,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 10,
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 9,
-                    fontWeight: 700,
-                    letterSpacing: "0.1em",
-                    textTransform: "uppercase",
-                    color: "#d4a853",
-                    background: "#252532",
-                    padding: "3px 8px",
-                    borderRadius: 4,
-                    width: "fit-content",
-                  }}
-                >
-                  {item.tag}
-                </span>
-                <h3
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 700,
-                    color: "#e8e8e8",
-                    margin: 0,
-                    lineHeight: 1.4,
-                  }}
-                >
-                  {item.title}
-                </h3>
-                <p
-                  style={{
-                    fontSize: 12,
-                    color: "#8a8a9a",
-                    margin: 0,
-                    lineHeight: 1.5,
-                    flex: 1,
-                  }}
-                >
-                  {item.excerpt}
-                </p>
-                <span
-                  style={{
-                    fontSize: 10,
-                    color: "#6b6b7b",
-                    paddingTop: 8,
-                    borderTop: "1px solid #1f1f2a",
-                  }}
-                >
-                  {item.date}
-                </span>
+              <div key={item.title} className="card dash-news-card">
+                <span className="dash-news-tag">{item.tag}</span>
+                <h3>{item.title}</h3>
+                <p>{item.excerpt}</p>
+                <span className="dash-news-date">{item.date}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Reviews Section */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: 16,
-            marginTop: 12,
-          }}
-        >
-          <div
-            style={{
-              borderBottom: "1px solid #252532",
-              paddingBottom: 12,
-            }}
-          >
-            <h2
-              style={{
-                fontSize: 16,
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: "#e8e8e8",
-                margin: 0,
-              }}
-            >
+        <div className="dash-section">
+          <div className="dash-section-head">
+            <h2>
+              <span className="dash-accent-bar" aria-hidden="true" />
               What Organizers Say
             </h2>
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: 16,
-            }}
-          >
+          <div className="dash-reviews-grid">
             {reviews.map((r, i) => (
-              <div
-                key={`${r.name}-${i}`}
-                style={{
-                  background: "#13131a",
-                  border: "1px solid #252532",
-                  borderRadius: 12,
-                  padding: 20,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 12,
-                }}
-              >
+              <div key={`${r.name}-${i}`} className="card dash-review-card">
                 <Stars value={r.rating} />
-                <p
-                  style={{
-                    fontSize: 13,
-                    color: "#e8e8e8",
-                    margin: 0,
-                    fontStyle: "italic",
-                    lineHeight: 1.5,
-                    flex: 1,
-                  }}
-                >
-                  "{r.quote}"
-                </p>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 2,
-                    borderTop: "1px solid #1f1f2a",
-                    paddingTop: 10,
-                  }}
-                >
-                  <strong style={{ fontSize: 12, color: "#e8e8e8" }}>
-                    {r.name}
-                  </strong>
-                  <span style={{ fontSize: 11, color: "#6b6b7b" }}>
-                    {r.role}
-                  </span>
+                <p className="dash-review-quote">"{r.quote}"</p>
+                <div className="dash-review-author dash-author-footer">
+                  <strong>{r.name}</strong>
+                  <span>{r.role}</span>
                 </div>
               </div>
             ))}
@@ -817,125 +474,57 @@ export default function Dashboard() {
 
           {!reviewFormOpen ? (
             <button
-              style={{
-                ...secondaryBtnStyle,
-                width: "fit-content",
-                marginTop: 8,
-              }}
+              className="btn-secondary"
               onClick={() => setReviewFormOpen(true)}
             >
               + Share Your Experience
             </button>
           ) : (
-            <div
-              style={{
-                background: "#13131a",
-                border: "1px solid #252532",
-                borderRadius: 12,
-                padding: 24,
-                marginTop: 8,
-              }}
-            >
+            <div className="card dash-review-form">
               {reviewSubmitted ? (
-                <p style={{ color: "#8a8a9a", fontSize: 13, margin: 0 }}>
+                <p className="dash-section-note dash-m-0">
                   Thanks for the review! 🙌
                 </p>
               ) : (
-                <form
-                  onSubmit={submitReview}
-                  style={{ display: "flex", flexDirection: "column", gap: 16 }}
-                >
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns:
-                        "repeat(auto-fit, minmax(220px, 1fr))",
-                      gap: 16,
-                    }}
-                  >
-                    <label
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 6,
-                        fontSize: 11,
-                        color: "#8a8a9a",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.08em",
-                      }}
-                    >
-                      <span>Your name</span>
+                <form onSubmit={submitReview}>
+                  <div className="form-grid form-grid-layout">
+                    <label className="form-label">
+                      <span className="dash-filter-label">Your name</span>
                       <input
                         type="text"
+                        className="form-input"
                         value={reviewName}
                         onChange={(e) => setReviewName(e.target.value)}
                         placeholder="Jane Wanjiku"
-                        style={inputStyle}
                       />
                     </label>
-                    <label
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 6,
-                        fontSize: 11,
-                        color: "#8a8a9a",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.08em",
-                      }}
-                    >
-                      <span>Rating</span>
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: 6,
-                          fontSize: 22,
-                          cursor: "pointer",
-                          height: 40,
-                          alignItems: "center",
-                        }}
-                      >
-                        {[1, 2, 3, 4, 5].map((n) => (
-                          <span
-                            key={n}
-                            style={{
-                              color: n <= reviewRating ? "#d4a853" : "#353545",
-                            }}
-                            onClick={() => setReviewRating(n)}
-                          >
-                            ★
-                          </span>
-                        ))}
+                    <label className="form-label">
+                      <span className="dash-filter-label">Rating</span>
+                      <div className="form-rating-wrapper">
+                        <Stars
+                          value={reviewRating}
+                          onChange={setReviewRating}
+                        />
                       </div>
                     </label>
                   </div>
-                  <label
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 6,
-                      fontSize: 11,
-                      color: "#8a8a9a",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.08em",
-                    }}
-                  >
-                    <span>Your review</span>
+                  <label className="form-label form-label-mb">
+                    <span className="dash-filter-label">Your review</span>
                     <textarea
                       rows={3}
+                      className="form-textarea"
                       value={reviewQuote}
                       onChange={(e) => setReviewQuote(e.target.value)}
                       placeholder="What's it been like running tournaments with Swiss Manager?"
-                      style={{ ...inputStyle, resize: "vertical" }}
                     />
                   </label>
-                  <div style={{ display: "flex", gap: 12 }}>
-                    <button style={primaryBtnStyle} type="submit">
+                  <div className="form-actions">
+                    <button className="btn-primary" type="submit">
                       Submit Review
                     </button>
                     <button
                       type="button"
-                      style={secondaryBtnStyle}
+                      className="btn-secondary"
                       onClick={() => setReviewFormOpen(false)}
                     >
                       Cancel
@@ -948,53 +537,19 @@ export default function Dashboard() {
         </div>
 
         {/* Footer */}
-        <footer
-          style={{
-            borderTop: "1px solid #252532",
-            paddingTop: 24,
-            marginTop: 20,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: 20,
-            color: "#8a8a9a",
-            fontSize: 12,
-          }}
-        >
+        <footer className="dash-footer">
           <div>
-            <p
-              style={{ fontWeight: 700, color: "#e8e8e8", margin: "0 0 4px 0" }}
-            >
-              Swiss Manager
-            </p>
-            <p style={{ margin: 0, color: "#6b6b7b" }}>
+            <p className="dash-footer-title">Swiss Manager</p>
+            <p className="dash-footer-sub">
               Built and maintained by Gilbert Williams.
             </p>
           </div>
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 4,
-              alignItems: "flex-end",
-            }}
-          >
-            <a
-              href="tel:+254719737274"
-              style={{ color: "#d4a853", textDecoration: "none" }}
-            >
-              0719 737 274
-            </a>
-            <a
-              href="tel:+254714591285"
-              style={{ color: "#d4a853", textDecoration: "none" }}
-            >
-              0714 591 285
-            </a>
+          <div className="dash-footer-contact">
+            <a href="tel:+254719737274">0719 737 274</a>
+            <a href="tel:+254714591285">0714 591 285</a>
             <a
               href="mailto:gilbertwilliamsnyange@gmail.com"
-              style={{ color: "#8a8a9a", textDecoration: "none" }}
+              className="footer-email"
             >
               gilbertwilliamsnyange@gmail.com
             </a>

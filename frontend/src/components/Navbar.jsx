@@ -24,7 +24,7 @@ export default function Navbar() {
     <header className="navbar">
       <div className="navbar-inner">
         <Link to="/" className="navbar-brand">
-          <span className="navbar-glyph">♞</span> Local Swiss Manager
+          <span className="navbar-glyph">♟</span> Local Swiss Manager
         </Link>
         <nav className="navbar-actions">
           {authenticated && (
@@ -42,7 +42,7 @@ export default function Navbar() {
                 + New Tournament
               </button>
               <button className="navbar-link" onClick={handleLogout}>
-                Log Out
+                Log out
               </button>
             </>
           )}

@@ -1,21 +1,31 @@
 /* ── Dashboard: token system ──────────────────────────────────────────────
-   Grounded in the material world of an actual chess set and tournament
-   hall — walnut boards, felt playing surfaces, brass trophies — rather
-   than a generic SaaS palette. Everything below is scoped under
-   `.dash-root` so it never leaks onto other pages that reuse .card,
-   .btn-primary, etc.
+   A dark control-room read on a tournament hall: near-black surfaces,
+   a single mint-teal accent for anything live or actionable, and a
+   monospace scoreboard typeface for numbers and headings — the vocabulary
+   of a chess clock / pairing board rather than a generic SaaS palette.
+   Everything below is scoped under `.dash-root` so it never leaks onto
+   other pages that reuse .card, .btn-primary, etc.
 ─────────────────────────────────────────────────────────────────────────── */
 
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap");
 
 .dash-root {
-  --ink: #1c231f;
-  --parchment: #f4efe2;
-  --felt: #24483a;
-  --felt-light: #3a6b53;
-  --walnut: #402a1f;
-  --brass: #b8863a;
-  --claret: #7c3130;
+  --bg: #14141b;
+  --surface: #23232e;
+  --surface-alt: #2a2a37;
+  --border: rgba(232, 230, 240, 0.09);
+  --border-strong: rgba(232, 230, 240, 0.16);
+  --ink: #eeecf4;
+  --muted: #8d8da0;
+  --muted-soft: #6b6b7c;
+  --teal: #00d4a8;
+  --teal-strong: #00b894;
+  --teal-soft: rgba(0, 212, 168, 0.14);
+  --indigo: #8ea2ec;
+  --indigo-soft: rgba(124, 147, 230, 0.16);
+  --amber: #d4a853;
+  --amber-soft: rgba(212, 168, 83, 0.14);
+  --claret: #d97a72;
 
   position: relative;
   isolation: isolate;
@@ -27,7 +37,8 @@
 .dash-root h1,
 .dash-root h2,
 .dash-root h3 {
-  font-family: "Fraunces", Georgia, serif;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-weight: 700;
   letter-spacing: -0.01em;
 }
 
@@ -35,86 +46,34 @@
   font-family: "IBM Plex Mono", ui-monospace, monospace;
 }
 
-/* ── Ambient background: slow cross-fading "hall light" scenes ─────────── */
+/* ── Background: quiet, near-flat — a faint board-grid watermark is the
+   only texture, no color-cycling scenes. The room is dim; the accent
+   color is what's meant to draw the eye. ────────────────────────────── */
 .dash-bg {
   position: fixed;
   inset: 0;
   z-index: -2;
   overflow: hidden;
-  background: var(--walnut);
+  background: var(--bg);
 }
 
-.dash-bg-scene {
+.dash-bg::before {
+  content: "";
   position: absolute;
   inset: 0;
-  opacity: 0;
+  background:
+    radial-gradient(
+      120% 70% at 50% -10%,
+      rgba(0, 212, 168, 0.06) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      90% 60% at 100% 110%,
+      rgba(35, 35, 46, 0.9) 0%,
+      transparent 60%
+    );
 }
 
-.dash-bg-scene:nth-child(1) {
-  background: radial-gradient(
-    120% 90% at 15% 10%,
-    #5c3c28 0%,
-    #402a1f 55%,
-    #241811 100%
-  );
-}
-.dash-bg-scene:nth-child(2) {
-  background: radial-gradient(
-    120% 90% at 85% 15%,
-    #2f5a45 0%,
-    #24483a 55%,
-    #142720 100%
-  );
-}
-.dash-bg-scene:nth-child(3) {
-  background: radial-gradient(
-    120% 90% at 50% 90%,
-    #8a6a34 0%,
-    #4a3820 55%,
-    #241811 100%
-  );
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .dash-bg-scene {
-    animation: dashCycle 24s infinite;
-  }
-  .dash-bg-scene:nth-child(1) {
-    animation-delay: 0s;
-  }
-  .dash-bg-scene:nth-child(2) {
-    animation-delay: 8s;
-  }
-  .dash-bg-scene:nth-child(3) {
-    animation-delay: 16s;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .dash-bg-scene:nth-child(1) {
-    opacity: 1;
-  }
-}
-
-@keyframes dashCycle {
-  0% {
-    opacity: 0;
-  }
-  4% {
-    opacity: 1;
-  }
-  29% {
-    opacity: 1;
-  }
-  33% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
-/* faint oversized rotated board-grid watermark, always present */
 .dash-bg::after {
   content: "";
   position: absolute;
@@ -122,71 +81,120 @@
   background-image:
     repeating-linear-gradient(
       0deg,
-      rgba(244, 239, 226, 0.05) 0 2px,
-      transparent 2px 64px
+      rgba(232, 230, 240, 0.035) 0 1px,
+      transparent 1px 64px
     ),
     repeating-linear-gradient(
       90deg,
-      rgba(244, 239, 226, 0.05) 0 2px,
-      transparent 2px 64px
+      rgba(232, 230, 240, 0.035) 0 1px,
+      transparent 1px 64px
     );
   transform: rotate(-8deg);
 }
 
-/* ── Glass surfaces: overrides .card only within the dashboard ─────────── */
+/* ── Surfaces: overrides .card only within the dashboard ───────────────── */
 .dash-root .card {
-  background: rgba(244, 239, 226, 0.219);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(244, 239, 226, 0.35);
-  box-shadow: 0 12px 30px rgba(20, 15, 10, 0.18);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  backdrop-filter: none;
 }
 
 .dash-root .page-title {
-  color: #fbf7ee;
+  color: var(--ink);
 }
 .dash-root .page-subtitle {
-  color: rgba(251, 247, 238, 0.82);
+  color: var(--muted);
 }
 
-/* ── Header / stat strip ─────────────────────────────────────────────── */
-.dash-header {
+/* ── Signature: a small teal tick marks every section's lead-in, like a
+   cursor on a scoreboard. Used sparingly — this is the one accent
+   device the page repeats. ─────────────────────────────────────────── */
+.dash-accent-bar {
+  display: inline-block;
+  width: 4px;
+  height: 0.85em;
+  margin-right: 10px;
+  border-radius: 2px;
+  background: var(--teal);
+  vertical-align: -0.05em;
+}
+
+/* ── Hero: title + primary action + stat strip, one card ───────────────── */
+.dash-hero {
+  padding: 26px 28px;
+  margin-bottom: 28px;
+}
+
+.dash-hero-top {
   display: flex;
   justify-content: space-between;
-  align-items: flex-end;
+  align-items: center;
   gap: 20px;
   flex-wrap: wrap;
-  margin-bottom: 18px;
+  margin-bottom: 22px;
+}
+
+.dash-hero-title {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  font-size: 1.4rem;
 }
 
 .dash-stats {
   display: flex;
-  gap: 14px;
+  gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 28px;
 }
 
 .dash-stat {
-  background: rgba(244, 239, 226, 0.14);
-  border: 1px solid rgba(244, 239, 226, 0.25);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(232, 230, 240, 0.03);
+  border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 10px 16px;
-  color: #fbf7ee;
-  min-width: 120px;
+  padding: 12px 16px;
+  min-width: 150px;
+  flex: 1;
+}
+
+.dash-stat-icon {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  background: var(--surface-alt);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dash-stat-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.dash-stat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .dash-stat strong {
-  display: block;
-  font-family: "Fraunces", serif;
-  font-size: 1.6rem;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 1.5rem;
   line-height: 1.1;
+  color: var(--ink);
 }
 
 .dash-stat span {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  opacity: 0.8;
+  letter-spacing: 0.07em;
+  color: var(--muted);
 }
 
 /* ── Sections ─────────────────────────────────────────────────────────── */
@@ -204,14 +212,16 @@
 }
 
 .dash-section-head h2 {
-  color: #fbf7ee;
-  font-size: 1.3rem;
+  display: flex;
+  align-items: center;
+  color: var(--ink);
+  font-size: 1.15rem;
   margin: 0;
 }
 
 .dash-section-note {
   font-size: 0.78rem;
-  color: rgba(251, 247, 238, 0.65);
+  color: var(--muted);
 }
 
 /* ── Filters ──────────────────────────────────────────────────────────── */
@@ -230,46 +240,140 @@
 }
 
 .dash-filter-label {
-  font-size: 0.72rem;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: rgba(251, 247, 238, 0.7);
+  letter-spacing: 0.08em;
+  color: var(--muted);
   margin-right: 4px;
 }
 
 .dash-chip {
-  border: 1px solid rgba(244, 239, 226, 0.4);
-  background: rgba(244, 239, 226, 0.1);
-  color: #fbf7ee;
+  font-family: "IBM Plex Mono", monospace;
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  color: var(--muted);
   border-radius: 999px;
   padding: 5px 14px;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   cursor: pointer;
   transition:
     background 0.15s ease,
-    color 0.15s ease;
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .dash-chip:hover {
-  background: rgba(244, 239, 226, 0.22);
+  border-color: var(--teal);
+  color: var(--ink);
 }
 
 .dash-chip.active {
-  background: var(--brass);
-  border-color: var(--brass);
-  color: #241811;
+  background: var(--teal);
+  border-color: var(--teal);
+  color: #08211c;
   font-weight: 600;
 }
 
-/* ── Tournament grid (glass cards on top of .tourney-grid/.tourney-card) ─ */
+/* ── Tournament grid ──────────────────────────────────────────────────── */
 .dash-root .tourney-card {
   cursor: pointer;
-  border-top: 3px solid var(--felt-light);
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease;
 }
 
-.dash-root .status-pill {
+.dash-root .tourney-card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-root .tourney-card:hover {
+    transform: none;
+  }
+}
+
+.status-pill {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  color: var(--muted);
+}
+
+.status-pill-active {
+  background: var(--teal-soft);
+  color: var(--teal);
+}
+
+.status-pill-finished {
+  background: var(--surface-alt);
+  color: var(--muted);
+}
+
+.status-pill-setup {
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+
+.tourney-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.tourney-chip {
   font-family: "IBM Plex Mono", monospace;
   font-size: 0.68rem;
+  letter-spacing: 0.02em;
+  padding: 3px 9px;
+  border-radius: 6px;
+  line-height: 1.4;
+}
+
+.tourney-chip-neutral {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.tourney-chip-variant {
+  background: var(--indigo-soft);
+  color: var(--indigo);
+}
+
+.tourney-chip-time {
+  background: transparent;
+  border: 1px solid var(--teal-soft);
+  color: var(--teal);
+}
+
+.tourney-federation {
+  font-size: 0.76rem;
+  font-style: italic;
+  color: var(--muted-soft);
+}
+
+.tourney-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  overflow: hidden;
+}
+
+.tourney-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--teal);
+}
+
+.tourney-progress-fill.is-muted {
+  background: var(--muted-soft);
 }
 
 /* ── News / blog cards ────────────────────────────────────────────────── */
@@ -286,32 +390,32 @@
 .dash-news-tag {
   display: inline-block;
   font-family: "IBM Plex Mono", monospace;
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--felt);
-  background: rgba(36, 72, 58, 0.1);
-  border-radius: 4px;
-  padding: 2px 8px;
+  letter-spacing: 0.07em;
+  color: var(--teal);
+  background: var(--teal-soft);
+  border-radius: 999px;
+  padding: 3px 10px;
   margin-bottom: 10px;
 }
 
 .dash-news-card h3 {
-  font-size: 1.05rem;
+  font-size: 1rem;
   margin: 0 0 8px;
 }
 
 .dash-news-card p {
   font-size: 0.88rem;
-  color: #4a463c;
-  line-height: 1.5;
+  color: var(--muted);
+  line-height: 1.55;
   margin: 0 0 10px;
 }
 
 .dash-news-date {
   font-family: "IBM Plex Mono", monospace;
-  font-size: 0.72rem;
-  color: #8a8478;
+  font-size: 0.7rem;
+  color: var(--muted-soft);
 }
 
 /* ── Reviews ──────────────────────────────────────────────────────────── */
@@ -330,7 +434,7 @@
 }
 
 .dash-review-stars {
-  color: var(--brass);
+  color: var(--amber);
   letter-spacing: 2px;
   font-size: 0.95rem;
 }
@@ -338,7 +442,7 @@
 .dash-review-quote {
   font-size: 0.92rem;
   line-height: 1.55;
-  color: #322d24;
+  color: var(--ink);
   font-style: italic;
 }
 
@@ -347,7 +451,7 @@
   justify-content: space-between;
   align-items: baseline;
   font-size: 0.82rem;
-  color: #6b665a;
+  color: var(--muted);
 }
 
 .dash-review-author strong {
@@ -371,11 +475,11 @@
 }
 
 .dash-star-picker span {
-  color: #d8d2c2;
+  color: var(--border-strong);
 }
 
 .dash-star-picker span.filled {
-  color: var(--brass);
+  color: var(--amber);
 }
 
 /* ── Footer acknowledgement banner ───────────────────────────────────── */
@@ -383,10 +487,9 @@
   margin-top: 48px;
   border-radius: 14px;
   padding: 26px 30px;
-  background: rgba(36, 24, 17, 0.72);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(244, 239, 226, 0.18);
-  color: #fbf7ee;
+  background: rgba(10, 10, 15, 0.6);
+  border: 1px solid var(--border);
+  color: var(--ink);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -395,14 +498,14 @@
 }
 
 .dash-footer-title {
-  font-family: "Fraunces", serif;
-  font-size: 1.05rem;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 1rem;
   margin: 0 0 4px;
 }
 
 .dash-footer-sub {
   font-size: 0.82rem;
-  color: rgba(251, 247, 238, 0.7);
+  color: var(--muted);
   margin: 0;
 }
 
@@ -416,7 +519,7 @@
 }
 
 .dash-footer-contact a {
-  color: #f0dcae;
+  color: var(--teal);
   text-decoration: none;
 }
 
@@ -432,4 +535,181 @@
   .dash-footer-contact {
     align-items: flex-start;
   }
+}
+
+/* ── Structural layout ───────────────────────────────────────────────── */
+.dash-container {
+  max-width: 100%;
+  width: 100%;
+  margin: 0 auto;
+  padding: 40px 20px;
+  box-sizing: border-box;
+}
+
+.dash-title-margin {
+  margin: 0 0 8px 0;
+}
+
+.dash-m-0 {
+  margin: 0;
+}
+
+.dash-mt-16 {
+  margin-top: 16px;
+}
+
+.dash-error-card {
+  color: var(--claret);
+  margin-bottom: 20px;
+}
+
+.dash-empty-card {
+  text-align: center;
+  padding: 48px;
+}
+
+.dash-empty-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+  color: var(--teal);
+}
+
+.dash-empty-title {
+  margin: 0 0 8px;
+}
+
+.dash-note-card {
+  padding: 24px;
+  text-align: center;
+}
+
+.tourney-grid-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.tourney-card-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  position: relative;
+}
+
+.tourney-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.text-uppercase {
+  text-transform: uppercase;
+}
+
+.btn-delete {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 4px;
+  color: var(--muted-soft);
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+
+.btn-delete:hover {
+  color: var(--claret);
+}
+
+.tourney-title {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.35;
+  color: var(--ink);
+}
+
+.tourney-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tourney-footer {
+  padding-top: 2px;
+  margin-top: 2px;
+  font-size: 0.82rem;
+  font-family: "IBM Plex Mono", monospace;
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+}
+
+.tourney-winner {
+  background: var(--amber-soft);
+  border: 1px solid rgba(212, 168, 83, 0.25);
+  color: var(--amber);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.dash-author-footer {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  margin-top: auto;
+}
+
+.form-grid-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label-mb {
+  margin-bottom: 16px;
+}
+
+.form-input,
+.form-textarea {
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  background: rgba(232, 230, 240, 0.04);
+  color: inherit;
+  font-family: inherit;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  outline: 2px solid var(--teal);
+  outline-offset: 1px;
+}
+
+.form-textarea {
+  resize: vertical;
+}
+
+.form-rating-wrapper {
+  height: 35px;
+  display: flex;
+  align-items: center;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.footer-email {
+  color: var(--muted);
 }

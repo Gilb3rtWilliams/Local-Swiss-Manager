@@ -528,7 +528,7 @@ export default function NewTournament() {
                       type="text"
                       value={timeControl}
                       onChange={(e) => setTimeControl(e.target.value)}
-                      placeholder="90+30"
+                      placeholder="90+30, 5+0, etc."
                     />
                   </label>
                   <label className="field">

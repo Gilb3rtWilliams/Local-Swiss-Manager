@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import BackgroundSlideshow from "../components/BackgroundSlideshow.jsx";
 import "../css/Welcome.css";
 import useTypingEffect from "/hooks/useTypingEffect.js";
@@ -231,12 +233,28 @@ export default function Welcome() {
     30,
   );
 
+  const [showLoginBtn, setShowLoginBtn] = useState(false);
+  const isLoggedIn = Boolean(localStorage.getItem("adminToken"));
+
+  const handleDashboardClick = () => {
+    if (!isLoggedIn) {
+      toast.error("You have to log in as an admin to access this page.", {
+        position: "top-right",
+        autoClose: 3000,
+      });
+      setShowLoginBtn(true);
+    } else {
+      navigate("/dashboard");
+    }
+  };
+
   function scrollToFormats() {
     document.getElementById("formats")?.scrollIntoView({ behavior: "smooth" });
   }
 
   return (
     <div className="welcome-page">
+      <ToastContainer />
       <section className="welcome-hero">
         <BackgroundSlideshow images={HERO_IMAGES} className="welcome-hero-bg" />
 
@@ -252,11 +270,20 @@ export default function Welcome() {
               Browse Tournaments
             </button>
             <button
-              className="btn-secondary btn-lg welcome-admin-cta"
-              onClick={() => navigate("/login")}
+              className="btn-primary btn-lg"
+              onClick={handleDashboardClick}
             >
-              Admin Sign In
+              Admin Dashboard
             </button>
+
+            {!isLoggedIn && showLoginBtn && (
+              <button
+                className="btn-secondary btn-lg welcome-admin-cta"
+                onClick={() => navigate("/login")}
+              >
+                Admin Sign In
+              </button>
+            )}
           </div>
           <p className="welcome-credit">by Gilbert Williams</p>
         </div>

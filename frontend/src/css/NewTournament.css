@@ -681,3 +681,12 @@ input.nt-roster-name {
     padding: 7px 4px;
   }
 }
+
+/* ── Structural Layout ───────────────────────────────────────────────── */
+.nt-root .container {
+  max-width: 100%;
+  width: 100%;
+  padding-left: 20px;
+  padding-right: 20px;
+  box-sizing: border-box;
+}

@@ -113,7 +113,7 @@
 
 /* ── Shell ────────────────────────────────────────────────────────────── */
 .pt-shell {
-  max-width: 1080px;
+  max-width: 100%;
   margin: 0 auto;
   padding: 56px 24px 0;
 }

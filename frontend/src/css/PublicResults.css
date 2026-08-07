@@ -114,7 +114,7 @@
 
 /* ── Shell ────────────────────────────────────────────────────────────── */
 .pv-shell {
-  max-width: 1040px;
+  max-width: 100%;
   margin: 0 auto;
   padding: 56px 24px 0;
 }

@@ -1,17 +1,18 @@
 /* ==========================================================================
-   NAVBAR (Dark Slate & Gold Theme)
-   Sticky glassmorphism header with glowing gold brand accents & monospaced nav
+   NAVBAR (Dark Slate & Teal Theme)
+   Sticky glassmorphism header with a teal brand accent & monospaced nav —
+   shares its palette with Dashboard.css so the two read as one system.
    ========================================================================== */
 
 @import url("https://fonts.googleapis.com/css2?family=Cascadia+Code:wght@400;500;600;700&display=swap");
 
 .navbar {
-  --nav-bg: rgba(19, 19, 26, 0.85);
+  --nav-bg: rgba(12, 12, 18, 0.85);
   --nav-border: #252532;
-  --nav-text: #e8e8e8;
-  --nav-muted: #8a8a9a;
-  --nav-brass: #d4a853;
-  --nav-brass-hover: #e5b964;
+  --nav-text: #eeecf4;
+  --nav-muted: #8d8da0;
+  --nav-teal: #00d4a8;
+  --nav-teal-hover: #1de6ba;
   --nav-maroon: #f44336;
   --nav-maroon-hover: #ff8a80;
 
@@ -26,13 +27,13 @@
   border-bottom: 1px solid var(--nav-border);
 
   z-index: 1000;
-  font-family: var(--font-mono, "SF Mono", Monaco, "Cascadia Code", monospace);
+  font-family: "Georgia", "Times New Roman", serif;
 }
 
 .navbar-inner {
-  max-width: 1200px;
+  max-width: 100%; /* Changed from 1200px to separate links to the far edges */
   margin: 0 auto;
-  padding: 0.85rem 1.5rem;
+  padding: 1.25rem 1.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -47,25 +48,28 @@
   text-decoration: none;
   color: var(--nav-text);
   font-family: inherit;
-  font-size: 1.15rem;
+  font-size: 1.5rem; /* Increased font size for a larger logo */
   font-weight: 700;
   letter-spacing: -0.02em;
   transition: color 0.2s ease;
 }
 
 .navbar-brand:hover {
-  color: var(--nav-brass);
+  color: var(--nav-teal);
 }
 
 .navbar-glyph {
-  font-size: 1.4rem;
-  color: var(--nav-brass);
-  filter: drop-shadow(0 0 8px rgba(212, 168, 83, 0.45));
-  transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  font-size: 1.8rem; /* Increased glyph size to match the larger brand text */
+  color: var(--nav-text);
+  transition:
+    color 0.2s ease,
+    transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .navbar-brand:hover .navbar-glyph {
+  color: var(--nav-teal);
   transform: rotate(-10deg) scale(1.15);
+  filter: drop-shadow(0 0 8px rgba(0, 212, 168, 0.45));
 }
 
 /* ── NAVIGATION ACTIONS ────────────────────────────────────────────────── */
@@ -84,27 +88,25 @@
   color: var(--nav-muted);
 
   font-family: inherit;
-  font-size: 0.82rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 0.5rem 0.95rem;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0.6rem 1.1rem;
   border-radius: 8px;
   transition: all 0.2s ease;
 }
 
 .navbar-link:hover {
   background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(212, 168, 83, 0.35);
-  color: var(--nav-brass);
+  border-color: rgba(0, 212, 168, 0.35);
+  color: var(--nav-teal);
 }
 
 .navbar-link.active {
-  background: rgba(212, 168, 83, 0.12);
-  border-color: rgba(212, 168, 83, 0.45);
-  color: var(--nav-brass);
+  background: rgba(0, 212, 168, 0.12);
+  border-color: rgba(0, 212, 168, 0.45);
+  color: var(--nav-teal);
   font-weight: 700;
-  box-shadow: 0 0 12px rgba(212, 168, 83, 0.15);
+  box-shadow: 0 0 12px rgba(0, 212, 168, 0.15);
 }
 
 /* Log Out Button */
@@ -121,21 +123,21 @@ button.navbar-link:hover {
 /* ── PRIMARY BUTTON ───────────────────────────────────────────────────── */
 
 .btn-primary {
-  background: var(--nav-brass);
-  color: #13131a;
-  border: 1px solid var(--nav-brass);
+  background: var(--nav-teal);
+  color: #08211c;
+  border: 1px solid var(--nav-teal);
   cursor: pointer;
   font-family: inherit;
   font-weight: 700;
-  box-shadow: 0 4px 12px rgba(212, 168, 83, 0.25);
+  box-shadow: 0 4px 12px rgba(0, 212, 168, 0.25);
   transition: all 0.2s ease;
 }
 
 .btn-primary:hover {
-  background: var(--nav-brass-hover);
-  border-color: var(--nav-brass-hover);
+  background: var(--nav-teal-hover);
+  border-color: var(--nav-teal-hover);
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(212, 168, 83, 0.35);
+  box-shadow: 0 6px 16px rgba(0, 212, 168, 0.35);
 }
 
 .btn-primary:active {
@@ -143,9 +145,9 @@ button.navbar-link:hover {
 }
 
 .btn-sm {
-  padding: 0.5rem 1.1rem;
+  padding: 0.6rem 1.2rem;
   border-radius: 999px;
-  font-size: 0.84rem;
+  font-size: 1rem;
   letter-spacing: 0.02em;
 }
 
@@ -155,7 +157,7 @@ button.navbar-link:hover {
   .navbar-inner {
     flex-direction: column;
     gap: 0.85rem;
-    padding: 0.85rem 1rem;
+    padding: 1.25rem 1rem;
   }
 
   .navbar-actions {
@@ -165,7 +167,7 @@ button.navbar-link:hover {
   }
 
   .navbar-brand {
-    font-size: 1.05rem;
+    font-size: 1.35rem; /* Increased proportionally for mobile */
   }
 }
 
