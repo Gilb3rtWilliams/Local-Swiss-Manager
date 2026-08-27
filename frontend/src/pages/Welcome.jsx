@@ -5,17 +5,16 @@ import "react-toastify/dist/ReactToastify.css";
 import BackgroundSlideshow from "../components/BackgroundSlideshow.jsx";
 import "../css/Welcome.css";
 import useTypingEffect from "/hooks/useTypingEffect.js";
+import slide1 from "../images/slide1.jpg";
+import slide2 from "../images/slide2.jpg";
+import slide3 from "../images/slide3.jpg";
+import slide4 from "../images/slide4.jpg";
+import slide5 from "../images/slide5.jpg";
 
 // Drop your own photos in /public/images/hall/ and list them here — the
 // slideshow (and this page) look fine with an empty array too, it just
 // falls back to a themed gradient until you do.
-const HERO_IMAGES = [
-  "src/images/slide1.jpg",
-  "src/images/slide2.jpg",
-  "src/images/slide3.jpg",
-  "src/images/slide4.jpg",
-  "src/images/slide5.jpg",
-];
+const HERO_IMAGES = [slide1, slide2, slide3, slide4, slide5];
 
 // ─── Reveal-on-scroll wrapper ────────────────────────────────────────────────
 function Reveal({ as: Tag = "div", className = "", children, delay = 0 }) {
