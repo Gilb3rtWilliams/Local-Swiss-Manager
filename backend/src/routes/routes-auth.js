@@ -1,4 +1,5 @@
 const express = require("express");
+const rateLimit = require("express-rate-limit");
 const {
   COOKIE_NAME,
   cookieOptions,
@@ -9,7 +10,26 @@ const {
 
 const router = express.Router();
 
-router.post("/login", async (req, res) => {
+// Single admin account, no lockout, no MFA — rate limiting is the only
+// thing standing between a public URL and someone scripting password
+// guesses. bcrypt already slows each individual comparison down, but that
+// alone doesn't stop a sustained scripted attempt once this isn't just
+// reachable from your home network anymore.
+//
+// 10 attempts per 15 minutes per IP: generous enough that you fat-fingering
+// your own password a few times never locks you out, tight enough to make
+// scripted guessing impractical. Successful logins don't count against the
+// limit, so it only ever penalizes repeated failures.
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+  message: { error: "Too many login attempts. Try again in a few minutes." },
+});
+
+router.post("/login", loginLimiter, async (req, res) => {
   const { password } = req.body || {};
   if (!password) {
     return res.status(400).json({ error: "Password is required" });

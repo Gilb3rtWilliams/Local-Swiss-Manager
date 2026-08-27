@@ -8,49 +8,70 @@ const chess960 = require("./chess960");
 const excelExport = require("./excelExport");
 const { title } = require("process");
 
-const db = store.load();
-function persist() {
-  store.save(db);
+// `db` used to be populated synchronously at require-time via
+// `store.load()`, because reading a local file is synchronous. A Postgres
+// read isn't — so `db` starts empty and gets populated by init(), which the
+// server's entrypoint must call (and await) once before app.listen(...).
+// Every exported function below still just reads/writes this same `db`
+// object exactly as before; nothing about the pairing/Swiss/bracket logic
+// changes, only when the object gets filled in.
+let db = { tournaments: {} };
+
+async function persist() {
+  await store.save(db);
 }
 
 // Migrate tournaments saved before the starting-rank feature existed, and
 // separately, before the Chess960 feature existed. Wrapped defensively so
 // one malformed legacy record can never prevent the server from starting —
-// worst case that one tournament is skipped and logged.
-let migrated = false;
-Object.values(db.tournaments).forEach((t) => {
-  try {
-    if (t.players.some((p) => p.startingRank === undefined)) {
-      assignStartingRanks(t.players);
-      migrated = true;
+// worst case that one tournament is skipped and logged. Returns whether
+// anything changed, so init() knows whether a persist() is needed.
+function runLegacyMigrations() {
+  let migrated = false;
+  Object.values(db.tournaments).forEach((t) => {
+    try {
+      if (t.players.some((p) => p.startingRank === undefined)) {
+        assignStartingRanks(t.players);
+        migrated = true;
+      }
+      if (
+        t.format === "team" &&
+        t.teams.some((x) => x.startingRank === undefined)
+      ) {
+        assignStartingRanks(t.teams);
+        migrated = true;
+      }
+      if (t.chess960 === undefined) {
+        // Tournament predates the Chess960 toggle existing at all — there's
+        // no reasonable way to know what the organizer would have chosen,
+        // so default to off (matches createTournament's own default)
+        // rather than silently turning it on for an event that was never
+        // set up for it.
+        t.chess960 = false;
+        migrated = true;
+      }
+      if (t.currentChess960 === undefined) {
+        t.currentChess960 = null;
+        migrated = true;
+      }
+    } catch (err) {
+      console.error(
+        `Starting-rank migration failed for tournament ${t.id} (${t.name}):`,
+        err.message,
+      );
     }
-    if (
-      t.format === "team" &&
-      t.teams.some((x) => x.startingRank === undefined)
-    ) {
-      assignStartingRanks(t.teams);
-      migrated = true;
-    }
-    if (t.chess960 === undefined) {
-      // Tournament predates the Chess960 toggle existing at all — there's no
-      // reasonable way to know what the organizer would have chosen, so
-      // default to off (matches createTournament's own default) rather than
-      // silently turning it on for an event that was never set up for it.
-      t.chess960 = false;
-      migrated = true;
-    }
-    if (t.currentChess960 === undefined) {
-      t.currentChess960 = null;
-      migrated = true;
-    }
-  } catch (err) {
-    console.error(
-      `Starting-rank migration failed for tournament ${t.id} (${t.name}):`,
-      err.message,
-    );
-  }
-});
-if (migrated) persist();
+  });
+  return migrated;
+}
+
+// Call once from the server entrypoint, before app.listen(...):
+//   const tournamentService = require("./tournamentService");
+//   await tournamentService.init();
+//   app.listen(PORT, ...);
+async function init() {
+  db = await store.load();
+  if (runLegacyMigrations()) await persist();
+}
 
 function uid() {
   return crypto.randomUUID();
@@ -360,7 +381,7 @@ const DEFAULT_TIEBREAKS = [
 ];
 
 // ─── Create Tournament ──────────────────────────────────────────────────────
-function createTournament(input) {
+async function createTournament(input) {
   const {
     // Core Identity
     name,
@@ -603,7 +624,7 @@ function createTournament(input) {
 
   // 6. Persist and Return
   db.tournaments[t.id] = t;
-  persist();
+  await persist();
   return serializeTournament(t);
 }
 
@@ -619,7 +640,7 @@ function assignStartingRanks(list) {
 }
 
 // ─── Round generation ───────────────────────────────────────────────────────
-function generateNextRound(id, updates = {}) {
+async function generateNextRound(id, updates = {}) {
   const t = assertTournament(id);
   if (isEliminationSystem(t)) {
     const e = new Error(
@@ -716,7 +737,7 @@ function generateNextRound(id, updates = {}) {
   }
 
   t.updatedAt = new Date().toISOString();
-  persist();
+  await persist();
   return serializeTournament(t);
 }
 
@@ -779,7 +800,7 @@ function applyGame(playersById, whiteId, blackId, result) {
   return { wScore, bScore };
 }
 
-function submitResults(id, resultsInput) {
+async function submitResults(id, resultsInput) {
   const t = assertTournament(id);
   if (isEliminationSystem(t)) {
     const e = new Error(
@@ -1006,7 +1027,7 @@ function submitResults(id, resultsInput) {
   }
 
   t.updatedAt = new Date().toISOString();
-  persist();
+  await persist();
   return serializeTournament(t);
 }
 
@@ -1140,7 +1161,7 @@ function recomputeStandingsFromRounds(t) {
 // edit shape:
 //   individual: { pairIndex, result }
 //   team:       { pairIndex, boardNum, result }
-function editResult(id, roundNumber, edit = {}) {
+async function editResult(id, roundNumber, edit = {}) {
   const t = assertTournament(id);
   if (isEliminationSystem(t)) {
     const e = new Error(
@@ -1193,7 +1214,7 @@ function editResult(id, roundNumber, edit = {}) {
   recomputeStandingsFromRounds(t);
 
   t.updatedAt = new Date().toISOString();
-  persist();
+  await persist();
   return serializeTournament(t);
 }
 
@@ -1207,7 +1228,7 @@ function editResult(id, roundNumber, edit = {}) {
 //
 // After deleting, t.currentRound drops back so the organizer can call
 // generateNextRound() again to draw fresh pairings for that round.
-function deleteRound(id, roundNumber) {
+async function deleteRound(id, roundNumber) {
   const t = assertTournament(id);
   if (isEliminationSystem(t)) {
     const e = new Error(
@@ -1236,7 +1257,7 @@ function deleteRound(id, roundNumber) {
     t.currentRound -= 1;
     t.currentChess960 = null;
     t.updatedAt = new Date().toISOString();
-    persist();
+    await persist();
     return serializeTournament(t);
   }
 
@@ -1261,7 +1282,7 @@ function deleteRound(id, roundNumber) {
   recomputeStandingsFromRounds(t);
 
   t.updatedAt = new Date().toISOString();
-  persist();
+  await persist();
   return serializeTournament(t);
 }
 
@@ -1270,7 +1291,7 @@ function deleteRound(id, roundNumber) {
 //   individual: { winner: "A" | "B" }
 //   team:       { boards: [{ boardNum, result }], winnerOverride?: "A" | "B" }
 //               (winnerOverride is required only if the boards tie)
-function submitBracketMatchResult(id, matchId, payload = {}) {
+async function submitBracketMatchResult(id, matchId, payload = {}) {
   const t = assertTournament(id);
   if (!isEliminationSystem(t)) {
     const e = new Error("This tournament doesn't use a bracket");
@@ -1441,7 +1462,7 @@ function submitBracketMatchResult(id, matchId, payload = {}) {
   resolveBracket(t);
 
   t.updatedAt = new Date().toISOString();
-  persist();
+  await persist();
   return serializeTournament(t);
 }
 
@@ -1473,7 +1494,7 @@ function validateBughouseTeams(id) {
 // isn't fixed up front. round-robin/elimination/bughouse are blocked
 // permanently (not just "early"), since their whole structure is drawn for
 // a fixed field and there's no round-based cutoff that would make it safe.
-function addLatePlayer(id, { name, title, rating, teamId }) {
+async function addLatePlayer(id, { name, title, rating, teamId }) {
   const t = assertTournament(id);
   if (isRoundRobinSystem(t)) {
     const e = new Error(
@@ -1545,7 +1566,7 @@ function addLatePlayer(id, { name, title, rating, teamId }) {
   if (suggested > t.totalRounds) t.totalRounds = suggested;
 
   t.updatedAt = new Date().toISOString();
-  persist();
+  await persist();
   return serializeTournament(t);
 }
 
@@ -1566,7 +1587,7 @@ function compactStartingRanks(list) {
 // (round-robin/elimination/bughouse). Unlike adding, removal keeps its own
 // round-1 cutoff: past that point a player may already have results and
 // pairings baked into rounds, and unwinding those safely isn't handled here.
-function deletePlayer(id, playerId) {
+async function deletePlayer(id, playerId) {
   const t = assertTournament(id);
   if (isRoundRobinSystem(t)) {
     const e = new Error(
@@ -1631,12 +1652,12 @@ function deletePlayer(id, playerId) {
   compactStartingRanks(t.players);
 
   t.updatedAt = new Date().toISOString();
-  persist();
+  await persist();
   return serializeTournament(t);
 }
 
 // ─── Extend tournament (add an extra round after it finished) ─────────────
-function addExtraRound(id) {
+async function addExtraRound(id) {
   const t = assertTournament(id);
   if (isEliminationSystem(t)) {
     const e = new Error(
@@ -1654,7 +1675,7 @@ function addExtraRound(id) {
   t.status = "active";
   t.finishedAt = null;
   t.updatedAt = new Date().toISOString();
-  persist();
+  await persist();
   return serializeTournament(t);
 }
 
@@ -1702,21 +1723,21 @@ function assertRegistrationWindowOpen(t) {
   }
 }
 
-function enableRegistration(id) {
+async function enableRegistration(id) {
   const t = assertTournament(id);
   assertRegistrationWindowOpen(t);
   if (!t.registrationToken) t.registrationToken = uid();
   t.registrationOpen = true;
   t.updatedAt = new Date().toISOString();
-  persist();
+  await persist();
   return serializeTournament(t);
 }
 
-function disableRegistration(id) {
+async function disableRegistration(id) {
   const t = assertTournament(id);
   t.registrationOpen = false;
   t.updatedAt = new Date().toISOString();
-  persist();
+  await persist();
   return serializeTournament(t);
 }
 
@@ -1745,7 +1766,7 @@ function getPublicRegistration(token) {
 // player; team tournaments register a whole new team (self-registration
 // has no concept of "join an existing team" — that still goes through the
 // organizer / addLatePlayer with an explicit teamId).
-function submitPublicRegistration(token, payload = {}) {
+async function submitPublicRegistration(token, payload = {}) {
   const t = findByRegistrationToken(token);
   if (!t.registrationOpen) {
     const e = new Error("Registration is closed for this tournament");
@@ -1821,7 +1842,7 @@ function submitPublicRegistration(token, payload = {}) {
     if (suggested > t.totalRounds) t.totalRounds = suggested;
 
     t.updatedAt = new Date().toISOString();
-    persist();
+    await persist();
     return { ok: true, teamId: team.id, teamName: team.name };
   }
 
@@ -1859,7 +1880,7 @@ function submitPublicRegistration(token, payload = {}) {
   if (suggested > t.totalRounds) t.totalRounds = suggested;
 
   t.updatedAt = new Date().toISOString();
-  persist();
+  await persist();
   return { ok: true, playerId: comp.id, name: comp.name };
 }
 
@@ -1887,21 +1908,21 @@ function findByPublicViewToken(token) {
   return t;
 }
 
-function enablePublicView(id) {
+async function enablePublicView(id) {
   const t = assertTournament(id);
   assertPublicViewSupported(t);
   if (!t.publicViewToken) t.publicViewToken = uid();
   t.publicViewOpen = true;
   t.updatedAt = new Date().toISOString();
-  persist();
+  await persist();
   return serializeTournament(t);
 }
 
-function disablePublicView(id) {
+async function disablePublicView(id) {
   const t = assertTournament(id);
   t.publicViewOpen = false;
   t.updatedAt = new Date().toISOString();
-  persist();
+  await persist();
   return serializeTournament(t);
 }
 
@@ -2086,7 +2107,7 @@ function buildTeamRoster(teamInput, variant) {
   return { players, teams };
 }
 
-function updateTournamentDetails(id, updates = {}) {
+async function updateTournamentDetails(id, updates = {}) {
   const t = assertTournament(id);
 
   // These determine how pairings/brackets get generated — changing them
@@ -2374,14 +2395,14 @@ function updateTournamentDetails(id, updates = {}) {
   }
 
   t.updatedAt = new Date().toISOString();
-  persist();
+  await persist();
   return serializeTournament(t);
 }
 
-function deleteTournament(id) {
+async function deleteTournament(id) {
   assertTournament(id);
   delete db.tournaments[id];
-  persist();
+  await persist();
 }
 
 // ─── Reads / serialization ──────────────────────────────────────────────────
@@ -2855,6 +2876,7 @@ function tournamentScheduleLength(id) {
 }
 
 module.exports = {
+  init,
   createTournament,
   generateNextRound,
   submitResults,

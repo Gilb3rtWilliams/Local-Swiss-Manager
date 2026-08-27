@@ -5,9 +5,9 @@ const requireAdmin = require("../middleware/requireAdmin");
 const router = express.Router();
 
 function wrap(fn) {
-  return (req, res) => {
+  return async (req, res) => {
     try {
-      const result = fn(req, res);
+      const result = await fn(req, res);
       res.json(result);
     } catch (err) {
       res

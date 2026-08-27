@@ -51,7 +51,10 @@ export default function PastTournaments() {
 
       <div className="pt-shell">
         <span className="pt-eyebrow">Open to Everyone</span>
-        <h1 className="pt-title">Past &amp; Live Tournaments</h1>
+        <h1 className="pt-title">
+          <span className="pt-title-accent" aria-hidden="true" />
+          Past &amp; Live Tournaments
+        </h1>
         <p className="pt-sub">
           Pairings and standings for every event on the platform.
         </p>
@@ -86,7 +89,9 @@ export default function PastTournaments() {
                 <button
                   key={val}
                   type="button"
-                  className={`dash-chip${statusFilter === val ? " active" : ""}`}
+                  className={`dash-chip${
+                    statusFilter === val ? " active" : ""
+                  }`}
                   onClick={() => setStatusFilter(val)}
                 >
                   {label}
