@@ -98,9 +98,9 @@ async function start() {
     process.exit(1);
   }
 
-  app.listen(PORT, () => {
+  app.listen(PORT, "0.0.0.0", () => {
     console.log(
-      `Local Swiss Manager backend running at http://localhost:${PORT}`,
+      `Local Swiss Manager backend running at http://0.0.0.0:${PORT}`,
     );
   });
 }
