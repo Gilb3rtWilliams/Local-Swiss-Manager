@@ -17,6 +17,7 @@ import Module from "./pages/tournament/Module.jsx";
 import Chess960 from "./pages/tournament/Chess960.jsx";
 import Register from "./pages/Register.jsx";
 import PublicResults from "./pages/PublicResults.jsx";
+import PublicPlayerProfile from "./pages/PublicPlayerProfile.jsx";
 import PastTournaments from "./pages/PastTournaments.jsx";
 import Login from "./pages/Login.jsx";
 
@@ -30,6 +31,10 @@ export default function App() {
         <Route path="/new" element={<NewTournament />} />
         <Route path="/register/:token" element={<Register />} />
         <Route path="/results/:token" element={<PublicResults />} />
+        <Route
+          path="/results/:token/player/:playerId"
+          element={<PublicPlayerProfile />}
+        />
         <Route path="/tournaments" element={<PastTournaments />} />
         <Route path="/login" element={<Login />} />
         <Route path="/tournament/:id" element={<TournamentLayout />}>
