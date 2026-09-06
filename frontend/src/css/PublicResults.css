@@ -509,6 +509,128 @@
   text-transform: uppercase;
 }
 
+/* ── Links (player-profile cross-links, "back to results") ─────────────── */
+.pv-root a {
+  color: var(--pv-brass);
+  text-decoration: none;
+}
+
+.pv-root a:hover {
+  text-decoration: underline;
+}
+
+.pv-back-link {
+  display: inline-block;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
+  color: var(--pv-muted);
+  margin-bottom: 16px;
+}
+
+.pv-back-link:hover {
+  color: var(--pv-brass);
+}
+
+/* ── Player profile: stat strip ──────────────────────────────────────── */
+.pv-stat-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pv-stat {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--pv-border);
+  border-radius: 10px;
+  padding: 10px 18px;
+  min-width: 90px;
+  text-align: center;
+}
+
+.pv-stat.highlight {
+  background: rgba(212, 168, 83, 0.08);
+  border-color: rgba(212, 168, 83, 0.35);
+}
+
+.pv-stat-value {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--pv-text);
+  line-height: 1.1;
+}
+
+.pv-stat.highlight .pv-stat-value {
+  color: var(--pv-brass);
+}
+
+.pv-stat-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--pv-muted);
+  margin-top: 4px;
+}
+
+.pv-note {
+  font-size: 0.72rem;
+  color: var(--pv-muted);
+  line-height: 1.6;
+  margin: 14px 0 0;
+}
+
+/* ── Player profile: game history rows ──────────────────────────────── */
+.pv-game-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--pv-border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+}
+
+.pv-game-round {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--pv-muted);
+  letter-spacing: 0.06em;
+  min-width: 56px;
+  display: inline-block;
+}
+
+.pv-game-color {
+  font-size: 0.72rem;
+  color: var(--pv-muted);
+  margin-left: 6px;
+}
+
+.pv-outcome {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  min-width: 44px;
+  text-align: right;
+}
+
+.pv-outcome-win {
+  color: var(--pv-felt);
+}
+
+.pv-outcome-draw {
+  color: var(--pv-muted);
+}
+
+.pv-outcome-loss {
+  color: var(--pv-maroon);
+}
+
+.pv-outcome-bye {
+  color: var(--pv-brass);
+}
+
 @media (max-width: 640px) {
   .pv-shell {
     padding: 36px 16px 0;
