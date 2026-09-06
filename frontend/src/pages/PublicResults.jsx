@@ -326,7 +326,7 @@ export default function PublicResults() {
       .then((d) => {
         setData(d);
         setSelectedRound(
-          d.currentPairings ? "current" : (d.rounds.at(-1)?.round ?? null),
+          d.currentPairings ? "current" : d.rounds.at(-1)?.round ?? null,
         );
       })
       .catch((e) => setLoadError(e.message));
@@ -441,7 +441,9 @@ export default function PublicResults() {
               {data.currentPairings && (
                 <button
                   type="button"
-                  className={`pv-round-pill${selectedRound === "current" ? " active" : ""}`}
+                  className={`pv-round-pill${
+                    selectedRound === "current" ? " active" : ""
+                  }`}
                   onClick={() => setSelectedRound("current")}
                 >
                   <span className="pv-round-pill-label">Round</span>
@@ -455,7 +457,9 @@ export default function PublicResults() {
                 <button
                   key={r.round}
                   type="button"
-                  className={`pv-round-pill${selectedRound === r.round ? " active" : ""}`}
+                  className={`pv-round-pill${
+                    selectedRound === r.round ? " active" : ""
+                  }`}
                   onClick={() => setSelectedRound(r.round)}
                 >
                   <span className="pv-round-pill-label">Round</span>
@@ -490,14 +494,23 @@ export default function PublicResults() {
               <div className="pv-card">
                 <h2>Standings</h2>
                 {isTeam && data.teamStandings ? (
-                  <TeamStandingsTable teamStandings={data.teamStandings} />
+                  <TeamStandingsTable
+                    teamStandings={data.teamStandings}
+                    basePath={`/results/${token}`}
+                  />
                 ) : (
-                  <StandingsTable standings={data.standings} />
+                  <StandingsTable
+                    standings={data.standings}
+                    basePath={`/results/${token}`}
+                  />
                 )}
               </div>
               <div className="pv-card pv-cross-card">
                 <h2>Cross Table</h2>
-                <CrossTable crossTable={data.crossTable} />
+                <CrossTable
+                  crossTable={data.crossTable}
+                  basePath={`/results/${token}`}
+                />
               </div>
             </div>
 
@@ -508,6 +521,7 @@ export default function PublicResults() {
                   standings={data.standings}
                   showTiebreaks={false}
                   showTeam
+                  basePath={`/results/${token}`}
                 />
               </div>
             )}
