@@ -19,7 +19,7 @@ function resolvePlayerMeta(playerObj, livePlayers) {
   return { title: "", id: null };
 }
 
-function PlayerLink({ tournamentId, id, title, name, titleColor = "#c25555" }) {
+function PlayerLink({ basePath, id, title, name, titleColor = "#c25555" }) {
   const label = (
     <>
       {title && (
@@ -32,10 +32,10 @@ function PlayerLink({ tournamentId, id, title, name, titleColor = "#c25555" }) {
       {name}
     </>
   );
-  if (!id || !tournamentId) return label;
+  if (!id || !basePath) return label;
   return (
     <Link
-      to={`/tournament/${tournamentId}/player/${id}`}
+      to={`${basePath}/player/${id}`}
       style={{ color: "inherit", textDecoration: "none" }}
       onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
       onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
@@ -92,7 +92,7 @@ function BughouseMatch({
   results,
   onSetBoardResult,
   livePlayers,
-  tournamentId,
+  basePath,
 }) {
   const decisiveBoard = p.boards.find(
     (b) => !b.sitOut && DECISIVE_RESULTS.has(results[`${p.idx}-${b.boardNum}`]),
@@ -199,7 +199,7 @@ function BughouseMatch({
             >
               <span style={{ color: "#a0a0b0" }}>
                 <PlayerLink
-                  tournamentId={tournamentId}
+                  basePath={basePath}
                   id={sitOutMeta.id}
                   title={sitOutMeta.title}
                   name={sitOutPlayer?.name}
@@ -260,7 +260,7 @@ function BughouseMatch({
                   }}
                 >
                   <PlayerLink
-                    tournamentId={tournamentId}
+                    basePath={basePath}
                     id={teamAMeta.id}
                     title={teamAMeta.title}
                     name={teamAPlayer.name}
@@ -401,7 +401,7 @@ function BughouseMatch({
                   }}
                 >
                   <PlayerLink
-                    tournamentId={tournamentId}
+                    basePath={basePath}
                     id={teamBMeta.id}
                     title={teamBMeta.title}
                     name={teamBPlayer.name}
@@ -483,7 +483,7 @@ function TeamMatch({
   onSetBoardResult,
   isBughouse,
   livePlayers,
-  tournamentId,
+  basePath,
 }) {
   if (isBughouse) {
     return (
@@ -492,7 +492,7 @@ function TeamMatch({
         results={results}
         onSetBoardResult={onSetBoardResult}
         livePlayers={livePlayers}
-        tournamentId={tournamentId}
+        basePath={basePath}
       />
     );
   }
@@ -528,7 +528,7 @@ function TeamMatch({
                   <td colSpan={3}>
                     <span className="player-name">
                       <PlayerLink
-                        tournamentId={tournamentId}
+                        basePath={basePath}
                         id={sitOutMeta.id}
                         title={sitOutMeta.title}
                         name={sitOutPlayer?.name}
@@ -543,7 +543,7 @@ function TeamMatch({
                       <span className="color-w" />
                       <span className="player-name">
                         <PlayerLink
-                          tournamentId={tournamentId}
+                          basePath={basePath}
                           id={whiteMeta.id}
                           title={whiteMeta.title}
                           name={b.white.name}
@@ -555,7 +555,7 @@ function TeamMatch({
                       <span className="color-b" />
                       <span className="player-name">
                         <PlayerLink
-                          tournamentId={tournamentId}
+                          basePath={basePath}
                           id={blackMeta.id}
                           title={blackMeta.title}
                           name={b.black.name}
@@ -608,11 +608,12 @@ export default function PairingsTeam({
   results,
   onSetBoardResult,
   isBughouse,
+  basePath: basePathProp,
 }) {
   const outletContext = useOutletContext();
   const t = outletContext?.t;
   const livePlayers = t?.players || [];
-  const tournamentId = t?.id;
+  const basePath = basePathProp ?? (t?.id ? `/tournament/${t.id}` : null);
 
   return (
     <div className="team-matches">
@@ -676,7 +677,7 @@ export default function PairingsTeam({
             onSetBoardResult={onSetBoardResult}
             isBughouse={isBughouse}
             livePlayers={livePlayers}
-            tournamentId={tournamentId}
+            basePath={basePath}
           />
         ),
       )}

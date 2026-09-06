@@ -1490,8 +1490,13 @@ function getBracket(id) {
 // round's pairings; team format instead looks inside each "match" pairing's
 // per-board results, since a team member's real opponent is whoever they
 // shared a board with, not the opposing team as a whole.
-function getPlayerProfile(id, playerId) {
-  const t = assertTournament(id);
+//
+// Takes an already-resolved tournament rather than an id, so both the
+// admin path (getPlayerProfile, resolved via assertTournament) and the
+// public path (getPublicPlayerProfile, resolved via findByPublicViewToken)
+// can share this one implementation instead of maintaining two copies of
+// the game-walking and performance-rating logic below.
+function buildPlayerProfile(t, playerId) {
   const player = (t.players || []).find((p) => p.id === playerId);
   if (!player) {
     const e = new Error("Player not found");
@@ -1645,6 +1650,27 @@ function getPlayerProfile(id, playerId) {
     games: [...games].reverse(), // most recent round first
     opponents: [...byOpponent.values()],
   };
+}
+
+// Admin path — same auth posture as getTournament/everything else gated by
+// requireAdmin in the router.
+function getPlayerProfile(id, playerId) {
+  const t = assertTournament(id);
+  return buildPlayerProfile(t, playerId);
+}
+
+// Public path — same resolution and "is this actually public yet" check as
+// getPublicResults, so a profile can't be viewed via a guessed tournament
+// id, and can't be viewed at all before the organizer turns public view on
+// for this event, even with a valid token.
+function getPublicPlayerProfile(token, playerId) {
+  const t = findByPublicViewToken(token);
+  if (!t.publicViewOpen) {
+    const e = new Error("Results aren't public for this tournament right now");
+    e.status = 403;
+    throw e;
+  }
+  return buildPlayerProfile(t, playerId);
 }
 
 // Pre-flight roster check for the bughouse variant — lets the frontend warn
@@ -3063,6 +3089,7 @@ module.exports = {
   submitBracketMatchResult,
   getBracket,
   getPlayerProfile,
+  getPublicPlayerProfile,
   validateBughouseTeams,
   enableRegistration,
   disableRegistration,

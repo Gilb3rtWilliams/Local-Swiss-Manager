@@ -153,6 +153,12 @@ router.get(
   "/public-view/:token",
   wrap((req) => svc.getPublicResults(req.params.token)),
 );
+router.get(
+  "/public-view/:token/players/:playerId/profile",
+  wrap((req) =>
+    svc.getPublicPlayerProfile(req.params.token, req.params.playerId),
+  ),
+);
 
 router.get("/:id/standings/export", requireAdmin, async (req, res) => {
   try {

@@ -1,10 +1,15 @@
 import { Link, useOutletContext } from "react-router-dom";
 
-export default function TeamStandingsTable({ teamStandings }) {
-  // Destructured as `tournament`, not `t` — the existing .map((t, i) => ...)
+// See CrossTable.jsx for why this is basePath rather than a bare id, and
+// why useOutletContext() is always called unconditionally.
+export default function TeamStandingsTable({ teamStandings, basePath }) {
+  // Destructured as `outletContext`, not `t` — the .map((t, i) => ...)
   // below already uses `t` for each team row, and shadowing that with the
-  // tournament object would silently break every t.* reference in the loop.
-  const { t: tournament } = useOutletContext();
+  // outlet context would silently break every t.* reference in the loop.
+  const outletContext = useOutletContext();
+  const resolvedBasePath =
+    basePath ??
+    (outletContext?.t?.id ? `/tournament/${outletContext.t.id}` : null);
 
   return (
     <table className="standings-table">
@@ -28,10 +33,8 @@ export default function TeamStandingsTable({ teamStandings }) {
                 ? t.players.map((p, pi) => (
                     <span key={p.id || p.name}>
                       {pi > 0 && ", "}
-                      {p.id ? (
-                        <Link
-                          to={`/tournament/${tournament.id}/player/${p.id}`}
-                        >
+                      {p.id && resolvedBasePath ? (
+                        <Link to={`${resolvedBasePath}/player/${p.id}`}>
                           {p.title ? `${p.title} ${p.name}` : p.name}
                         </Link>
                       ) : p.title ? (

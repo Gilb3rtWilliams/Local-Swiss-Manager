@@ -44,10 +44,16 @@ function ResultButtons({
   );
 }
 
-export default function PairingsIndividual({ pairings, results, onSetResult }) {
+export default function PairingsIndividual({
+  pairings,
+  results,
+  onSetResult,
+  basePath: basePathProp,
+}) {
   const outletContext = useOutletContext();
   const t = outletContext?.t;
   const livePlayers = t?.players || [];
+  const basePath = basePathProp ?? (t?.id ? `/tournament/${t.id}` : null);
 
   // Same fallback shape as resolveTitle used to use on its own: prefer
   // whatever's already on the pairing's player object, fall back to a
@@ -81,10 +87,10 @@ export default function PairingsIndividual({ pairings, results, onSetResult }) {
         {name}
       </>
     );
-    if (!id || !t?.id) return label;
+    if (!id || !basePath) return label;
     return (
       <Link
-        to={`/tournament/${t.id}/player/${id}`}
+        to={`${basePath}/player/${id}`}
         style={{ color: "inherit", textDecoration: "none" }}
         onMouseEnter={(e) =>
           (e.currentTarget.style.textDecoration = "underline")

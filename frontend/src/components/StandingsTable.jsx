@@ -1,11 +1,17 @@
 import { Link, useOutletContext } from "react-router-dom";
 
+// See CrossTable.jsx for why this is basePath rather than a bare id, and
+// why useOutletContext() is always called unconditionally.
 export default function StandingsTable({
   standings,
   showTiebreaks = true,
   showTeam = false,
+  basePath,
 }) {
-  const { t } = useOutletContext();
+  const outletContext = useOutletContext();
+  const resolvedBasePath =
+    basePath ??
+    (outletContext?.t?.id ? `/tournament/${outletContext.t.id}` : null);
 
   return (
     <table className="standings-table">
@@ -28,8 +34,8 @@ export default function StandingsTable({
               {p.player?.title || p.title || null || ""}
             </td>
             <td className="player-name">
-              {p.id ? (
-                <Link to={`/tournament/${t.id}/player/${p.id}`}>{p.name}</Link>
+              {p.id && resolvedBasePath ? (
+                <Link to={`${resolvedBasePath}/player/${p.id}`}>{p.name}</Link>
               ) : (
                 p.name
               )}{" "}

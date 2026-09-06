@@ -79,6 +79,8 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   getPublicResults: (token) => request(`/tournaments/public-view/${token}`),
+  getPublicPlayerProfile: (token, playerId) =>
+    request(`/tournaments/public-view/${token}/players/${playerId}/profile`),
   enablePublicView: (id) =>
     request(`/tournaments/${id}/public-view/enable`, { method: "POST" }),
   disablePublicView: (id) =>
