@@ -54,6 +54,8 @@ export const api = {
     }),
   deletePlayer: (id, playerId) =>
     request(`/tournaments/${id}/players/${playerId}`, { method: "DELETE" }),
+  getPlayerProfile: (id, playerId) =>
+    request(`/tournaments/${id}/players/${playerId}/profile`),
   extendTournament: (id) =>
     request(`/tournaments/${id}/extend`, { method: "POST" }),
 

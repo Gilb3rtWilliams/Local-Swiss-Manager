@@ -1,7 +1,49 @@
 import React from "react";
-import { useOutletContext } from "react-router-dom";
+import { Link, useOutletContext } from "react-router-dom";
 
 const DECISIVE_RESULTS = new Set(["1-0", "0-1", "1F-0F", "0F-1F"]);
+
+// Shared by both match layouts below (previously duplicated as a local
+// resolveTitle in each) — resolves title AND id in one lookup, since a
+// linkable id needs the same "prefer what's already on the object, fall
+// back to a name-based lookup against the live roster" logic title did.
+function resolvePlayerMeta(playerObj, livePlayers) {
+  if (!playerObj) return { title: "", id: null };
+  if (playerObj.title || playerObj.id) {
+    return { title: playerObj.title || "", id: playerObj.id || null };
+  }
+  if (playerObj.name) {
+    const match = livePlayers.find((lp) => lp.name === playerObj.name);
+    if (match) return { title: match.title || "", id: match.id || null };
+  }
+  return { title: "", id: null };
+}
+
+function PlayerLink({ tournamentId, id, title, name, titleColor = "#c25555" }) {
+  const label = (
+    <>
+      {title && (
+        <span
+          style={{ color: titleColor, marginRight: "6px", fontWeight: 700 }}
+        >
+          {title}
+        </span>
+      )}
+      {name}
+    </>
+  );
+  if (!id || !tournamentId) return label;
+  return (
+    <Link
+      to={`/tournament/${tournamentId}/player/${id}`}
+      style={{ color: "inherit", textDecoration: "none" }}
+      onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
+      onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
+    >
+      {label}
+    </Link>
+  );
+}
 
 function ResultButtons({
   results,
@@ -45,20 +87,16 @@ function ResultButtons({
   );
 }
 
-function BughouseMatch({ p, results, onSetBoardResult, livePlayers }) {
+function BughouseMatch({
+  p,
+  results,
+  onSetBoardResult,
+  livePlayers,
+  tournamentId,
+}) {
   const decisiveBoard = p.boards.find(
     (b) => !b.sitOut && DECISIVE_RESULTS.has(results[`${p.idx}-${b.boardNum}`]),
   );
-
-  function resolveTitle(playerObj) {
-    if (!playerObj) return "";
-    if (playerObj.title) return playerObj.title;
-    if (playerObj.name) {
-      const match = livePlayers.find((lp) => lp.name === playerObj.name);
-      if (match?.title) return match.title;
-    }
-    return "";
-  }
 
   return (
     <div
@@ -142,12 +180,12 @@ function BughouseMatch({ p, results, onSetBoardResult, livePlayers }) {
         const teamAPlayer = teamAIsWhite ? b.white : b.black;
         const teamBPlayer = teamAIsWhite ? b.black : b.white;
 
-        const teamAPlayerTitle = resolveTitle(teamAPlayer);
-        const teamBPlayerTitle = resolveTitle(teamBPlayer);
+        const teamAMeta = resolvePlayerMeta(teamAPlayer, livePlayers);
+        const teamBMeta = resolvePlayerMeta(teamBPlayer, livePlayers);
 
         if (b.sitOut) {
           const sitOutPlayer = b.white || b.black;
-          const sitOutTitle = resolveTitle(sitOutPlayer);
+          const sitOutMeta = resolvePlayerMeta(sitOutPlayer, livePlayers);
           return (
             <div
               key={b.boardNum}
@@ -160,18 +198,13 @@ function BughouseMatch({ p, results, onSetBoardResult, livePlayers }) {
               }}
             >
               <span style={{ color: "#a0a0b0" }}>
-                {sitOutTitle && (
-                  <span
-                    style={{
-                      color: "#c25555",
-                      marginRight: "4px",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {sitOutTitle}
-                  </span>
-                )}
-                {sitOutPlayer?.name}
+                <PlayerLink
+                  tournamentId={tournamentId}
+                  id={sitOutMeta.id}
+                  title={sitOutMeta.title}
+                  name={sitOutPlayer?.name}
+                  titleColor="#c25555"
+                />
               </span>{" "}
               sits out this round
             </div>
@@ -226,18 +259,12 @@ function BughouseMatch({ p, results, onSetBoardResult, livePlayers }) {
                     lineHeight: 1.2,
                   }}
                 >
-                  {teamAPlayerTitle && (
-                    <span
-                      style={{
-                        color: "#c25555",
-                        marginRight: "6px",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {teamAPlayerTitle}
-                    </span>
-                  )}
-                  {teamAPlayer.name}
+                  <PlayerLink
+                    tournamentId={tournamentId}
+                    id={teamAMeta.id}
+                    title={teamAMeta.title}
+                    name={teamAPlayer.name}
+                  />
                 </div>
                 <div
                   style={{
@@ -275,7 +302,9 @@ function BughouseMatch({ p, results, onSetBoardResult, livePlayers }) {
                       borderRadius: 1,
                       display: "inline-block",
                       background: teamAIsWhite ? "#f0e6d2" : "#252532",
-                      border: `1px solid ${teamAIsWhite ? "#e0d5c0" : "#454555"}`,
+                      border: `1px solid ${
+                        teamAIsWhite ? "#e0d5c0" : "#454555"
+                      }`,
                     }}
                   />
                   {teamAIsWhite ? "WHITE" : "BLACK"} · BOARD {b.boardNum}
@@ -371,18 +400,12 @@ function BughouseMatch({ p, results, onSetBoardResult, livePlayers }) {
                     lineHeight: 1.2,
                   }}
                 >
-                  {teamBPlayerTitle && (
-                    <span
-                      style={{
-                        color: "#c25555",
-                        marginRight: "6px",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {teamBPlayerTitle}
-                    </span>
-                  )}
-                  {teamBPlayer.name}
+                  <PlayerLink
+                    tournamentId={tournamentId}
+                    id={teamBMeta.id}
+                    title={teamBMeta.title}
+                    name={teamBPlayer.name}
+                  />
                 </div>
                 <div
                   style={{
@@ -421,7 +444,9 @@ function BughouseMatch({ p, results, onSetBoardResult, livePlayers }) {
                       borderRadius: 1,
                       display: "inline-block",
                       background: teamAIsWhite ? "#252532" : "#f0e6d2",
-                      border: `1px solid ${teamAIsWhite ? "#454555" : "#e0d5c0"}`,
+                      border: `1px solid ${
+                        teamAIsWhite ? "#454555" : "#e0d5c0"
+                      }`,
                     }}
                   />
                   {teamAIsWhite ? "BLACK" : "WHITE"} · BOARD {b.boardNum}
@@ -452,7 +477,14 @@ function BughouseMatch({ p, results, onSetBoardResult, livePlayers }) {
   );
 }
 
-function TeamMatch({ p, results, onSetBoardResult, isBughouse, livePlayers }) {
+function TeamMatch({
+  p,
+  results,
+  onSetBoardResult,
+  isBughouse,
+  livePlayers,
+  tournamentId,
+}) {
   if (isBughouse) {
     return (
       <BughouseMatch
@@ -460,18 +492,9 @@ function TeamMatch({ p, results, onSetBoardResult, isBughouse, livePlayers }) {
         results={results}
         onSetBoardResult={onSetBoardResult}
         livePlayers={livePlayers}
+        tournamentId={tournamentId}
       />
     );
-  }
-
-  function resolveTitle(playerObj) {
-    if (!playerObj) return "";
-    if (playerObj.title) return playerObj.title;
-    if (playerObj.name) {
-      const match = livePlayers.find((lp) => lp.name === playerObj.name);
-      if (match?.title) return match.title;
-    }
-    return "";
   }
 
   return (
@@ -493,10 +516,10 @@ function TeamMatch({ p, results, onSetBoardResult, isBughouse, livePlayers }) {
         <tbody>
           {p.boards.map((b) => {
             const key = `${p.idx}-${b.boardNum}`;
-            const whiteTitle = resolveTitle(b.white);
-            const blackTitle = resolveTitle(b.black);
+            const whiteMeta = resolvePlayerMeta(b.white, livePlayers);
+            const blackMeta = resolvePlayerMeta(b.black, livePlayers);
             const sitOutPlayer = b.white || b.black;
-            const sitOutTitle = resolveTitle(sitOutPlayer);
+            const sitOutMeta = resolvePlayerMeta(sitOutPlayer, livePlayers);
 
             return (
               <tr key={b.boardNum}>
@@ -504,18 +527,13 @@ function TeamMatch({ p, results, onSetBoardResult, isBughouse, livePlayers }) {
                 {b.sitOut ? (
                   <td colSpan={3}>
                     <span className="player-name">
-                      {sitOutTitle && (
-                        <span
-                          style={{
-                            color: "#c25555",
-                            marginRight: "4px",
-                            fontWeight: 700,
-                          }}
-                        >
-                          {sitOutTitle}
-                        </span>
-                      )}
-                      {sitOutPlayer?.name}
+                      <PlayerLink
+                        tournamentId={tournamentId}
+                        id={sitOutMeta.id}
+                        title={sitOutMeta.title}
+                        name={sitOutPlayer?.name}
+                        titleColor="#c25555"
+                      />
                     </span>
                     <span className="bye-result"> sits out this round</span>
                   </td>
@@ -524,36 +542,24 @@ function TeamMatch({ p, results, onSetBoardResult, isBughouse, livePlayers }) {
                     <td>
                       <span className="color-w" />
                       <span className="player-name">
-                        {whiteTitle && (
-                          <span
-                            style={{
-                              color: "#c25555",
-                              marginRight: "4px",
-                              fontWeight: 700,
-                            }}
-                          >
-                            {whiteTitle}
-                          </span>
-                        )}
-                        {b.white.name}
+                        <PlayerLink
+                          tournamentId={tournamentId}
+                          id={whiteMeta.id}
+                          title={whiteMeta.title}
+                          name={b.white.name}
+                        />
                       </span>{" "}
                       <span className="rating-tag">({b.white.rating})</span>
                     </td>
                     <td>
                       <span className="color-b" />
                       <span className="player-name">
-                        {blackTitle && (
-                          <span
-                            style={{
-                              color: "#c25555",
-                              marginRight: "4px",
-                              fontWeight: 700,
-                            }}
-                          >
-                            {blackTitle}
-                          </span>
-                        )}
-                        {b.black.name}
+                        <PlayerLink
+                          tournamentId={tournamentId}
+                          id={blackMeta.id}
+                          title={blackMeta.title}
+                          name={b.black.name}
+                        />
                       </span>{" "}
                       <span className="rating-tag">({b.black.rating})</span>
                     </td>
@@ -574,8 +580,8 @@ function TeamMatch({ p, results, onSetBoardResult, isBughouse, livePlayers }) {
                               r === "1-0" || r === "1F-0F"
                                 ? "white-wins"
                                 : r === "0-1" || r === "0F-1F"
-                                  ? "black-wins"
-                                  : "draw"
+                                ? "black-wins"
+                                : "draw"
                             } ${results[key] === r ? "active" : ""}`}
                             onClick={() =>
                               onSetBoardResult(p.idx, b.boardNum, r)
@@ -606,6 +612,7 @@ export default function PairingsTeam({
   const outletContext = useOutletContext();
   const t = outletContext?.t;
   const livePlayers = t?.players || [];
+  const tournamentId = t?.id;
 
   return (
     <div className="team-matches">
@@ -669,6 +676,7 @@ export default function PairingsTeam({
             onSetBoardResult={onSetBoardResult}
             isBughouse={isBughouse}
             livePlayers={livePlayers}
+            tournamentId={tournamentId}
           />
         ),
       )}

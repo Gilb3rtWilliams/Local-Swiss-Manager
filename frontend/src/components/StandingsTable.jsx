@@ -1,8 +1,12 @@
+import { Link, useOutletContext } from "react-router-dom";
+
 export default function StandingsTable({
   standings,
   showTiebreaks = true,
   showTeam = false,
 }) {
+  const { t } = useOutletContext();
+
   return (
     <table className="standings-table">
       <thead>
@@ -24,7 +28,11 @@ export default function StandingsTable({
               {p.player?.title || p.title || null || ""}
             </td>
             <td className="player-name">
-              {p.name}{" "}
+              {p.id ? (
+                <Link to={`/tournament/${t.id}/player/${p.id}`}>{p.name}</Link>
+              ) : (
+                p.name
+              )}{" "}
               {p.rating != null && (
                 <span className="rating-tag">({p.rating})</span>
               )}

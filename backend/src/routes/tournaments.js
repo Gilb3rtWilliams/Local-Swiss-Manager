@@ -92,6 +92,12 @@ router.get(
   requireAdmin,
   wrap((req) => svc.getBracket(req.params.id)),
 );
+
+router.get(
+  "/:id/players/:playerId/profile",
+  requireAdmin,
+  wrap((req) => svc.getPlayerProfile(req.params.id, req.params.playerId)),
+);
 router.post(
   "/:id/bracket/matches/:matchId/result",
   requireAdmin,

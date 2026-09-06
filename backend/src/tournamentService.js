@@ -604,8 +604,8 @@ async function createTournament(input) {
   t.totalRounds = isRoundRobinSystem(t)
     ? roundRobin.scheduleLength(competitorCount, system)
     : totalRounds && totalRounds > 0
-      ? Number(totalRounds)
-      : engine.suggestedRounds(competitorCount);
+    ? Number(totalRounds)
+    : engine.suggestedRounds(competitorCount);
 
   // Initial rank assignment (locked in once t.status switches to 'active')
   assignStartingRanks(t.players);
@@ -761,7 +761,9 @@ const VALID_RESULTS = new Set([
 function assertValidResult(result) {
   if (!VALID_RESULTS.has(result)) {
     const e = new Error(
-      `"${result}" isn't a recognized result — expected one of ${[...VALID_RESULTS].join(", ")}`,
+      `"${result}" isn't a recognized result — expected one of ${[
+        ...VALID_RESULTS,
+      ].join(", ")}`,
     );
     e.status = 400;
     throw e;
@@ -1476,6 +1478,175 @@ function getBracket(id) {
   return serializeTournament(t);
 }
 
+// ─── Player profile ─────────────────────────────────────────────────────────
+// Scoped entirely to this one tournament — deliberately not a cross-event
+// player history. Walks t.rounds (not the player's own `results`/`opponents`
+// fields) because those only ever hold one entry per opponent id, so a
+// double round-robin rematch would silently overwrite the first meeting.
+// t.rounds is the full, ordered game-by-game record, so it's the only
+// source that can't lose a repeat pairing.
+//
+// Works for both formats: individual pairings are read directly off each
+// round's pairings; team format instead looks inside each "match" pairing's
+// per-board results, since a team member's real opponent is whoever they
+// shared a board with, not the opposing team as a whole.
+function getPlayerProfile(id, playerId) {
+  const t = assertTournament(id);
+  const player = (t.players || []).find((p) => p.id === playerId);
+  if (!player) {
+    const e = new Error("Player not found");
+    e.status = 404;
+    throw e;
+  }
+  const playersById = new Map((t.players || []).map((p) => [p.id, p]));
+
+  // Chronological, oldest round first; reversed just before returning so
+  // the "last opponents" the frontend wants are first in the array.
+  const games = [];
+
+  function recordGame(
+    round,
+    opponentId,
+    side,
+    result,
+    { bughouseDerived } = {},
+  ) {
+    const opponent = playersById.get(opponentId);
+    games.push({
+      round,
+      opponentId,
+      opponentName: opponent ? opponent.name : "Unknown player",
+      opponentTitle: opponent ? opponent.title || "" : "",
+      opponentRating: opponent ? opponent.rating ?? null : null,
+      color: side === "white" ? "W" : "B",
+      result,
+      points: scoreFromResult(result, side),
+      bughouseDerived: bughouseDerived || false,
+    });
+  }
+
+  (t.rounds || []).forEach((roundRecord) => {
+    roundRecord.pairings.forEach((pairing) => {
+      if (pairing.type === "bye" && pairing.white === playerId) {
+        games.push({
+          round: roundRecord.round,
+          opponentId: null,
+          opponentName: null,
+          opponentTitle: "",
+          opponentRating: null,
+          color: null,
+          result: "bye",
+          points: 1,
+          bughouseDerived: false,
+        });
+        return;
+      }
+
+      if (pairing.type === "individual") {
+        if (pairing.white === playerId) {
+          recordGame(roundRecord.round, pairing.black, "white", pairing.result);
+        } else if (pairing.black === playerId) {
+          recordGame(roundRecord.round, pairing.white, "black", pairing.result);
+        }
+        return;
+      }
+
+      if (pairing.type === "match") {
+        (pairing.boards || []).forEach((board) => {
+          if (board.sitOut || !board.result) return;
+          if (board.white === playerId) {
+            recordGame(roundRecord.round, board.black, "white", board.result, {
+              bughouseDerived: !!board.derivedFromBoard,
+            });
+          } else if (board.black === playerId) {
+            recordGame(roundRecord.round, board.white, "black", board.result, {
+              bughouseDerived: !!board.derivedFromBoard,
+            });
+          }
+        });
+      }
+    });
+  });
+
+  // Per-opponent totals — the "score against them" part of the request.
+  // Keyed by opponent id so a repeat pairing (double round-robin) accumulates
+  // instead of overwriting.
+  const byOpponent = new Map();
+  games.forEach((g) => {
+    if (!g.opponentId) return; // byes have no opponent to attribute to
+    if (!byOpponent.has(g.opponentId)) {
+      byOpponent.set(g.opponentId, {
+        opponentId: g.opponentId,
+        name: g.opponentName,
+        title: g.opponentTitle,
+        rating: g.opponentRating,
+        gamesPlayed: 0,
+        points: 0,
+      });
+    }
+    const rec = byOpponent.get(g.opponentId);
+    rec.gamesPlayed += 1;
+    rec.points += g.points;
+  });
+
+  // Performance rating, FIDE-style: TPR = average opponent rating + dp(p),
+  // where p is the percentage score against those opponents and dp is the
+  // rating difference implied by Elo's expected-score model:
+  //   dp(p) = 400 * log10(p / (1 - p))
+  // This is the actual basis of FIDE's published dp lookup table (FIDE
+  // Rating Regulations B.02, Annex) — the table is this formula's output,
+  // rounded to fixed percentage steps for lookup by hand. Computing it
+  // directly is at least as accurate as reading the table and needs no
+  // embedded table. dp is capped at +-800, matching FIDE's current
+  // regulations (extended from an older +-400 cap), and p=0%/100% are
+  // special-cased since the raw formula is undefined at those exact
+  // extremes (log of 0 or of infinity).
+  //
+  // This is meaningfully different from a linear "avg rating +- N points
+  // per game" approximation, especially at high or low score percentages —
+  // the logistic curve is steep near 0%/100% and flattens near 50%, so a
+  // near-perfect score implies a much bigger rating gap than a linear
+  // formula would credit, and the linear version has no cap at all.
+  //
+  // Byes and games against unrated opponents are excluded — a performance
+  // estimate built on a made-up opponent rating is worse than no estimate.
+  const PERFORMANCE_DP_CAP = 800;
+  function performanceDp(percentageScore) {
+    if (percentageScore <= 0) return -PERFORMANCE_DP_CAP;
+    if (percentageScore >= 1) return PERFORMANCE_DP_CAP;
+    const dp = 400 * Math.log10(percentageScore / (1 - percentageScore));
+    return Math.max(-PERFORMANCE_DP_CAP, Math.min(PERFORMANCE_DP_CAP, dp));
+  }
+
+  const decisive = games.filter(
+    (g) => g.opponentId && typeof g.opponentRating === "number",
+  );
+  let performanceRating = null;
+  if (decisive.length > 0) {
+    const avgOpponentRating =
+      decisive.reduce((sum, g) => sum + g.opponentRating, 0) / decisive.length;
+    const totalPoints = decisive.reduce((sum, g) => sum + g.points, 0);
+    const percentageScore = totalPoints / decisive.length;
+    performanceRating = Math.round(
+      avgOpponentRating + performanceDp(percentageScore),
+    );
+  }
+
+  return {
+    id: player.id,
+    name: player.name,
+    title: player.title || "",
+    rating: player.rating ?? null,
+    teamId: player.teamId || null,
+    score: player.score,
+    gamesPlayed: games.filter((g) => g.opponentId).length,
+    byes: games.filter((g) => !g.opponentId).length,
+    performanceRating,
+    games: [...games].reverse(), // most recent round first
+    opponents: [...byOpponent.values()],
+  };
+}
+
 // Pre-flight roster check for the bughouse variant — lets the frontend warn
 // before attempting to generate a round/pairing, rather than surfacing a
 // 400 from deep inside board-building. Not applicable outside team+bughouse.
@@ -1545,7 +1716,7 @@ async function addLatePlayer(id, { name, title, rating, teamId }) {
     t.teams.find((x) => x.id === teamId).playerIds.push(comp.id);
     t.players.push(comp);
     // Give the new player a personal bye credit for round 1 if a round is already open.
-    if (t.currentPairings) ((comp.score += 1), (comp.byeRounds += 1));
+    if (t.currentPairings) (comp.score += 1), (comp.byeRounds += 1);
   } else {
     t.players.push(comp);
     if (t.currentPairings) {
@@ -2891,6 +3062,7 @@ module.exports = {
   getTournament,
   submitBracketMatchResult,
   getBracket,
+  getPlayerProfile,
   validateBughouseTeams,
   enableRegistration,
   disableRegistration,

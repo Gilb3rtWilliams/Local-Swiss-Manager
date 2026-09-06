@@ -7,6 +7,7 @@ import NewTournament from "./pages/NewTournament.jsx";
 import TournamentLayout, {
   TournamentIndex,
 } from "./pages/tournament/TournamentLayout.jsx";
+import PlayerProfile from "./pages/tournament/PlayerProfile.jsx";
 import StartingRank from "./pages/tournament/StartingRank.jsx";
 import Overview from "./pages/tournament/Overview.jsx";
 import Pairings from "./pages/tournament/Pairings.jsx";
@@ -33,6 +34,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/tournament/:id" element={<TournamentLayout />}>
           <Route index element={<TournamentIndex />} />
+          <Route path="player/:playerId" element={<PlayerProfile />} />
           <Route path="starting-rank" element={<StartingRank />} />
           <Route path="overview" element={<Overview />} />
           <Route path="pairings" element={<Pairings />} />

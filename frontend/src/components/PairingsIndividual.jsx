@@ -1,5 +1,5 @@
 import React from "react";
-import { useOutletContext } from "react-router-dom";
+import { Link, useOutletContext } from "react-router-dom";
 
 function ResultButtons({
   results,
@@ -49,13 +49,51 @@ export default function PairingsIndividual({ pairings, results, onSetResult }) {
   const t = outletContext?.t;
   const livePlayers = t?.players || [];
 
-  function resolveTitle(playerObj, playerName) {
-    if (playerObj?.title) return playerObj.title;
+  // Same fallback shape as resolveTitle used to use on its own: prefer
+  // whatever's already on the pairing's player object, fall back to a
+  // name-based lookup against the live roster. Combined into one lookup
+  // so a linkable id doesn't need a second pass through livePlayers.
+  function resolvePlayerMeta(playerObj, playerName) {
+    if (playerObj?.title || playerObj?.id) {
+      return { title: playerObj.title || "", id: playerObj.id || null };
+    }
     if (playerName) {
       const match = livePlayers.find((lp) => lp.name === playerName);
-      if (match?.title) return match.title;
+      if (match) return { title: match.title || "", id: match.id || null };
     }
-    return "";
+    return { title: "", id: null };
+  }
+
+  function PlayerLabel({ id, title, name }) {
+    const label = (
+      <>
+        {title && (
+          <span
+            style={{
+              color: "#c25555",
+              marginRight: "6px",
+              fontWeight: 700,
+            }}
+          >
+            {title}
+          </span>
+        )}
+        {name}
+      </>
+    );
+    if (!id || !t?.id) return label;
+    return (
+      <Link
+        to={`/tournament/${t.id}/player/${id}`}
+        style={{ color: "inherit", textDecoration: "none" }}
+        onMouseEnter={(e) =>
+          (e.currentTarget.style.textDecoration = "underline")
+        }
+        onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
+      >
+        {label}
+      </Link>
+    );
   }
 
   return (
@@ -73,7 +111,7 @@ export default function PairingsIndividual({ pairings, results, onSetResult }) {
     >
       {pairings.map((p, i) => {
         if (p.type === "bye") {
-          const byeTitle = resolveTitle(p.player, p.playerName);
+          const byeMeta = resolvePlayerMeta(p.player, p.playerName);
           return (
             <div
               key={p.idx}
@@ -95,18 +133,11 @@ export default function PairingsIndividual({ pairings, results, onSetResult }) {
                   fontWeight: 700,
                 }}
               >
-                {byeTitle && (
-                  <span
-                    style={{
-                      color: "#c25555",
-                      marginRight: "6px",
-                      fontWeight: 700,
-                    }}
-                  >
-                    {byeTitle}
-                  </span>
-                )}
-                {p.playerName}
+                <PlayerLabel
+                  id={byeMeta.id}
+                  title={byeMeta.title}
+                  name={p.playerName}
+                />
               </div>
               <div
                 style={{
@@ -123,8 +154,8 @@ export default function PairingsIndividual({ pairings, results, onSetResult }) {
           );
         }
 
-        const whiteTitle = resolveTitle(p.white, p.whiteName);
-        const blackTitle = resolveTitle(p.black, p.blackName);
+        const whiteMeta = resolvePlayerMeta(p.white, p.whiteName);
+        const blackMeta = resolvePlayerMeta(p.black, p.blackName);
 
         return (
           <div
@@ -181,18 +212,11 @@ export default function PairingsIndividual({ pairings, results, onSetResult }) {
                       lineHeight: 1.2,
                     }}
                   >
-                    {whiteTitle && (
-                      <span
-                        style={{
-                          color: "#c25555",
-                          marginRight: "6px",
-                          fontWeight: 700,
-                        }}
-                      >
-                        {whiteTitle}
-                      </span>
-                    )}
-                    {p.whiteName}
+                    <PlayerLabel
+                      id={whiteMeta.id}
+                      title={whiteMeta.title}
+                      name={p.whiteName}
+                    />
                   </div>
                   <div
                     style={{
@@ -288,18 +312,11 @@ export default function PairingsIndividual({ pairings, results, onSetResult }) {
                       lineHeight: 1.2,
                     }}
                   >
-                    {blackTitle && (
-                      <span
-                        style={{
-                          color: "#c25555",
-                          marginRight: "6px",
-                          fontWeight: 700,
-                        }}
-                      >
-                        {blackTitle}
-                      </span>
-                    )}
-                    {p.blackName}
+                    <PlayerLabel
+                      id={blackMeta.id}
+                      title={blackMeta.title}
+                      name={p.blackName}
+                    />
                   </div>
                   <div
                     style={{
