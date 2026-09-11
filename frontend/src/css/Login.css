@@ -17,86 +17,23 @@
   letter-spacing: -0.02em;
 }
 
-/* ─── Background & Ambient Light Animation ───────────────────────────── */
-.lg-bg {
+/* ─── Background Slideshow ──────────────────────────────────────────── */
+
+.login-bg {
   position: fixed;
   inset: 0;
   z-index: -2;
-  overflow: hidden;
-  background: var(--bg, #1f1f2e);
+  width: 100%;
+  height: 100%;
 }
 
-.lg-bg-scene {
+/* Dark cinematic overlay so the login card remains readable */
+.login-bg::after {
+  content: "";
   position: absolute;
   inset: 0;
-  opacity: 0;
-}
-
-/* Subtle dark slate & ambient gold glows */
-.lg-bg-scene:nth-child(1) {
-  background: radial-gradient(
-    120% 90% at 15% 10%,
-    #2a2a3c 0%,
-    #1f1f2e 55%,
-    #13131a 100%
-  );
-}
-
-.lg-bg-scene:nth-child(2) {
-  background: radial-gradient(
-    120% 90% at 85% 15%,
-    #3a2e1e 0%,
-    #1f1f2e 55%,
-    #13131a 100%
-  );
-}
-
-.lg-bg-scene:nth-child(3) {
-  background: radial-gradient(
-    120% 90% at 50% 90%,
-    #2d2517 0%,
-    #1b1b26 55%,
-    #0d0d12 100%
-  );
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .lg-bg-scene {
-    animation: lgCycle 24s infinite;
-  }
-  .lg-bg-scene:nth-child(1) {
-    animation-delay: 0s;
-  }
-  .lg-bg-scene:nth-child(2) {
-    animation-delay: 8s;
-  }
-  .lg-bg-scene:nth-child(3) {
-    animation-delay: 16s;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lg-bg-scene:nth-child(1) {
-    opacity: 1;
-  }
-}
-
-@keyframes lgCycle {
-  0% {
-    opacity: 0;
-  }
-  4% {
-    opacity: 1;
-  }
-  29% {
-    opacity: 1;
-  }
-  33% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 0;
-  }
+  background: rgba(0, 0, 0, 0.45);
+  pointer-events: none;
 }
 
 /* ─── Login Card ─────────────────────────────────────────────────────── */
