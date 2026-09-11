@@ -142,4 +142,4 @@ async function ping() {
   await pool.query("SELECT 1");
 }
 
-module.exports = { load, save, ping };
+module.exports = { load, save, ping, pool };

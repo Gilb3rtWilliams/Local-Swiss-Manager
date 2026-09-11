@@ -35,6 +35,7 @@ const cookieParser = require("cookie-parser");
 const path = require("path");
 const tournamentsRouter = require("./src/routes/tournaments");
 const authRouter = require("./src/routes/routes-auth");
+const reviewsRouter = require("./src/routes/reviews");
 const tournamentService = require("./src/tournamentService");
 const store = require("./src/store");
 
@@ -66,6 +67,7 @@ app.use(cookieParser());
 
 app.use("/api/auth", authRouter);
 app.use("/api/tournaments", tournamentsRouter);
+app.use("/api/reviews", reviewsRouter);
 
 app.get("/api/health", async (req, res) => {
   try {
@@ -98,9 +100,9 @@ async function start() {
     process.exit(1);
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  app.listen(PORT, () => {
     console.log(
-      `Local Swiss Manager backend running at http://0.0.0.0:${PORT}`,
+      `Local Swiss Manager backend running at http://localhost:${PORT}`,
     );
   });
 }

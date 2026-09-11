@@ -92,6 +92,11 @@ export const api = {
     downloadFile(`/tournaments/${id}/standings/export`),
   downloadPairingsExport: (id) =>
     downloadFile(`/tournaments/${id}/pairings/export`),
+
+  listReviews: () => request("/reviews"),
+  submitReview: (payload) =>
+    request("/reviews", { method: "POST", body: JSON.stringify(payload) }),
+  deleteReview: (id) => request(`/reviews/${id}`, { method: "DELETE" }),
 };
 
 async function downloadFile(path) {

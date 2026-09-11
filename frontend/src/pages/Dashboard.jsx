@@ -41,30 +41,6 @@ const NEWS_ITEMS = [
   },
 ];
 
-const INITIAL_REVIEWS = [
-  {
-    name: "Wanjiru K.",
-    role: "Club organizer, Nyeri",
-    quote:
-      "I used to build pairing sheets by hand at 11pm the night before. Now I generate a round in under a minute and actually get to bed.",
-    rating: 5,
-  },
-  {
-    name: "Otieno M.",
-    role: "Arbiter",
-    quote:
-      "The bracket view finally makes knockout side-events worth running alongside our main Swiss tournaments. Players can see exactly where they stand.",
-    rating: 5,
-  },
-  {
-    name: "Achieng N.",
-    role: "Team captain",
-    quote:
-      "Team match scoring with board-by-board results was the one thing every other tool I tried got clunky. This one didn't.",
-    rating: 4,
-  },
-];
-
 // Small outline icons for the stat strip — hand-rolled inline so the
 // dashboard doesn't pull in an icon library just for four glyphs.
 function IconFlag() {
@@ -162,17 +138,25 @@ export default function Dashboard() {
   const [formatFilter, setFormatFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const [reviews, setReviews] = useState(INITIAL_REVIEWS);
+  const [reviews, setReviews] = useState(null);
   const [reviewFormOpen, setReviewFormOpen] = useState(false);
   const [reviewName, setReviewName] = useState("");
   const [reviewQuote, setReviewQuote] = useState("");
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const [reviewError, setReviewError] = useState("");
+  const [reviewBusy, setReviewBusy] = useState(false);
 
   const heroTitle = useTypingEffect("Tournament Manager Dashboard", 60);
 
   useEffect(() => {
     refresh();
+    api
+      .listReviews()
+      .then(setReviews)
+      .catch(() => setReviews([])); // reviews are a nice-to-have section — a
+    // failed fetch here shouldn't block the rest of the dashboard, so this
+    // degrades to "no reviews yet" rather than surfacing a page-level error.
   }, []);
 
   function refresh() {
@@ -219,26 +203,31 @@ export default function Dashboard() {
       ]
     : [];
 
-  function submitReview(e) {
+  async function submitReview(e) {
     e.preventDefault();
     if (!reviewName.trim() || !reviewQuote.trim()) return;
-    setReviews((rs) => [
-      {
+    setReviewBusy(true);
+    setReviewError("");
+    try {
+      const created = await api.submitReview({
         name: reviewName.trim(),
-        role: "Swiss Manager user",
         quote: reviewQuote.trim(),
         rating: reviewRating,
-      },
-      ...rs,
-    ]);
-    setReviewName("");
-    setReviewQuote("");
-    setReviewRating(5);
-    setReviewSubmitted(true);
-    setTimeout(() => {
-      setReviewSubmitted(false);
-      setReviewFormOpen(false);
-    }, 1800);
+      });
+      setReviews((rs) => [created, ...(rs || [])]);
+      setReviewName("");
+      setReviewQuote("");
+      setReviewRating(5);
+      setReviewSubmitted(true);
+      setTimeout(() => {
+        setReviewSubmitted(false);
+        setReviewFormOpen(false);
+      }, 1800);
+    } catch (err) {
+      setReviewError(err.message);
+    } finally {
+      setReviewBusy(false);
+    }
   }
 
   return (
@@ -292,7 +281,9 @@ export default function Dashboard() {
                     <button
                       key={f}
                       type="button"
-                      className={`dash-chip ${formatFilter === f ? "active" : ""}`}
+                      className={`dash-chip ${
+                        formatFilter === f ? "active" : ""
+                      }`}
                       onClick={() => setFormatFilter(f)}
                     >
                       {f === "all" ? "All" : FORMAT_LABEL[f]}
@@ -309,7 +300,9 @@ export default function Dashboard() {
                     <button
                       key={val}
                       type="button"
-                      className={`dash-chip ${statusFilter === val ? "active" : ""}`}
+                      className={`dash-chip ${
+                        statusFilter === val ? "active" : ""
+                      }`}
                       onClick={() => setStatusFilter(val)}
                     >
                       {label}
@@ -400,7 +393,9 @@ export default function Dashboard() {
 
                       <div className="tourney-progress">
                         <div
-                          className={`tourney-progress-fill ${t.status === "finished" ? "is-muted" : ""}`}
+                          className={`tourney-progress-fill ${
+                            t.status === "finished" ? "is-muted" : ""
+                          }`}
                           style={{ width: `${roundProgress}%` }}
                         />
                       </div>
@@ -459,18 +454,26 @@ export default function Dashboard() {
             </h2>
           </div>
 
-          <div className="dash-reviews-grid">
-            {reviews.map((r, i) => (
-              <div key={`${r.name}-${i}`} className="card dash-review-card">
-                <Stars value={r.rating} />
-                <p className="dash-review-quote">"{r.quote}"</p>
-                <div className="dash-review-author dash-author-footer">
-                  <strong>{r.name}</strong>
-                  <span>{r.role}</span>
+          {reviews === null ? (
+            <p className="dash-section-note">Loading…</p>
+          ) : reviews.length === 0 ? (
+            <p className="dash-section-note">
+              No reviews yet — be the first to share your experience.
+            </p>
+          ) : (
+            <div className="dash-reviews-grid">
+              {reviews.map((r) => (
+                <div key={r.id} className="card dash-review-card">
+                  <Stars value={r.rating} />
+                  <p className="dash-review-quote">"{r.quote}"</p>
+                  <div className="dash-review-author dash-author-footer">
+                    <strong>{r.name}</strong>
+                    <span>{r.role}</span>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           {!reviewFormOpen ? (
             <button
@@ -519,8 +522,12 @@ export default function Dashboard() {
                     />
                   </label>
                   <div className="form-actions">
-                    <button className="btn-primary" type="submit">
-                      Submit Review
+                    <button
+                      className="btn-primary"
+                      type="submit"
+                      disabled={reviewBusy}
+                    >
+                      {reviewBusy ? "Submitting…" : "Submit Review"}
                     </button>
                     <button
                       type="button"
@@ -529,6 +536,11 @@ export default function Dashboard() {
                     >
                       Cancel
                     </button>
+                    {reviewError && (
+                      <span style={{ color: "#d97a72", fontSize: 12 }}>
+                        {reviewError}
+                      </span>
+                    )}
                   </div>
                 </form>
               )}
