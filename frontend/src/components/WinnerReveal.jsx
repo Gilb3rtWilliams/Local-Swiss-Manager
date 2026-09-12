@@ -34,21 +34,60 @@ export default function WinnerReveal({ t }) {
         toast(
           ({ closeToast }) => (
             <div
-              style={{ display: "flex", flexDirection: "column", gap: "12px" }}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "12px",
+                alignItems: "center",
+                padding: "8px 0",
+              }}
             >
-              <span style={{ fontSize: "14px", fontWeight: 600 }}>
-                Play Winner Reveal?
+              {/* Mini Fireworks & Trophy using your existing float animation */}
+              <div
+                style={{
+                  fontSize: "28px",
+                  animation: "wrTrophyFloat 2.4s ease-in-out infinite",
+                }}
+              >
+                🎆 🏆 🎆
+              </div>
+
+              {/* Reusing your shimmering gold text class */}
+              <span
+                className="wr-winner-name"
+                style={{
+                  fontSize: "20px",
+                  textAlign: "center",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Tournament Finished!
               </span>
+
+              <span
+                style={{
+                  fontSize: "11px",
+                  color: "#8a8a9a",
+                  fontWeight: 600,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  marginBottom: "4px",
+                }}
+              >
+                Replay Winner Reveal?
+              </span>
+
               <div
                 style={{
                   display: "flex",
-                  gap: "8px",
-                  justifyContent: "flex-end",
+                  gap: "12px",
+                  width: "100%",
+                  justifyContent: "center",
                 }}
               >
                 <button
-                  className="wr-dismiss" // Reusing your dismiss button styles
-                  style={{ padding: "6px 12px", margin: 0, fontSize: "12px" }}
+                  className="wr-dismiss"
+                  style={{ padding: "8px 16px", margin: 0, fontSize: "12px" }}
                   onClick={() => {
                     celebratedRef.current = true;
                     closeToast();
@@ -59,12 +98,13 @@ export default function WinnerReveal({ t }) {
                 <button
                   className="wr-dismiss"
                   style={{
-                    padding: "6px 12px",
+                    padding: "8px 16px",
                     margin: 0,
                     fontSize: "12px",
-                    background: "#e8e8e8",
+                    background: "#d4a853", // Force a solid gold button for the primary action
                     color: "#0a0a0e",
-                    borderColor: "#e8e8e8",
+                    borderColor: "#d4a853",
+                    boxShadow: "0 0 15px rgba(212, 168, 83, 0.4)",
                   }}
                   onClick={() => {
                     celebratedRef.current = true;
@@ -73,17 +113,17 @@ export default function WinnerReveal({ t }) {
                     closeToast();
                   }}
                 >
-                  Play
+                  Play Reveal
                 </button>
               </div>
             </div>
           ),
           {
-            position: "top-right", // Forces the toast to the top corner
+            position: "center",
             autoClose: false,
             closeOnClick: false,
             draggable: false,
-            className: "wr-toast-custom", // Custom class for styling
+            className: "wr-toast-custom",
           },
         );
       }
