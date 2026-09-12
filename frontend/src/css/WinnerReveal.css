@@ -308,13 +308,13 @@
     z-index: 1003;
   }
 }
-/* ── Custom Toast Popup (Matches Podium Cards) ────────────────────────── */
+/* ── Energetic Custom Toast Popup ────────────────────────── */
 .wr-toast-custom {
-  background: rgba(25, 25, 36, 0.85) !important;
-  border: 1px solid #252532 !important;
+  background: rgba(20, 20, 28, 0.95) !important;
+  border: 2px solid #d4a853 !important; /* Thick gold border */
   backdrop-filter: blur(14px) !important;
   -webkit-backdrop-filter: blur(14px) !important;
-  border-radius: 14px !important;
+  border-radius: 16px !important;
   color: #e8e8e8 !important;
   font-family: var(
     --font-mono,
@@ -323,12 +323,25 @@
     "Cascadia Code",
     monospace
   ) !important;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45) !important;
-  z-index: 1005 !important; /* Ensures it sits above the wr-overlay which is 1000 */
+  z-index: 1005 !important;
+
+  /* The attention-grabbing continuous pulse */
+  animation: wrToastPulse 1.2s infinite alternate ease-in-out !important;
 }
 
-/* Removes the default react-toastify background to let the blur show */
+@keyframes wrToastPulse {
+  0% {
+    box-shadow: 0 0 10px rgba(212, 168, 83, 0.3), 0 8px 20px rgba(0, 0, 0, 0.5);
+    transform: scale(1);
+  }
+  100% {
+    box-shadow: 0 0 25px rgba(212, 168, 83, 0.8), 0 12px 30px rgba(0, 0, 0, 0.6);
+    transform: scale(1.03); /* Subtle heartbeat scaling */
+  }
+}
+
+/* Override default react-toastify background */
 .Toastify__toast-theme--light.wr-toast-custom,
 .Toastify__toast-theme--dark.wr-toast-custom {
-  background: rgba(25, 25, 36, 0.85);
+  background: rgba(20, 20, 28, 0.95);
 }

@@ -119,7 +119,7 @@ export default function WinnerReveal({ t }) {
             </div>
           ),
           {
-            position: "center",
+            position: "top-right",
             autoClose: false,
             closeOnClick: false,
             draggable: false,
