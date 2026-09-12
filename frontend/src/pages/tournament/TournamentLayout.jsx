@@ -10,6 +10,8 @@ import {
 import { api } from "../../api.js";
 import WinnerReveal from "../../components/WinnerReveal.jsx";
 import BackgroundSlideshow from "../../components/BackgroundSlideshow.jsx";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function isElimination(t) {
   return t.system === "single_elimination" || t.system === "double_elimination";
@@ -99,6 +101,8 @@ export default function TournamentLayout() {
         overflow: "hidden",
       }}
     >
+      <ToastContainer />
+
       {/* Ambient Background Layer */}
       <div
         style={{
