@@ -42,6 +42,18 @@ export default function TeamStandingsTable({ teamStandings, basePath }) {
                       ) : (
                         p.name
                       )}
+                      {p.fideId && (
+                        <a
+                          href={`https://ratings.fide.com/profile/${p.fideId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ fontSize: "0.85em", marginLeft: 4 }}
+                          title={`FIDE ID ${p.fideId}`}
+                        >
+                          [FIDE]
+                        </a>
+                      )}
                     </span>
                   ))
                 : t.playerCount}

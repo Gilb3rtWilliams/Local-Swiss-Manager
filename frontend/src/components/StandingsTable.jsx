@@ -20,6 +20,7 @@ export default function StandingsTable({
           <th className="rank-col">#</th>
           <th className="title-col">Title</th>
           <th>Player</th>
+          <th>FIDE ID</th>
           {showTeam && <th>Team</th>}
           <th>Score</th>
           {showTiebreaks && <th>Buchholz</th>}
@@ -41,6 +42,20 @@ export default function StandingsTable({
               )}{" "}
               {p.rating != null && (
                 <span className="rating-tag">({p.rating})</span>
+              )}
+            </td>
+            <td className="fide-id-col">
+              {p.fideId ? (
+                <a
+                  href={`https://ratings.fide.com/profile/${p.fideId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {p.fideId}
+                </a>
+              ) : (
+                "—"
               )}
             </td>
             {showTeam && <td>{p.teamName}</td>}

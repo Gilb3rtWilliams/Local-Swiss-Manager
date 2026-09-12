@@ -157,7 +157,27 @@ export default function PlayerProfile() {
               {profile.name}
             </h2>
             <div style={{ color: "#8a8a9a", fontSize: 12, marginTop: 6 }}>
-              Rating {profile.rating ?? "Unrated"} · This tournament only
+              Rating {profile.rating ?? "Unrated"}
+              {profile.fideId && (
+                <>
+                  {" · "}
+                  <a
+                    href={`https://ratings.fide.com/profile/${profile.fideId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: "#8aa9d4", textDecoration: "none" }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.textDecoration = "underline")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.textDecoration = "none")
+                    }
+                  >
+                    FIDE {profile.fideId}
+                  </a>
+                </>
+              )}
+              {" · This tournament only"}
             </div>
           </div>
 
@@ -218,6 +238,9 @@ export default function PlayerProfile() {
                 >
                   <th style={{ padding: "10px 12px" }}>Opponent</th>
                   <th style={{ padding: "10px 12px", textAlign: "right" }}>
+                    FIDE ID
+                  </th>
+                  <th style={{ padding: "10px 12px", textAlign: "right" }}>
                     Rating
                   </th>
                   <th style={{ padding: "10px 12px", textAlign: "right" }}>
@@ -258,6 +281,35 @@ export default function PlayerProfile() {
                       >
                         {o.name}
                       </Link>
+                    </td>
+                    <td
+                      style={{
+                        padding: "10px 12px",
+                        textAlign: "right",
+                        fontSize: 11,
+                        fontFamily:
+                          "'SF Mono', Monaco, 'Cascadia Code', monospace",
+                      }}
+                    >
+                      {o.fideId ? (
+                        <a
+                          href={`https://ratings.fide.com/profile/${o.fideId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: "#8aa9d4", textDecoration: "none" }}
+                          onClick={(e) => e.stopPropagation()}
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.textDecoration = "underline")
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.textDecoration = "none")
+                          }
+                        >
+                          {o.fideId}
+                        </a>
+                      ) : (
+                        <span style={{ color: "#4a4a55" }}>—</span>
+                      )}
                     </td>
                     <td
                       style={{
@@ -364,6 +416,29 @@ export default function PlayerProfile() {
                             {" "}
                             ({g.opponentRating})
                           </span>
+                        )}
+                        {g.opponentFideId && (
+                          <a
+                            href={`https://ratings.fide.com/profile/${g.opponentFideId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              color: "#8aa9d4",
+                              fontWeight: 400,
+                              fontSize: 11,
+                              marginLeft: 8,
+                              textDecoration: "none",
+                            }}
+                            onMouseEnter={(e) =>
+                              (e.currentTarget.style.textDecoration =
+                                "underline")
+                            }
+                            onMouseLeave={(e) =>
+                              (e.currentTarget.style.textDecoration = "none")
+                            }
+                          >
+                            FIDE {g.opponentFideId}
+                          </a>
                         )}
                         <span
                           style={{

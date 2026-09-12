@@ -538,6 +538,7 @@ async function createTournament(input) {
         const comp = engine.newCompetitor(uid(), Number(p.rating) || 0);
         comp.name = p.name.trim();
         comp.title = p.title ? p.title.trim() : null;
+        comp.fideId = p.fideId ? String(p.fideId).trim() : null;
         comp.teamId = teamId;
         comp.status = "active"; // scaffolding for a future withdrawal feature — nothing reads this yet, but nothing breaks by it being here either
         return comp;
@@ -594,6 +595,7 @@ async function createTournament(input) {
       const comp = engine.newCompetitor(uid(), Number(p.rating) || 0);
       comp.name = p.name.trim();
       comp.title = p.title ? p.title.trim() : null;
+      comp.fideId = p.fideId ? String(p.fideId).trim() : null;
       comp.status = "active"; // same scaffolding note as above
       t.players.push(comp);
     });
@@ -1522,6 +1524,7 @@ function buildPlayerProfile(t, playerId) {
       opponentId,
       opponentName: opponent ? opponent.name : "Unknown player",
       opponentTitle: opponent ? opponent.title || "" : "",
+      opponentFideId: opponent ? opponent.fideId || null : null,
       opponentRating: opponent ? opponent.rating ?? null : null,
       color: side === "white" ? "W" : "B",
       result,
@@ -1584,6 +1587,7 @@ function buildPlayerProfile(t, playerId) {
         opponentId: g.opponentId,
         name: g.opponentName,
         title: g.opponentTitle,
+        fideId: g.opponentFideId,
         rating: g.opponentRating,
         gamesPlayed: 0,
         points: 0,
@@ -1641,6 +1645,7 @@ function buildPlayerProfile(t, playerId) {
     id: player.id,
     name: player.name,
     title: player.title || "",
+    fideId: player.fideId || null,
     rating: player.rating ?? null,
     teamId: player.teamId || null,
     score: player.score,
@@ -1691,7 +1696,7 @@ function validateBughouseTeams(id) {
 // isn't fixed up front. round-robin/elimination/bughouse are blocked
 // permanently (not just "early"), since their whole structure is drawn for
 // a fixed field and there's no round-based cutoff that would make it safe.
-async function addLatePlayer(id, { name, title, rating, teamId }) {
+async function addLatePlayer(id, { name, title, rating, teamId, fideId }) {
   const t = assertTournament(id);
   if (isRoundRobinSystem(t)) {
     const e = new Error(
@@ -1730,6 +1735,7 @@ async function addLatePlayer(id, { name, title, rating, teamId }) {
   const comp = engine.newCompetitor(uid(), Number(rating) || 0);
   comp.name = name.trim();
   comp.title = title ? title.trim() : null;
+  comp.fideId = fideId ? String(fideId).trim() : null;
   comp.startingRank = t.players.length + 1;
 
   if (t.format === "team") {
@@ -2011,6 +2017,7 @@ async function submitPublicRegistration(token, payload = {}) {
       const comp = engine.newCompetitor(uid(), Number(p.rating) || 0);
       comp.name = p.name.trim();
       comp.title = p.title ? p.title.trim() : null;
+      comp.fideId = p.fideId ? String(p.fideId).trim() : null;
       comp.teamId = teamId;
       comp.startingRank = t.players.length + 1;
       return comp;
@@ -2044,7 +2051,7 @@ async function submitPublicRegistration(token, payload = {}) {
   }
 
   // Individual format
-  const { name, title, rating } = payload;
+  const { name, title, rating, fideId } = payload;
   if (!name || !name.trim()) {
     const e = new Error("Name is required");
     e.status = 400;
@@ -2060,6 +2067,7 @@ async function submitPublicRegistration(token, payload = {}) {
   const comp = engine.newCompetitor(uid(), Number(rating) || 0);
   comp.name = name.trim();
   comp.title = title ? title.trim() : null;
+  comp.fideId = fideId ? String(fideId).trim() : null;
   comp.startingRank = t.players.length + 1;
   t.players.push(comp);
   if (t.currentPairings) {
@@ -2204,6 +2212,7 @@ function buildIndividualRoster(playersInput) {
   const cleaned = playersInput.map((p) => ({
     name: p?.name?.trim(),
     title: p?.title?.trim() || null,
+    fideId: p?.fideId ? String(p.fideId).trim() : null,
     rating: Number(p?.rating) || 0,
   }));
   if (cleaned.some((p) => !p.name)) {
@@ -2220,6 +2229,8 @@ function buildIndividualRoster(playersInput) {
   return cleaned.map((p) => {
     const comp = engine.newCompetitor(uid(), p.rating);
     comp.name = p.name;
+    comp.title = p.title;
+    comp.fideId = p.fideId;
     comp.status = "active";
     return comp;
   });
@@ -2274,6 +2285,7 @@ function buildTeamRoster(teamInput, variant) {
       const comp = engine.newCompetitor(uid(), Number(p?.rating) || 0);
       comp.name = name;
       comp.title = p?.title?.trim() || null;
+      comp.fideId = p?.fideId ? String(p.fideId).trim() : null;
       comp.teamId = teamId;
       comp.status = "active";
       players.push(comp);
@@ -2420,6 +2432,8 @@ async function updateTournamentDetails(id, updates = {}) {
         if (edit.name !== undefined) player.name = edit.name.trim();
         if (edit.title !== undefined)
           player.title = edit.title ? edit.title.trim() : null;
+        if (edit.fideId !== undefined)
+          player.fideId = edit.fideId ? String(edit.fideId).trim() : null;
       }
     });
 
@@ -2467,6 +2481,7 @@ async function updateTournamentDetails(id, updates = {}) {
           const comp = engine.newCompetitor(uid(), Number(p.rating) || 0);
           comp.name = p.name.trim();
           comp.title = p.title ? p.title.trim() : null;
+          comp.fideId = p.fideId ? String(p.fideId).trim() : null;
           comp.teamId = teamId;
           comp.status = "active";
           return comp;
@@ -2524,6 +2539,7 @@ async function updateTournamentDetails(id, updates = {}) {
         const comp = engine.newCompetitor(uid(), Number(p.rating) || 0);
         comp.name = p.name.trim();
         comp.title = p.title ? p.title.trim() : null;
+        comp.fideId = p.fideId ? String(p.fideId).trim() : null;
         comp.status = "active";
         return comp;
       });
@@ -2731,6 +2747,7 @@ function serializeTournament(t) {
     id: p.id,
     name: p.name,
     title: p.title || null,
+    fideId: p.fideId || null,
     rating: p.rating,
     score: p.score,
     teamId: p.teamId || null,
@@ -2810,7 +2827,11 @@ function serializeTournament(t) {
       const resolvedPlayers = team.playerIds
         .map((id) => t.players.find((p) => p.id === id))
         .filter(Boolean) // Safely remove undefined
-        .map((p) => ({ name: p.name, title: p.title || null }));
+        .map((p) => ({
+          name: p.name,
+          title: p.title || null,
+          fideId: p.fideId || null,
+        }));
       return {
         id: team.id,
         name: team.name,
@@ -2831,6 +2852,7 @@ function serializeTournament(t) {
       id: p.id,
       name: p.name,
       title: p.title || null,
+      fideId: p.fideId || null,
       rating: p.rating,
       teamId: p.teamId,
       teamName: teamNameOf(p.teamId),
@@ -2851,6 +2873,7 @@ function serializeTournament(t) {
         id: p.id,
         name: p.name,
         title: p.title || null,
+        fideId: p.fideId || null,
         rating: p.rating,
         score: engine.formatScore(p.score),
         inContention,
@@ -2937,6 +2960,7 @@ function serializeTournament(t) {
               .map((p) => ({
                 id: p.id,
                 name: p.name,
+                fideId: p.fideId || null,
                 rating: p.rating,
                 startingRank: p.startingRank,
               })),
@@ -2950,6 +2974,7 @@ function serializeTournament(t) {
             rank: p.startingRank,
             id: p.id,
             name: p.name,
+            fideId: p.fideId || null,
             rating: p.rating,
           }));
 

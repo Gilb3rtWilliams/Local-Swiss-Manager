@@ -79,6 +79,31 @@ export default function StartingRank() {
     );
   }
 
+  // Links out to the player's real FIDE profile — a different destination
+  // (ratings.fide.com) from the in-app player-profile Link above, so this
+  // is deliberately its own external <a>, not folded into PlayerName.
+  // Renders nothing when there's no FIDE ID rather than an empty cell with
+  // visible styling, since most club-level players won't have one.
+  function FideId({ p }) {
+    const fideId = resolvePlayer(p)?.fideId || p?.fideId;
+    if (!fideId) return <span style={{ color: "#4a4a55" }}>—</span>;
+    return (
+      <a
+        href={`https://ratings.fide.com/profile/${fideId}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ color: "#8aa9d4", textDecoration: "none" }}
+        onMouseEnter={(e) =>
+          (e.currentTarget.style.textDecoration = "underline")
+        }
+        onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {fideId}
+      </a>
+    );
+  }
+
   return (
     <div
       style={{
@@ -229,6 +254,7 @@ export default function StartingRank() {
                         >
                           <th style={{ padding: "10px 18px", width: 60 }}>#</th>
                           <th style={{ padding: "10px 18px" }}>Player</th>
+                          <th style={{ padding: "10px 18px" }}>FIDE ID</th>
                           <th
                             style={{
                               padding: "10px 18px",
@@ -261,6 +287,16 @@ export default function StartingRank() {
                               }}
                             >
                               <PlayerName p={p} />
+                            </td>
+                            <td
+                              style={{
+                                padding: "10px 18px",
+                                fontSize: 11,
+                                fontFamily:
+                                  "'SF Mono', Monaco, 'Cascadia Code', monospace",
+                              }}
+                            >
+                              <FideId p={p} />
                             </td>
                             <td
                               style={{
@@ -310,6 +346,7 @@ export default function StartingRank() {
                 >
                   <th style={{ padding: "12px 18px", width: 80 }}>Seed</th>
                   <th style={{ padding: "12px 18px" }}>Player</th>
+                  <th style={{ padding: "12px 18px" }}>FIDE ID</th>
                   <th style={{ padding: "12px 18px", textAlign: "right" }}>
                     Rating
                   </th>
@@ -343,6 +380,16 @@ export default function StartingRank() {
                       }}
                     >
                       <PlayerName p={p} />
+                    </td>
+                    <td
+                      style={{
+                        padding: "12px 18px",
+                        fontSize: 11,
+                        fontFamily:
+                          "'SF Mono', Monaco, 'Cascadia Code', monospace",
+                      }}
+                    >
+                      <FideId p={p} />
                     </td>
                     <td
                       style={{

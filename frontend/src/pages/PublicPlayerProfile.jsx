@@ -94,7 +94,21 @@ export default function PublicPlayerProfile() {
             </h2>
 
             <div className="pp-rating">
-              Rating {profile.rating ?? "Unrated"} · This tournament only
+              Rating {profile.rating ?? "Unrated"}
+              {profile.fideId && (
+                <>
+                  {" · "}
+                  <a
+                    href={`https://ratings.fide.com/profile/${profile.fideId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="pp-fide-link"
+                  >
+                    FIDE {profile.fideId}
+                  </a>
+                </>
+              )}
+              {" · This tournament only"}
             </div>
           </div>
 
@@ -134,6 +148,7 @@ export default function PublicPlayerProfile() {
               <thead>
                 <tr>
                   <th>Opponent</th>
+                  <th className="pp-align-right">FIDE ID</th>
                   <th className="pp-align-right">Rating</th>
                   <th className="pp-align-right">Games</th>
                   <th className="pp-align-right">Score</th>
