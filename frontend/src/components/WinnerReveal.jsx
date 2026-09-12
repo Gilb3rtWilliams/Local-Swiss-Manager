@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { toast } from "react-toastify";
 import Confetti from "./Confetti.jsx";
 import Fireworks from "./Fireworks.jsx";
 import { playFanfare } from "../useFanfare.js";
@@ -16,17 +17,92 @@ function scoreOf(c) {
 
 export default function WinnerReveal({ t }) {
   const celebratedRef = useRef(false);
+  const initialLoadRef = useRef(true);
   const [stage, setStage] = useState("idle");
   const [dismissed, setDismissed] = useState(false);
   const [triggerFlash, setTriggerFlash] = useState(false);
 
   useEffect(() => {
-    if (t && t.status === "finished" && !celebratedRef.current) {
-      celebratedRef.current = true;
-      setDismissed(false);
-      setStage("suspense");
+    if (!t) return;
+
+    // Handle the very first time tournament data loads
+    if (initialLoadRef.current) {
+      initialLoadRef.current = false;
+
+      if (t.status === "finished" && !celebratedRef.current) {
+        // Tournament was already completed when opened. Prompt the user.
+        toast(
+          ({ closeToast }) => (
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "12px",
+                fontFamily: "'SF Mono', Monaco, monospace",
+              }}
+            >
+              <span style={{ fontSize: "14px", fontWeight: 600 }}>
+                Play Winner Reveal?
+              </span>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "8px",
+                  justifyContent: "flex-end",
+                }}
+              >
+                <button
+                  style={{
+                    padding: "6px 12px",
+                    cursor: "pointer",
+                    background: "#353545",
+                    color: "#e8e8e8",
+                    border: "1px solid #252532",
+                    borderRadius: "6px",
+                  }}
+                  onClick={() => {
+                    celebratedRef.current = true;
+                    closeToast(); // Block animation
+                  }}
+                >
+                  Skip
+                </button>
+                <button
+                  style={{
+                    padding: "6px 12px",
+                    cursor: "pointer",
+                    background: "#e8e8e8",
+                    color: "#0a0a0e",
+                    border: "none",
+                    borderRadius: "6px",
+                    fontWeight: "bold",
+                  }}
+                  onClick={() => {
+                    celebratedRef.current = true;
+                    setDismissed(false);
+                    setStage("suspense");
+                    closeToast(); // Trigger animation
+                  }}
+                >
+                  Play
+                </button>
+              </div>
+            </div>
+          ),
+          { autoClose: false, closeOnClick: false, draggable: false },
+        );
+      }
+    } else {
+      // Handle live transition: status changed to finished while page was open
+      if (t.status === "finished" && !celebratedRef.current) {
+        celebratedRef.current = true;
+        setDismissed(false);
+        setStage("suspense");
+      }
     }
-    if (t && t.status !== "finished") {
+
+    // Reset if tournament is restarted or status changes back
+    if (t.status !== "finished") {
       celebratedRef.current = false;
       setStage("idle");
     }
@@ -63,7 +139,9 @@ export default function WinnerReveal({ t }) {
 
       {!dismissed && (
         <div
-          className={`wr-overlay wr-stage-${stage} ${triggerFlash ? "wr-flash" : ""}`}
+          className={`wr-overlay wr-stage-${stage} ${
+            triggerFlash ? "wr-flash" : ""
+          }`}
         >
           {stage === "suspense" && (
             <div className="wr-suspense">
