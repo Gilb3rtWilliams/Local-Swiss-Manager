@@ -14,7 +14,7 @@ function rowId() {
   return `p-${++uidCounter}`;
 }
 function emptyPlayer() {
-  return { key: rowId(), name: "", rating: "" };
+  return { key: rowId(), name: "", rating: "", fideId: "" };
 }
 
 export default function Register() {
@@ -25,6 +25,7 @@ export default function Register() {
 
   const [name, setName] = useState("");
   const [rating, setRating] = useState("");
+  const [fideId, setFideId] = useState("");
   const [teamName, setTeamName] = useState("");
   const [players, setPlayers] = useState([emptyPlayer(), emptyPlayer()]);
 
@@ -66,7 +67,11 @@ export default function Register() {
       }
       const cleanPlayers = players
         .filter((p) => p.name.trim())
-        .map((p) => ({ name: p.name.trim(), rating: p.rating }));
+        .map((p) => ({
+          name: p.name.trim(),
+          rating: p.rating,
+          fideId: p.fideId ? p.fideId.trim() : null,
+        }));
       if (cleanPlayers.length === 0) {
         setSubmitError("Add at least 1 player.");
         return;
@@ -81,7 +86,7 @@ export default function Register() {
         setSubmitError("Name is required.");
         return;
       }
-      payload = { name, rating };
+      payload = { name, rating, fideId };
     }
 
     setSubmitting(true);
@@ -181,6 +186,15 @@ export default function Register() {
                         }
                       />
                       <input
+                        type="text"
+                        placeholder="FIDE ID (optional)"
+                        inputMode="numeric"
+                        value={p.fideId}
+                        onChange={(e) =>
+                          updatePlayer(idx, "fideId", e.target.value)
+                        }
+                      />
+                      <input
                         type="number"
                         placeholder="Rating"
                         min="0"
@@ -220,6 +234,16 @@ export default function Register() {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Jane Wanjiku"
+                    />
+                  </label>
+                  <label className="reg-field">
+                    <span>FIDE ID (optional)</span>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      value={fideId}
+                      onChange={(e) => setFideId(e.target.value)}
+                      placeholder="e.g. 8603677"
                     />
                   </label>
                   <label className="reg-field">

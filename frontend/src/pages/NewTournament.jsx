@@ -29,7 +29,7 @@ function rowId() {
 }
 
 function emptyPlayer() {
-  return { key: rowId(), title: "", name: "", rating: "" };
+  return { key: rowId(), title: "", name: "", rating: "", fideId: "" };
 }
 function emptyTeam() {
   return { key: rowId(), name: "", players: [emptyPlayer(), emptyPlayer()] };
@@ -148,10 +148,10 @@ export default function NewTournament() {
   const rounds = isRoundRobin
     ? roundRobinRounds(Math.max(competitorCount, 2), system)
     : isElimination
-      ? eliminationRounds(Math.max(competitorCount, 2), system)
-      : autoRounds
-        ? suggestedRounds(Math.max(competitorCount, 2))
-        : totalRounds;
+    ? eliminationRounds(Math.max(competitorCount, 2), system)
+    : autoRounds
+    ? suggestedRounds(Math.max(competitorCount, 2))
+    : totalRounds;
 
   function toggleTiebreak(id) {
     setTiebreaks((prev) =>
@@ -259,6 +259,7 @@ export default function NewTournament() {
             .map((p) => ({
               name: p.name.trim(),
               title: p.title || null,
+              fideId: p.fideId ? p.fideId.trim() : null,
               rating: p.rating,
             })),
         }))
@@ -278,6 +279,7 @@ export default function NewTournament() {
         .map((p) => ({
           name: p.name.trim(),
           title: p.title || null,
+          fideId: p.fideId ? p.fideId.trim() : null,
           rating: p.rating,
         }));
       if (cleanPlayers.length < 2) {
@@ -693,6 +695,7 @@ export default function NewTournament() {
               <div className="nt-roster-legend">
                 <span />
                 <span>Name</span>
+                <span>FIDE ID</span>
                 <span>Rating</span>
                 <span />
               </div>
@@ -728,6 +731,17 @@ export default function NewTournament() {
                         }
                       />
                     </div>
+
+                    <input
+                      type="text"
+                      className="nt-roster-fideid"
+                      placeholder="e.g. 8603677"
+                      inputMode="numeric"
+                      value={p.fideId}
+                      onChange={(e) =>
+                        updatePlayer(idx, "fideId", e.target.value)
+                      }
+                    />
 
                     <input
                       type="number"
@@ -806,6 +820,7 @@ export default function NewTournament() {
                     <div className="nt-roster-legend nt-roster-legend-nested">
                       <span />
                       <span>Name</span>
+                      <span>FIDE ID</span>
                       <span>Rating</span>
                       <span />
                     </div>
@@ -853,6 +868,22 @@ export default function NewTournament() {
                           </div>
 
                           <input
+                            type="text"
+                            className="nt-roster-fideid"
+                            placeholder="e.g. 8603677"
+                            inputMode="numeric"
+                            value={p.fideId}
+                            onChange={(e) =>
+                              updateTeamPlayer(
+                                tIdx,
+                                pIdx,
+                                "fideId",
+                                e.target.value,
+                              )
+                            }
+                          />
+
+                          <input
                             type="number"
                             className="nt-roster-rating"
                             placeholder="—"
@@ -873,7 +904,9 @@ export default function NewTournament() {
                             className="nt-row-remove"
                             onClick={() => removeTeamPlayer(tIdx, pIdx)}
                             title="Remove"
-                            aria-label={`Remove player ${pIdx + 1} from team ${tIdx + 1}`}
+                            aria-label={`Remove player ${pIdx + 1} from team ${
+                              tIdx + 1
+                            }`}
                           >
                             ✕
                           </button>
@@ -908,8 +941,8 @@ export default function NewTournament() {
               {submitting
                 ? "Creating…"
                 : isElimination
-                  ? "Done — Draw Bracket"
-                  : "Done — Generate Round 1"}
+                ? "Done — Draw Bracket"
+                : "Done — Generate Round 1"}
             </button>
             {error && <span className="inline-error">{error}</span>}
           </div>

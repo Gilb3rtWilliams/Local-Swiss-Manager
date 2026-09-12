@@ -28,7 +28,7 @@ function rowId() {
   return `row-${++uidCounter}`;
 }
 function emptyPlayer() {
-  return { key: rowId(), title: "", name: "", rating: "" };
+  return { key: rowId(), title: "", name: "", rating: "", fideId: "" };
 }
 function emptyTeam() {
   return { key: rowId(), name: "", players: [emptyPlayer(), emptyPlayer()] };
@@ -153,6 +153,7 @@ export default function Overview() {
           title: p.title || "",
           name: p.name,
           rating: p.rating ?? "",
+          fideId: p.fideId || "",
         })),
     }));
   }
@@ -164,6 +165,7 @@ export default function Overview() {
       title: p.title || "",
       name: p.name,
       rating: p.rating ?? "",
+      fideId: p.fideId || "",
     }));
   }
 
@@ -307,6 +309,7 @@ export default function Overview() {
         title: lateNewPlayer.title ? lateNewPlayer.title.trim() : null,
         name: lateNewPlayer.name.trim(),
         rating: lateNewPlayer.rating,
+        fideId: lateNewPlayer.fideId ? lateNewPlayer.fideId.trim() : null,
       });
       setEditPlayers(buildPlayerRows(updated));
       setLateNewPlayer(emptyPlayer());
@@ -345,6 +348,7 @@ export default function Overview() {
         title: draft.title ? draft.title.trim() : null,
         name: draft.name.trim(),
         rating: draft.rating,
+        fideId: draft.fideId ? draft.fideId.trim() : null,
         teamId,
       });
       setEditTeams(buildTeamRows(updated));
@@ -457,6 +461,7 @@ export default function Overview() {
                 title: p.title ? p.title.trim() : null,
                 name: p.name.trim(),
                 rating: p.rating,
+                fideId: p.fideId ? p.fideId.trim() : null,
               })),
           }));
         } else {
@@ -466,6 +471,7 @@ export default function Overview() {
               title: p.title ? p.title.trim() : null,
               name: p.name.trim(),
               rating: p.rating,
+              fideId: p.fideId ? p.fideId.trim() : null,
             }));
         }
       } else {
@@ -478,6 +484,7 @@ export default function Overview() {
                 title: p.title ? p.title.trim() : null,
                 name: p.name.trim(),
                 rating: p.rating,
+                fideId: p.fideId ? p.fideId.trim() : null,
               })),
           );
         } else {
@@ -488,6 +495,7 @@ export default function Overview() {
               title: p.title ? p.title.trim() : null,
               name: p.name.trim(),
               rating: p.rating,
+              fideId: p.fideId ? p.fideId.trim() : null,
             }));
         }
       }
@@ -947,6 +955,24 @@ export default function Overview() {
                               />
                             </label>
 
+                            <label className="field field-fideid">
+                              <span>FIDE ID</span>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                placeholder="Optional"
+                                value={player.fideId}
+                                onChange={(e) =>
+                                  updateEditTeamPlayer(
+                                    teamIdx,
+                                    playerIdx,
+                                    "fideId",
+                                    e.target.value,
+                                  )
+                                }
+                              />
+                            </label>
+
                             <label className="field field-rating">
                               <span>Rating</span>
                               <input
@@ -1034,6 +1060,25 @@ export default function Overview() {
                               />
                             </label>
 
+                            <label className="field field-fideid">
+                              <span>FIDE ID</span>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                placeholder="Optional"
+                                value={
+                                  lateNewTeamPlayers[team.id]?.fideId ?? ""
+                                }
+                                onChange={(e) =>
+                                  updateLateTeamDraft(
+                                    team.id,
+                                    "fideId",
+                                    e.target.value,
+                                  )
+                                }
+                              />
+                            </label>
+
                             <label className="field field-rating">
                               <span>Rating</span>
                               <input
@@ -1101,6 +1146,19 @@ export default function Overview() {
                           value={player.name}
                           onChange={(e) =>
                             updateEditPlayer(idx, "name", e.target.value)
+                          }
+                        />
+                      </label>
+
+                      <label className="field field-fideid">
+                        <span>FIDE ID</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="Optional"
+                          value={player.fideId}
+                          onChange={(e) =>
+                            updateEditPlayer(idx, "fideId", e.target.value)
                           }
                         />
                       </label>
@@ -1181,6 +1239,22 @@ export default function Overview() {
                         />
                       </label>
 
+                      <label className="field field-fideid">
+                        <span>FIDE ID</span>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="Optional"
+                          value={lateNewPlayer.fideId}
+                          onChange={(e) =>
+                            setLateNewPlayer((p) => ({
+                              ...p,
+                              fideId: e.target.value,
+                            }))
+                          }
+                        />
+                      </label>
+
                       <label className="field field-rating">
                         <span>Rating</span>
                         <input
@@ -1249,8 +1323,8 @@ export default function Overview() {
               {regBusy
                 ? "Working…"
                 : t.registrationOpen
-                  ? "Close Registration"
-                  : "Enable Registration Link"}
+                ? "Close Registration"
+                : "Enable Registration Link"}
             </button>
           </div>
           <p className="muted" style={{ marginBottom: 10 }}>
@@ -1299,8 +1373,8 @@ export default function Overview() {
             {pubBusy
               ? "Working…"
               : t.publicViewOpen
-                ? "Turn Off Public Link"
-                : "Enable Public Link"}
+              ? "Turn Off Public Link"
+              : "Enable Public Link"}
           </button>
         </div>
         <p className="muted" style={{ marginBottom: 10 }}>
@@ -1309,8 +1383,8 @@ export default function Overview() {
               ? "Anyone with this link can follow the live bracket and standings — read-only, no sign-in needed."
               : "Anyone with this link can browse pairings for every round and current standings — read-only, no sign-in needed."
             : isElimination
-              ? "Turn this on to share a read-only link where players and spectators can follow the bracket live, any time during the event."
-              : "Turn this on to share a read-only link where players and spectators can check pairings and standings themselves, any time during the event."}
+            ? "Turn this on to share a read-only link where players and spectators can follow the bracket live, any time during the event."
+            : "Turn this on to share a read-only link where players and spectators can check pairings and standings themselves, any time during the event."}
         </p>
         {t.publicViewOpen && publicResultsLink && (
           <div style={{ display: "flex", gap: 8 }}>
@@ -1345,8 +1419,8 @@ export default function Overview() {
             {t.bracket?.champion
               ? `Congratulations, ${t.bracket.champion.name}!`
               : t.system === "double_elimination"
-                ? "The full winners and losers bracket was drawn when this tournament was created. Enter results match by match as they finish."
-                : "The full bracket was drawn when this tournament was created. Enter results match by match as they finish."}
+              ? "The full winners and losers bracket was drawn when this tournament was created. Enter results match by match as they finish."
+              : "The full bracket was drawn when this tournament was created. Enter results match by match as they finish."}
           </p>
           <button
             className="btn-primary"
