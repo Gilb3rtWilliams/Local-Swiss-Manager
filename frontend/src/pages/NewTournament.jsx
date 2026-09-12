@@ -110,6 +110,12 @@ export default function NewTournament() {
   const [autoRounds, setAutoRounds] = useState(true);
   const [totalRounds, setTotalRounds] = useState(5);
   const [chess960, setChess960] = useState(false);
+  // Only meaningful for system === "single_elimination" — see
+  // tournamentService.js/bracket.js for why double elimination doesn't get
+  // one. Gated in the UI below; harmless to leave true if the person
+  // switches system afterward, since the backend only reads it for
+  // single-elim brackets.
+  const [thirdPlaceMatch, setThirdPlaceMatch] = useState(false);
   const [tiebreaks, setTiebreaks] = useState([
     "buchholz_cut1",
     "buchholz",
@@ -236,6 +242,8 @@ export default function NewTournament() {
       maxHalfPointByes: Number(maxHalfPointByes) || 0,
       byeCutoffRound: byeCutoffRound ? Number(byeCutoffRound) : null,
       chess960,
+      thirdPlaceMatch:
+        system === "single_elimination" ? thirdPlaceMatch : false,
       format,
       variant,
       system,
@@ -520,6 +528,20 @@ export default function NewTournament() {
                       </option>
                     </select>
                   </label>
+                  {system === "single_elimination" && (
+                    <label className="field">
+                      <span>3rd Place Playoff</span>
+                      <SegmentedToggle
+                        name="thirdPlaceMatch"
+                        value={thirdPlaceMatch}
+                        onChange={setThirdPlaceMatch}
+                        options={[
+                          { value: false, label: "Off" },
+                          { value: true, label: "On" },
+                        ]}
+                      />
+                    </label>
+                  )}
                   <label className="field">
                     <span>Time Control</span>
                     <input
@@ -575,6 +597,10 @@ export default function NewTournament() {
                     "Pairings adapt each round based on standings."}
                   {system === "single_elimination" &&
                     "Single loss and you're out. The full bracket is drawn as soon as you create the tournament."}
+                  {system === "single_elimination" &&
+                    (thirdPlaceMatch
+                      ? " The two semifinal losers play each other for 3rd place, alongside the final."
+                      : " Turn on the 3rd Place Playoff above to also draw a match between the two semifinal losers.")}
                   {system === "double_elimination" &&
                     "Lose once and you drop to the losers bracket; lose twice and you're out — unless you beat the winners-bracket champion in the Grand Final, which triggers a bracket reset."}
                   {chess960 &&
