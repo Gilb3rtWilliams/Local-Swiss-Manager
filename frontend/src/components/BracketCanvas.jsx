@@ -91,8 +91,7 @@ function computeLayout(matches) {
       .filter((src) => src && centers.has(src.id));
     const y = refs.length
       ? refs.reduce((sum, src) => sum + centers.get(src.id), 0) / refs.length
-      : (centers.get(gfMatches[0].id) ??
-        (wSection.height + lSection.height) / 2);
+      : centers.get(gfMatches[0].id) ?? (wSection.height + lSection.height) / 2;
     centers.set(m.id, y);
   });
 
@@ -200,8 +199,10 @@ function MatchNode({ match, seeds, onOpen }) {
 
   return (
     <div
-      className={`bx-card ${meta.className}${clickable ? " bx-card-clickable" : ""}`}
-      style={{ width: CARD_W, height: CARD_H }}
+      className={`bx-card ${meta.className}${
+        clickable ? " bx-card-clickable" : ""
+      }`}
+      style={{ width: CARD_W, height: CARD_H, position: "relative" }}
       onClick={clickable ? () => onOpen(match) : undefined}
       role={clickable ? "button" : undefined}
       tabIndex={clickable ? 0 : undefined}
@@ -209,30 +210,55 @@ function MatchNode({ match, seeds, onOpen }) {
       {meta.label && (
         <span className={`bx-status-tag ${meta.className}`}>{meta.label}</span>
       )}
+      {match.chess960 && (
+        <span
+          title={`Chess960 position #${match.chess960.id}`}
+          style={{
+            position: "absolute",
+            top: 4,
+            right: 6,
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: "0.05em",
+            color: "#d4a853",
+            background: "rgba(212,168,83,0.14)",
+            border: "1px solid rgba(212,168,83,0.35)",
+            borderRadius: 4,
+            padding: "1px 5px",
+            pointerEvents: "none",
+          }}
+        >
+          960
+        </span>
+      )}
       <div
-        className={`bx-row${aWin ? " bx-row-winner" : ""}${!a ? " bx-row-empty" : ""}`}
+        className={`bx-row${aWin ? " bx-row-winner" : ""}${
+          !a ? " bx-row-empty" : ""
+        }`}
       >
         <span className="bx-seed">{seedBadge(seeds, a) ?? ""}</span>
         <span className="bx-name">
           {a
             ? a.name
             : match.status === "bye" || match.status === "skipped"
-              ? "Bye"
-              : "TBD"}
+            ? "Bye"
+            : "TBD"}
         </span>
         {aWin && <span className="bx-check">✓</span>}
       </div>
       <div className="bx-divider" />
       <div
-        className={`bx-row${bWin ? " bx-row-winner" : ""}${!b ? " bx-row-empty" : ""}`}
+        className={`bx-row${bWin ? " bx-row-winner" : ""}${
+          !b ? " bx-row-empty" : ""
+        }`}
       >
         <span className="bx-seed">{seedBadge(seeds, b) ?? ""}</span>
         <span className="bx-name">
           {b
             ? b.name
             : match.status === "bye" || match.status === "skipped"
-              ? "Bye"
-              : "TBD"}
+            ? "Bye"
+            : "TBD"}
         </span>
         {bWin && <span className="bx-check">✓</span>}
       </div>

@@ -44,6 +44,72 @@ function CopyFenButton({ fen }) {
   );
 }
 
+function bracketLabel(m) {
+  return m.bracket === "W"
+    ? "Winners"
+    : m.bracket === "L"
+    ? "Losers"
+    : "Grand Final";
+}
+
+function competitorNames(m) {
+  const a = m.competitorA?.name || "TBD";
+  const b = m.competitorB?.name || "TBD";
+  return `${a} vs ${b}`;
+}
+
+// Bracket matches don't share a synchronous "round" the way Swiss/round-robin
+// rounds do — a match's Chess960 position is rolled the moment its two sides
+// are known (see tournamentService.js's activateMatch), which can happen at
+// very different real-world times for different matches. So instead of the
+// round picker used for Swiss/round-robin, brackets get a match picker here.
+function BracketMatchPicker({ matches, selectedId, onSelect }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        gap: 8,
+      }}
+    >
+      {matches.map((m) => {
+        const active = m.id === selectedId;
+        return (
+          <button
+            key={m.id}
+            type="button"
+            onClick={() => onSelect(m.id)}
+            style={{
+              background: active ? "#252532" : "#1a1a24",
+              border: `1px solid ${active ? "#d4a853" : "#353545"}`,
+              color: active ? "#e8e8e8" : "#8a8a9a",
+              fontSize: 11,
+              fontWeight: 600,
+              padding: "8px 12px",
+              borderRadius: 8,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              textAlign: "left",
+              lineHeight: 1.4,
+            }}
+          >
+            <div
+              style={{
+                letterSpacing: "0.05em",
+                textTransform: "uppercase",
+                fontSize: 10,
+              }}
+            >
+              {bracketLabel(m)} · Round {m.round}
+            </div>
+            <div>{competitorNames(m)}</div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function Chess960() {
   const { t } = useOutletContext();
 
@@ -65,7 +131,17 @@ export default function Chess960() {
     }
   });
 
+  const isBracket = Boolean(t.bracket);
+
+  // Swiss/round-robin: one position per round, keyed by round number.
+  const roundHistory = t.rounds.filter((r) => r.chess960);
+  // Elimination brackets: one position per match, keyed by match id.
+  const matchHistory = isBracket
+    ? (t.bracket.matches || []).filter((m) => m.chess960)
+    : [];
+
   const [selectedRound, setSelectedRound] = useState(t.currentRound);
+  const [selectedMatchId, setSelectedMatchId] = useState(null);
 
   useEffect(() => {
     try {
@@ -82,6 +158,25 @@ export default function Chess960() {
       // Same as above — non-fatal.
     }
   }, [pieceTheme]);
+
+  // Hooks must run every render regardless of t.chess960, so both selection
+  // effects live above the early return below (t.chess960 is effectively
+  // static per mounted tournament, but this keeps hook order safe either way).
+  useEffect(() => {
+    if (!roundHistory.length) return;
+    setSelectedRound((prev) =>
+      prev === null ? roundHistory[roundHistory.length - 1].round : prev,
+    );
+  }, [roundHistory.length]);
+
+  useEffect(() => {
+    if (!matchHistory.length) return;
+    setSelectedMatchId((prev) =>
+      prev && matchHistory.some((m) => m.id === prev)
+        ? prev
+        : matchHistory[matchHistory.length - 1].id,
+    );
+  }, [matchHistory.length]);
 
   if (!t.chess960) {
     return (
@@ -102,19 +197,34 @@ export default function Chess960() {
     );
   }
 
-  const history = t.rounds.filter((r) => r.chess960);
+  const selectedMatch = isBracket
+    ? matchHistory.find((m) => m.id === selectedMatchId)
+    : null;
 
-  const current =
-    history.find((r) => r.round === selectedRound)?.chess960 ??
-    t.currentChess960;
+  const current = isBracket
+    ? selectedMatch?.chess960 ?? null
+    : roundHistory.find((r) => r.round === selectedRound)?.chess960 ??
+      t.currentChess960;
 
-  useEffect(() => {
-    if (!history.length) return;
+  const badgeLabel = isBracket
+    ? selectedMatch
+      ? `${bracketLabel(selectedMatch)} · Round ${selectedMatch.round}`
+      : null
+    : `Round ${selectedRound ?? t.currentRound}`;
 
-    setSelectedRound((prev) =>
-      prev === null ? history[history.length - 1].round : prev,
-    );
-  }, [history]);
+  const emptyStateHint = isBracket
+    ? "Each match gets its own random position the moment both sides are known — check back once the bracket starts filling in."
+    : "A fresh random position is drawn the moment Round 1 is generated — check back once pairings are up.";
+
+  const footerHint = isBracket
+    ? selectedMatch
+      ? `Every board in ${competitorNames(
+          selectedMatch,
+        )} starts from this position — set boards up accordingly before play begins.`
+      : "Every board in this match starts from this position — set boards up accordingly before play begins."
+    : `Every board in Round ${
+        selectedRound ?? t.currentRound
+      } starts from this position — set boards up accordingly before play begins.`;
 
   const selectStyle = {
     background: "#1a1a24",
@@ -208,7 +318,7 @@ export default function Chess960() {
                 </option>
               ))}
             </select>
-            {current && (
+            {current && badgeLabel && (
               <span
                 style={{
                   fontSize: 10,
@@ -222,16 +332,25 @@ export default function Chess960() {
                   border: "1px solid #353545",
                 }}
               >
-                Round {selectedRound ?? t.currentRound}
+                {badgeLabel}
               </span>
             )}
           </div>
         </div>
 
+        {isBracket && matchHistory.length > 0 && (
+          <div style={{ marginBottom: 20 }}>
+            <BracketMatchPicker
+              matches={matchHistory}
+              selectedId={selectedMatchId}
+              onSelect={setSelectedMatchId}
+            />
+          </div>
+        )}
+
         {!current ? (
           <p style={{ color: "#8a8a9a", fontSize: 14, margin: 0 }}>
-            A fresh random position is drawn the moment Round 1 is generated —
-            check back once pairings are up.
+            {emptyStateHint}
           </p>
         ) : (
           <div
@@ -292,9 +411,9 @@ export default function Chess960() {
                       lineHeight: 1.4,
                     }}
                   >
-                    This round happens to have drawn the standard chess starting
-                    position — Chess960 includes it as one of its 960 legal
-                    arrangements.
+                    {isBracket ? "This match happens" : "This round happens"} to
+                    have drawn the standard chess starting position — Chess960
+                    includes it as one of its 960 legal arrangements.
                   </p>
                 )}
               </div>
@@ -341,22 +460,22 @@ export default function Chess960() {
                   lineHeight: 1.5,
                 }}
               >
-                Every board in Round {selectedRound ?? t.currentRound} starts
-                from this position — set boards up accordingly before play
-                begins.
+                {footerHint}
               </p>
             </div>
           </div>
         )}
       </div>
 
-      <Chess960History
-        history={history}
-        selectedRound={selectedRound}
-        onSelectRound={setSelectedRound}
-        theme={theme}
-        pieceTheme={pieceTheme}
-      />
+      {!isBracket && (
+        <Chess960History
+          history={roundHistory}
+          selectedRound={selectedRound}
+          onSelectRound={setSelectedRound}
+          theme={theme}
+          pieceTheme={pieceTheme}
+        />
+      )}
     </div>
   );
 }

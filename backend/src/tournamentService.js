@@ -259,8 +259,17 @@ function buildTeamBoards(t, teamWhite, teamBlack) {
 
 // Wires up a team match's boards the moment both sides are known, reusing
 // the same board-pairing convention as the Swiss/round-robin team flow.
+// Also rolls this match's own Chess960 starting position when the feature
+// is on — a bracket match activates whenever its slots resolve, which can
+// happen at any point as earlier matches finish, not on a synchronous
+// "round" boundary the way Swiss/round-robin's t.currentChess960 assumes.
+// One fresh position per match is the bracket equivalent of one fresh
+// position per round.
 function activateMatch(t, m) {
   m.status = "ready";
+  if (t.chess960) {
+    m.chess960 = chess960.randomChess960Position();
+  }
   if (t.format !== "team") return;
   const teamA = t.teams.find((x) => x.id === m.competitorA);
   const teamB = t.teams.find((x) => x.id === m.competitorB);
@@ -454,19 +463,6 @@ async function createTournament(input) {
   }
   if (dateFrom && dateTo && dateTo < dateFrom) {
     const e = new Error("End date can't be before start date");
-    e.status = 400;
-    throw e;
-  }
-  if (
-    chess960Enabled &&
-    (system === "single_elimination" || system === "double_elimination")
-  ) {
-    // Brackets are drawn whole at creation (buildBracketState), not
-    // round-by-round via generateNextRound, which is the only place a
-    // Chess960 position gets rolled — so there's nowhere for it to hook in.
-    const e = new Error(
-      "Chess960 isn't available for elimination brackets yet — only Swiss and round-robin systems.",
-    );
     e.status = 400;
     throw e;
   }
@@ -2723,6 +2719,7 @@ function serializeBracket(t) {
       winnerTo: m.winnerTo || null,
       loserTo: m.loserTo || null,
       result: m.result,
+      chess960: m.chess960 || null,
       boards:
         t.format === "team" && m.boards
           ? m.boards.map((b) => ({

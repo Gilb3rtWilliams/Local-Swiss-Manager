@@ -234,10 +234,41 @@ function ScoreModal({
               {match.bracket === "W"
                 ? "Winners"
                 : match.bracket === "L"
-                  ? "Losers"
-                  : "Grand Final"}{" "}
+                ? "Losers"
+                : "Grand Final"}{" "}
               · Round {match.round}
             </div>
+            {match.chess960 && (
+              <div
+                className="bx-modal-subtitle"
+                style={{
+                  marginTop: 4,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    letterSpacing: "0.05em",
+                    textTransform: "uppercase",
+                    padding: "3px 7px",
+                    borderRadius: 4,
+                    background: "#252532",
+                    color: "#d4a853",
+                    border: "1px solid #353545",
+                  }}
+                >
+                  Chess960 #{match.chess960.id}
+                </span>
+                <span className="muted">
+                  Set boards from this position — see the Chess960 tab for the
+                  diagram
+                </span>
+              </div>
+            )}
           </div>
           <button
             type="button"

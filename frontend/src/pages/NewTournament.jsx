@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api.js";
 import { FIDE_FEDERATIONS } from "../federations.js";
@@ -140,10 +140,6 @@ export default function NewTournament() {
   const isElimination =
     system === "single_elimination" || system === "double_elimination";
   const isFixedRounds = isRoundRobin || isElimination;
-
-  useEffect(() => {
-    if (isElimination && chess960) setChess960(false);
-  }, [isElimination, chess960]);
 
   const rounds = isRoundRobin
     ? roundRobinRounds(Math.max(competitorCount, 2), system)
@@ -555,20 +551,18 @@ export default function NewTournament() {
                       )}
                     </div>
                   </label>
-                  {!isElimination && (
-                    <label className="field">
-                      <span>Chess960 (Fischer Random)</span>
-                      <SegmentedToggle
-                        name="chess960"
-                        value={chess960}
-                        onChange={setChess960}
-                        options={[
-                          { value: false, label: "Off" },
-                          { value: true, label: "On" },
-                        ]}
-                      />
-                    </label>
-                  )}
+                  <label className="field">
+                    <span>Chess960 (Fischer Random)</span>
+                    <SegmentedToggle
+                      name="chess960"
+                      value={chess960}
+                      onChange={setChess960}
+                      options={[
+                        { value: false, label: "Off" },
+                        { value: true, label: "On" },
+                      ]}
+                    />
+                  </label>
                 </div>
                 <p className="hint" style={{ marginTop: 10 }}>
                   {isRoundRobin &&
@@ -584,7 +578,9 @@ export default function NewTournament() {
                   {system === "double_elimination" &&
                     "Lose once and you drop to the losers bracket; lose twice and you're out — unless you beat the winners-bracket champion in the Grand Final, which triggers a bracket reset."}
                   {chess960 &&
-                    " A new random Chess960 starting position is drawn each round — check the Chess960 tab before boards start."}
+                    (isElimination
+                      ? " Each bracket match gets its own random Chess960 starting position, rolled the moment both sides are known — check the match card before boards start."
+                      : " A new random Chess960 starting position is drawn each round — check the Chess960 tab before boards start.")}
                 </p>
               </div>
             </div>
