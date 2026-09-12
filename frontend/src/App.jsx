@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./AuthContext.jsx";
+import { ToastContainer } from "react-toastify";
 import Navbar from "./components/Navbar.jsx";
 import Welcome from "./pages/Welcome.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
@@ -49,6 +50,7 @@ export default function App() {
           <Route path="chess960" element={<Chess960 />} />
         </Route>
       </Routes>
+      <ToastContainer />
     </AuthProvider>
   );
 }

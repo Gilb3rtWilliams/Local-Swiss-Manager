@@ -308,3 +308,27 @@
     z-index: 1003;
   }
 }
+/* ── Custom Toast Popup (Matches Podium Cards) ────────────────────────── */
+.wr-toast-custom {
+  background: rgba(25, 25, 36, 0.85) !important;
+  border: 1px solid #252532 !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  border-radius: 14px !important;
+  color: #e8e8e8 !important;
+  font-family: var(
+    --font-mono,
+    "SF Mono",
+    Monaco,
+    "Cascadia Code",
+    monospace
+  ) !important;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45) !important;
+  z-index: 1005 !important; /* Ensures it sits above the wr-overlay which is 1000 */
+}
+
+/* Removes the default react-toastify background to let the blur show */
+.Toastify__toast-theme--light.wr-toast-custom,
+.Toastify__toast-theme--dark.wr-toast-custom {
+  background: rgba(25, 25, 36, 0.85);
+}

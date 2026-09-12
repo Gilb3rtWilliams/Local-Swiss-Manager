@@ -34,12 +34,7 @@ export default function WinnerReveal({ t }) {
         toast(
           ({ closeToast }) => (
             <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "12px",
-                fontFamily: "'SF Mono', Monaco, monospace",
-              }}
+              style={{ display: "flex", flexDirection: "column", gap: "12px" }}
             >
               <span style={{ fontSize: "14px", fontWeight: 600 }}>
                 Play Winner Reveal?
@@ -52,36 +47,30 @@ export default function WinnerReveal({ t }) {
                 }}
               >
                 <button
-                  style={{
-                    padding: "6px 12px",
-                    cursor: "pointer",
-                    background: "#353545",
-                    color: "#e8e8e8",
-                    border: "1px solid #252532",
-                    borderRadius: "6px",
-                  }}
+                  className="wr-dismiss" // Reusing your dismiss button styles
+                  style={{ padding: "6px 12px", margin: 0, fontSize: "12px" }}
                   onClick={() => {
                     celebratedRef.current = true;
-                    closeToast(); // Block animation
+                    closeToast();
                   }}
                 >
                   Skip
                 </button>
                 <button
+                  className="wr-dismiss"
                   style={{
                     padding: "6px 12px",
-                    cursor: "pointer",
+                    margin: 0,
+                    fontSize: "12px",
                     background: "#e8e8e8",
                     color: "#0a0a0e",
-                    border: "none",
-                    borderRadius: "6px",
-                    fontWeight: "bold",
+                    borderColor: "#e8e8e8",
                   }}
                   onClick={() => {
                     celebratedRef.current = true;
                     setDismissed(false);
                     setStage("suspense");
-                    closeToast(); // Trigger animation
+                    closeToast();
                   }}
                 >
                   Play
@@ -89,7 +78,13 @@ export default function WinnerReveal({ t }) {
               </div>
             </div>
           ),
-          { autoClose: false, closeOnClick: false, draggable: false },
+          {
+            position: "top-right", // Forces the toast to the top corner
+            autoClose: false,
+            closeOnClick: false,
+            draggable: false,
+            className: "wr-toast-custom", // Custom class for styling
+          },
         );
       }
     } else {
