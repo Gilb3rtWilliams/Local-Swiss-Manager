@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import {
+  Link,
   NavLink,
   Navigate,
   Outlet,
@@ -37,8 +38,8 @@ export function TournamentIndex() {
   const target = isElimination(t)
     ? "module"
     : t.currentPairings
-      ? "pairings"
-      : "overview";
+    ? "pairings"
+    : "overview";
   return <Navigate to={`/tournament/${t.id}/${target}`} replace />;
 }
 
@@ -124,6 +125,30 @@ export default function TournamentLayout() {
         }}
       >
         <WinnerReveal t={t} />
+
+        <div style={{ marginBottom: 20 }}>
+          <Link
+            to="/dashboard"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              fontSize: 12,
+              fontWeight: 600,
+              letterSpacing: "0.05em",
+              textTransform: "uppercase",
+              color: "#8a8a9a",
+              textDecoration: "none",
+              border: "1px solid #252532",
+              padding: "8px 14px",
+              borderRadius: 10,
+              background: "#13131a",
+              transition: "all 0.2s ease",
+            }}
+          >
+            ← Back to Dashboard
+          </Link>
+        </div>
 
         {/* Header Section */}
         <div style={{ textAlign: "center", marginBottom: 40 }}>
