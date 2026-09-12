@@ -375,7 +375,12 @@ export default function BracketCanvas({
                 className="bx-edge"
                 style={
                   e.dashed
-                    ? { strokeDasharray: "4,4", opacity: 0.6 }
+                    ? {
+                        strokeDasharray: "5,4",
+                        stroke: "#c9a227",
+                        strokeWidth: 2,
+                        fill: "none",
+                      }
                     : undefined
                 }
               />

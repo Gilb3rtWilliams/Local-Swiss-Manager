@@ -364,7 +364,7 @@ function finalizeBracketIfDone(t) {
     const thirdPlaceDone =
       !b.thirdPlaceMatchId ||
       ["complete", "bye", "skipped"].includes(
-        bracketMatchById(t, b.thirdPlaceMatchId).status,
+        bracketMatchById(t, b.thirdPlaceMatchId)?.status,
       );
     if (final && final.status === "complete" && thirdPlaceDone) {
       b.champion = final.winnerId;
