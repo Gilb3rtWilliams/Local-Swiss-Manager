@@ -308,14 +308,14 @@
     z-index: 1003;
   }
 }
-/* ── Energetic Custom Toast Popup ────────────────────────── */
+
+/* ── Clean Toast Styling ────────────────────────── */
 .wr-toast-custom {
-  background: rgba(20, 20, 28, 0.95) !important;
-  border: 2px solid #d4a853 !important; /* Thick gold border */
+  background: rgba(25, 25, 36, 0.95) !important;
+  border: 1px solid #353545 !important;
   backdrop-filter: blur(14px) !important;
   -webkit-backdrop-filter: blur(14px) !important;
-  border-radius: 16px !important;
-  color: #e8e8e8 !important;
+  border-radius: 12px !important;
   font-family: var(
     --font-mono,
     "SF Mono",
@@ -324,24 +324,42 @@
     monospace
   ) !important;
   z-index: 1005 !important;
-
-  /* The attention-grabbing continuous pulse */
-  animation: wrToastPulse 1.2s infinite alternate ease-in-out !important;
 }
 
-@keyframes wrToastPulse {
-  0% {
-    box-shadow: 0 0 10px rgba(212, 168, 83, 0.3), 0 8px 20px rgba(0, 0, 0, 0.5);
-    transform: scale(1);
-  }
-  100% {
-    box-shadow: 0 0 25px rgba(212, 168, 83, 0.8), 0 12px 30px rgba(0, 0, 0, 0.6);
-    transform: scale(1.03); /* Subtle heartbeat scaling */
-  }
-}
-
-/* Override default react-toastify background */
 .Toastify__toast-theme--light.wr-toast-custom,
 .Toastify__toast-theme--dark.wr-toast-custom {
-  background: rgba(20, 20, 28, 0.95);
+  background: rgba(25, 25, 36, 0.95);
+}
+
+/* ── One-Time CSS Firework Explosion ────────────────────────── */
+.wr-mini-burst {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  /* This creates 8 particles exploding outward */
+  box-shadow: 0 0 0 #d4a853, 0 0 0 #d4a853, 0 0 0 #fff, 0 0 0 #fff,
+    0 0 0 #d4a853, 0 0 0 #d4a853, 0 0 0 #fff, 0 0 0 #fff;
+  animation: wrMiniExplosion 0.8s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes wrMiniExplosion {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    /* Particles fly 80px out and fade away */
+    box-shadow: 0 -80px 0 2px rgba(212, 168, 83, 0),
+      0 80px 0 2px rgba(212, 168, 83, 0), 80px 0 0 2px rgba(255, 255, 255, 0),
+      -80px 0 0 2px rgba(255, 255, 255, 0),
+      55px -55px 0 2px rgba(212, 168, 83, 0),
+      -55px 55px 0 2px rgba(212, 168, 83, 0),
+      55px 55px 0 2px rgba(255, 255, 255, 0),
+      -55px -55px 0 2px rgba(255, 255, 255, 0);
+    opacity: 0;
+  }
 }

@@ -15,6 +15,79 @@ function scoreOf(c) {
   return c.score ?? c.points ?? c.pts ?? 0;
 }
 
+// Dedicated component to handle the specific interaction flow safely
+const RevealPrompt = ({ closeToast, onAccept, onDecline }) => {
+  const [accepted, setAccepted] = useState(false);
+
+  if (accepted) {
+    return (
+      <div
+        style={{
+          textAlign: "center",
+          padding: "12px 0",
+          fontSize: "14px",
+          fontWeight: 600,
+          color: "#e8e8e8",
+        }}
+      >
+        Okay, let's see who our winners are!
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        position: "relative",
+        display: "flex",
+        flexDirection: "column",
+        gap: "16px",
+        padding: "4px",
+      }}
+    >
+      {/* The CSS Firework Animation triggers when this mounts */}
+      <div className="wr-mini-burst"></div>
+
+      <span style={{ fontSize: "14px", fontWeight: 600, color: "#e8e8e8" }}>
+        Play the winner reveal?
+      </span>
+
+      <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+        <button
+          className="wr-dismiss"
+          style={{ padding: "6px 16px", margin: 0, fontSize: "12px" }}
+          onClick={() => {
+            onDecline();
+            closeToast();
+          }}
+        >
+          No
+        </button>
+        <button
+          className="wr-dismiss"
+          style={{
+            padding: "6px 16px",
+            margin: 0,
+            fontSize: "12px",
+            background: "#e8e8e8",
+            color: "#0a0a0e",
+            borderColor: "#e8e8e8",
+          }}
+          onClick={() => {
+            setAccepted(true);
+            setTimeout(() => {
+              onAccept();
+              closeToast();
+            }, 1800); // Gives you 1.8s to read the response before it starts
+          }}
+        >
+          Yes
+        </button>
+      </div>
+    </div>
+  );
+};
+
 export default function WinnerReveal({ t }) {
   const celebratedRef = useRef(false);
   const initialLoadRef = useRef(true);
@@ -25,99 +98,21 @@ export default function WinnerReveal({ t }) {
   useEffect(() => {
     if (!t) return;
 
-    // Handle the very first time tournament data loads
     if (initialLoadRef.current) {
       initialLoadRef.current = false;
 
       if (t.status === "finished" && !celebratedRef.current) {
-        // Tournament was already completed when opened. Prompt the user.
         toast(
-          ({ closeToast }) => (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "12px",
-                alignItems: "center",
-                padding: "8px 0",
-              }}
-            >
-              {/* Mini Fireworks & Trophy using your existing float animation */}
-              <div
-                style={{
-                  fontSize: "28px",
-                  animation: "wrTrophyFloat 2.4s ease-in-out infinite",
-                }}
-              >
-                🎆 🏆 🎆
-              </div>
-
-              {/* Reusing your shimmering gold text class */}
-              <span
-                className="wr-winner-name"
-                style={{
-                  fontSize: "20px",
-                  textAlign: "center",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                Tournament Finished!
-              </span>
-
-              <span
-                style={{
-                  fontSize: "11px",
-                  color: "#8a8a9a",
-                  fontWeight: 600,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  marginBottom: "4px",
-                }}
-              >
-                Replay Winner Reveal?
-              </span>
-
-              <div
-                style={{
-                  display: "flex",
-                  gap: "12px",
-                  width: "100%",
-                  justifyContent: "center",
-                }}
-              >
-                <button
-                  className="wr-dismiss"
-                  style={{ padding: "8px 16px", margin: 0, fontSize: "12px" }}
-                  onClick={() => {
-                    celebratedRef.current = true;
-                    closeToast();
-                  }}
-                >
-                  Skip
-                </button>
-                <button
-                  className="wr-dismiss"
-                  style={{
-                    padding: "8px 16px",
-                    margin: 0,
-                    fontSize: "12px",
-                    background: "#d4a853", // Force a solid gold button for the primary action
-                    color: "#0a0a0e",
-                    borderColor: "#d4a853",
-                    boxShadow: "0 0 15px rgba(212, 168, 83, 0.4)",
-                  }}
-                  onClick={() => {
-                    celebratedRef.current = true;
-                    setDismissed(false);
-                    setStage("suspense");
-                    closeToast();
-                  }}
-                >
-                  Play Reveal
-                </button>
-              </div>
-            </div>
-          ),
+          <RevealPrompt
+            onAccept={() => {
+              celebratedRef.current = true;
+              setDismissed(false);
+              setStage("suspense");
+            }}
+            onDecline={() => {
+              celebratedRef.current = true;
+            }}
+          />,
           {
             position: "top-right",
             autoClose: false,
@@ -128,7 +123,6 @@ export default function WinnerReveal({ t }) {
         );
       }
     } else {
-      // Handle live transition: status changed to finished while page was open
       if (t.status === "finished" && !celebratedRef.current) {
         celebratedRef.current = true;
         setDismissed(false);
@@ -136,7 +130,6 @@ export default function WinnerReveal({ t }) {
       }
     }
 
-    // Reset if tournament is restarted or status changes back
     if (t.status !== "finished") {
       celebratedRef.current = false;
       setStage("idle");
