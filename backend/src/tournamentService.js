@@ -169,6 +169,7 @@ function buildBracketState(t) {
     matches,
     seeds: seeds.map((c, i) => ({ seed: i, id: c.id, name: c.name })),
     champion: null,
+    roundChess960: {}, // keyed "<bracket><round>" e.g. "W1", "L2", "GF1" — see activateMatch
   };
 
   resolveBracket(t);
@@ -259,16 +260,24 @@ function buildTeamBoards(t, teamWhite, teamBlack) {
 
 // Wires up a team match's boards the moment both sides are known, reusing
 // the same board-pairing convention as the Swiss/round-robin team flow.
-// Also rolls this match's own Chess960 starting position when the feature
-// is on — a bracket match activates whenever its slots resolve, which can
-// happen at any point as earlier matches finish, not on a synchronous
-// "round" boundary the way Swiss/round-robin's t.currentChess960 assumes.
-// One fresh position per match is the bracket equivalent of one fresh
-// position per round.
+// Also assigns this match's Chess960 starting position when the feature is
+// on. Brackets don't have a single synchronous "round" the way Swiss/
+// round-robin does (t.currentChess960 assumes exactly one open round at a
+// time), so instead every match shares one position per (bracket branch,
+// round) tier — e.g. every Winners-bracket Round 1 match gets the same
+// position, every Losers-bracket Round 2 match gets its own shared one, the
+// Grand Final gets its own, etc. The position for a tier is rolled the
+// first time any match in it activates, then reused for every other match
+// in that same tier as it activates later.
 function activateMatch(t, m) {
   m.status = "ready";
   if (t.chess960) {
-    m.chess960 = chess960.randomChess960Position();
+    if (!t.bracket.roundChess960) t.bracket.roundChess960 = {};
+    const tierKey = `${m.bracket}${m.round}`;
+    if (!t.bracket.roundChess960[tierKey]) {
+      t.bracket.roundChess960[tierKey] = chess960.randomChess960Position();
+    }
+    m.chess960 = t.bracket.roundChess960[tierKey];
   }
   if (t.format !== "team") return;
   const teamA = t.teams.find((x) => x.id === m.competitorA);
