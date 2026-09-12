@@ -341,18 +341,39 @@
   height: 5px;
   border-radius: 50%;
   /* This creates 8 particles exploding outward */
-  box-shadow: 0 0 0 #d4a853, 0 0 0 #d4a853, 0 0 0 #fff, 0 0 0 #fff,
-    0 0 0 #d4a853, 0 0 0 #d4a853, 0 0 0 #fff, 0 0 0 #fff;
+  box-shadow: 0 0 0 2px rgba(212, 168, 83, 1), 0 0 0 2px rgba(212, 168, 83, 1),
+    0 0 0 2px rgba(255, 255, 255, 1), 0 0 0 2px rgba(255, 255, 255, 1),
+    0 0 0 2px rgba(212, 168, 83, 1), 0 0 0 2px rgba(212, 168, 83, 1),
+    0 0 0 2px rgba(255, 255, 255, 1), 0 0 0 2px rgba(255, 255, 255, 1);
   animation: wrMiniExplosion 0.8s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
   pointer-events: none;
 }
 
 @keyframes wrMiniExplosion {
+  /* Particles start bunched at the center, but already fully opaque —
+     visibility is carried entirely by each shadow's own alpha from here
+     on, not by a second, independent opacity fade on the element (the old
+     version faded both at once, so there was never a moment the particles
+     were both spread out AND opaque enough to actually read as visible). */
   0% {
-    opacity: 1;
+    box-shadow: 0 0 0 2px rgba(212, 168, 83, 1), 0 0 0 2px rgba(212, 168, 83, 1),
+      0 0 0 2px rgba(255, 255, 255, 1), 0 0 0 2px rgba(255, 255, 255, 1),
+      0 0 0 2px rgba(212, 168, 83, 1), 0 0 0 2px rgba(212, 168, 83, 1),
+      0 0 0 2px rgba(255, 255, 255, 1), 0 0 0 2px rgba(255, 255, 255, 1);
+  }
+  /* Pinned midpoint: fully spread out AND still fully opaque, regardless
+     of how the cubic-bezier easing skews time toward either end. This is
+     the guaranteed-visible frame the old two-keyframe version never had. */
+  55% {
+    box-shadow: 0 -80px 0 2px rgba(212, 168, 83, 1),
+      0 80px 0 2px rgba(212, 168, 83, 1), 80px 0 0 2px rgba(255, 255, 255, 1),
+      -80px 0 0 2px rgba(255, 255, 255, 1),
+      55px -55px 0 2px rgba(212, 168, 83, 1),
+      -55px 55px 0 2px rgba(212, 168, 83, 1),
+      55px 55px 0 2px rgba(255, 255, 255, 1),
+      -55px -55px 0 2px rgba(255, 255, 255, 1);
   }
   100% {
-    /* Particles fly 80px out and fade away */
     box-shadow: 0 -80px 0 2px rgba(212, 168, 83, 0),
       0 80px 0 2px rgba(212, 168, 83, 0), 80px 0 0 2px rgba(255, 255, 255, 0),
       -80px 0 0 2px rgba(255, 255, 255, 0),
@@ -360,6 +381,5 @@
       -55px 55px 0 2px rgba(212, 168, 83, 0),
       55px 55px 0 2px rgba(255, 255, 255, 0),
       -55px -55px 0 2px rgba(255, 255, 255, 0);
-    opacity: 0;
   }
 }

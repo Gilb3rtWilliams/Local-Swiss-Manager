@@ -99,8 +99,6 @@ export default function TournamentLayout() {
         overflow: "hidden",
       }}
     >
-      <ToastContainer />
-
       {/* Ambient Background Layer */}
       <div
         style={{
