@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import BackgroundSlideshow from "../components/BackgroundSlideshow.jsx";
 import "../css/Welcome.css";
 import useTypingEffect from "/hooks/useTypingEffect.js";
@@ -253,7 +252,6 @@ export default function Welcome() {
 
   return (
     <div className="welcome-page">
-      <ToastContainer />
       <section className="welcome-hero">
         <BackgroundSlideshow images={HERO_IMAGES} className="welcome-hero-bg" />
 
