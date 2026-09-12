@@ -2838,10 +2838,8 @@ function serializeTournament(t) {
 
         score: engine.formatScore(c.score),
         inContention,
-        buchholz: inContention ? engine.buchholz(c, byIdMap).toFixed(1) : null,
-        sb: inContention
-          ? engine.sonnenbornBerger(c, byIdMap).toFixed(2)
-          : null,
+        buchholz: engine.buchholz(c, byIdMap).toFixed(1),
+        sb: engine.sonnenbornBerger(c, byIdMap).toFixed(2),
         playerCount: team.playerIds.length,
         players: resolvedPlayers,
       };
@@ -2877,10 +2875,8 @@ function serializeTournament(t) {
         rating: p.rating,
         score: engine.formatScore(p.score),
         inContention,
-        buchholz: inContention ? engine.buchholz(p, byIdMap).toFixed(1) : null,
-        sb: inContention
-          ? engine.sonnenbornBerger(p, byIdMap).toFixed(2)
-          : null,
+        buchholz: engine.buchholz(p, byIdMap).toFixed(1),
+        sb: engine.sonnenbornBerger(p, byIdMap).toFixed(2),
       };
     });
     crossTable = buildCrossTable(
