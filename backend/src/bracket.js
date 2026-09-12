@@ -46,8 +46,15 @@ function standardSeedOrder(size) {
 }
 
 // ─── Single elimination ─────────────────────────────────────────────────────
-function singleEliminationBracket(n) {
-  if (n < 2) return { size: n, rounds: 0, matches: [] };
+// options.thirdPlaceMatch: when true and the bracket has an actual semifinal
+// round (rounds >= 2, i.e. at least 4 entrants once padded to a power of 2),
+// adds one extra match pairing the two semifinal losers, played alongside
+// the final. With only 1 round (a 2-competitor bracket) there's no
+// semifinal to draw losers from, so the flag is a no-op in that case.
+function singleEliminationBracket(n, options = {}) {
+  const { thirdPlaceMatch = false } = options;
+  if (n < 2)
+    return { size: n, rounds: 0, matches: [], thirdPlaceMatchId: null };
 
   const size = nextPowerOfTwo(n);
   const rounds = Math.log2(size);
@@ -95,7 +102,29 @@ function singleEliminationBracket(n) {
   // roundMatches now holds just the final — its winnerTo is left null on
   // purpose, so finalizeBracketIfDone() can find it with `!m.winnerTo`.
 
-  return { size, rounds, matches };
+  // ── Optional third-place playoff ──
+  // The final's slotA/slotB are always { type: 'winner', matchId: <semi> }
+  // pointing at the two semifinal matches (see the loop above), so we can
+  // read those ids straight off the final instead of tracking them
+  // separately. Reuses the same 'loser' slot type resolveBracketSlot()
+  // already knows how to handle — no new slot type needed.
+  let thirdPlaceMatchId = null;
+  if (thirdPlaceMatch && rounds >= 2) {
+    const final = roundMatches[0];
+    const m = {
+      id: "3P",
+      bracket: "3P",
+      round: rounds,
+      slotA: { type: "loser", matchId: final.slotA.matchId },
+      slotB: { type: "loser", matchId: final.slotB.matchId },
+      winnerTo: null,
+      loserTo: null,
+    };
+    matches.push(m);
+    thirdPlaceMatchId = m.id;
+  }
+
+  return { size, rounds, matches, thirdPlaceMatchId };
 }
 
 // ─── Double elimination ─────────────────────────────────────────────────────
@@ -115,6 +144,7 @@ function doubleEliminationBracket(n) {
       lbRounds: 0,
       grandFinalId: null,
       grandFinalResetId: null,
+      thirdPlaceMatchId: null,
       matches: [],
     };
 
@@ -301,6 +331,12 @@ function doubleEliminationBracket(n) {
     lbRounds,
     grandFinalId: gf.id,
     grandFinalResetId: gfReset.id,
+    // Double elimination intentionally has no third-place match: the
+    // losers bracket already eliminates people one at a time down to a
+    // single LB final, so there's no natural "semifinal losers" pair the
+    // way there is in single elimination — see tournamentService.js's
+    // buildBracketState() for the decision not to bolt one on here.
+    thirdPlaceMatchId: null,
     matches,
   };
 }

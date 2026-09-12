@@ -105,6 +105,26 @@ function computeLayout(matches) {
   );
   gfMatches.forEach((m, i) => xOf.set(m.id, (maxRounds + i) * COLUMN_W));
 
+  // ── Third-place match (single elimination only — see bracket.js/
+  // tournamentService.js for why double elimination never produces one).
+  // It shares its two source matches with the final itself, so it belongs
+  // in the same column as the final; it's offset one row below so it reads
+  // as a parallel "consolation" match rather than a continuation of the
+  // main line.
+  const tpMatches = matches.filter((m) => m.bracket === "3P");
+  if (tpMatches.length) {
+    const finalMatch = wMatches.find((m) => !m.winnerTo);
+    const tpX = (wSection.rounds.length - 1) * COLUMN_W;
+    const tpY =
+      (finalMatch && centers.has(finalMatch.id)
+        ? centers.get(finalMatch.id)
+        : wSection.height / 2) + UNIT;
+    tpMatches.forEach((m) => {
+      xOf.set(m.id, tpX);
+      centers.set(m.id, tpY);
+    });
+  }
+
   const positions = new Map();
   matches.forEach((m) => {
     if (!centers.has(m.id) || !xOf.has(m.id)) return;
@@ -113,11 +133,17 @@ function computeLayout(matches) {
 
   const totalWidth =
     (maxRounds + gfMatches.length) * COLUMN_W - ROUND_GAP + CARD_W;
-  const totalHeight =
+  let totalHeight =
     (lSection.height > 0 ? lOffset + lSection.height : wSection.height) || UNIT;
+  if (tpMatches.length) {
+    const maxTpY = Math.max(...tpMatches.map((m) => centers.get(m.id)));
+    totalHeight = Math.max(totalHeight, maxTpY + CARD_H / 2 + 8);
+  }
 
   // Connector edges: same-bracket winner links, plus anything feeding a
-  // Grand Final match (cross-bracket by definition), plus GF -> GF-Reset.
+  // Grand Final match (cross-bracket by definition) or the third-place
+  // match (also cross-bracket: its slots are 'loser' links into the "3P"
+  // bracket, not 'winner' links within "W"), plus GF -> GF-Reset.
   const edges = [];
   matches.forEach((m) => {
     [m.slotA, m.slotB].forEach((slot) => {
@@ -126,9 +152,10 @@ function computeLayout(matches) {
       if (!src || !positions.has(src.id) || !positions.has(m.id)) return;
       if (
         m.bracket === "GF" ||
+        m.bracket === "3P" ||
         (slot.type === "winner" && src.bracket === m.bracket)
       ) {
-        edges.push({ from: src.id, to: m.id });
+        edges.push({ from: src.id, to: m.id, dashed: m.bracket === "3P" });
       }
     });
   });
@@ -149,6 +176,7 @@ function computeLayout(matches) {
     wRounds: wSection.rounds,
     lRounds: lSection.rounds,
     gfMatches,
+    tpMatches,
     totalWidth: Math.max(totalWidth, CARD_W),
     totalHeight,
     edges,
@@ -283,6 +311,7 @@ export default function BracketCanvas({
     wRounds,
     lRounds,
     gfMatches,
+    tpMatches,
     totalWidth,
     totalHeight,
     edges,
@@ -344,6 +373,11 @@ export default function BracketCanvas({
                 key={i}
                 d={`M ${x1} ${y1} H ${midX} V ${y2} H ${x2}`}
                 className="bx-edge"
+                style={
+                  e.dashed
+                    ? { strokeDasharray: "4,4", opacity: 0.6 }
+                    : undefined
+                }
               />
             );
           })}
@@ -371,6 +405,31 @@ export default function BracketCanvas({
             );
           })}
         </div>
+
+        {tpMatches.map((m) => {
+          const p = positions.get(m.id);
+          if (!p) return null;
+          return (
+            <div
+              key={`tp-label-${m.id}`}
+              style={{
+                position: "absolute",
+                left: p.x,
+                top: 32 + p.y - CARD_H / 2 - 20,
+                width: CARD_W,
+                textAlign: "center",
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: "0.04em",
+                textTransform: "uppercase",
+                color: "#9a9aa8",
+                pointerEvents: "none",
+              }}
+            >
+              3rd Place Match
+            </div>
+          );
+        })}
 
         {isDouble && lRounds.length > 0 && (
           <div

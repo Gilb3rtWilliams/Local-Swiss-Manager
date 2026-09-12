@@ -54,6 +54,14 @@ function runLegacyMigrations() {
         t.currentChess960 = null;
         migrated = true;
       }
+      if (t.thirdPlaceMatch === undefined) {
+        // Tournament predates this feature — its bracket (if already built)
+        // has no thirdPlaceMatchId either, which every read site already
+        // treats as "no third-place match", so defaulting the flag off here
+        // is enough; no bracket-rebuild needed.
+        t.thirdPlaceMatch = false;
+        migrated = true;
+      }
     } catch (err) {
       console.error(
         `Starting-rank migration failed for tournament ${t.id} (${t.name}):`,
@@ -146,8 +154,12 @@ function buildBracketState(t) {
   const n = seeds.length;
   const topology =
     t.system === "double_elimination"
-      ? bracketEngine.doubleEliminationBracket(n)
-      : bracketEngine.singleEliminationBracket(n);
+      ? // No third-place match for double elimination — see bracket.js's
+        // doubleEliminationBracket() for why one isn't a natural fit there.
+        bracketEngine.doubleEliminationBracket(n)
+      : bracketEngine.singleEliminationBracket(n, {
+          thirdPlaceMatch: !!t.thirdPlaceMatch,
+        });
 
   const matches = topology.matches.map((m) => ({
     ...m,
@@ -166,9 +178,11 @@ function buildBracketState(t) {
     lbRounds: topology.lbRounds ?? 0,
     grandFinalId: topology.grandFinalId ?? null,
     grandFinalResetId: topology.grandFinalResetId ?? null,
+    thirdPlaceMatchId: topology.thirdPlaceMatchId ?? null,
     matches,
     seeds: seeds.map((c, i) => ({ seed: i, id: c.id, name: c.name })),
     champion: null,
+    thirdPlace: null,
     roundChess960: {}, // keyed "<bracket><round>" e.g. "W1", "L2", "GF1" — see activateMatch
   };
 
@@ -330,9 +344,29 @@ function resolveBracket(t) {
 
 function finalizeBracketIfDone(t) {
   const b = t.bracket;
+
+  // Record the 3rd-place result as soon as it's known, independent of
+  // whether the final itself is done yet — the two can be played in either
+  // order. "bye" counts as decided too (e.g. one semifinal was itself a bye,
+  // so its "loser" slot never had a real competitor).
+  if (b.thirdPlaceMatchId) {
+    const tp = bracketMatchById(t, b.thirdPlaceMatchId);
+    if (tp && (tp.status === "complete" || tp.status === "bye")) {
+      b.thirdPlace = tp.winnerId;
+    }
+  }
+
   if (t.system === "single_elimination") {
     const final = b.matches.find((m) => m.bracket === "W" && !m.winnerTo);
-    if (final && final.status === "complete") {
+    // Don't call the tournament finished until the 3rd-place match (if one
+    // exists) has also reached a decided state — otherwise a champion could
+    // be crowned while a required match is still sitting there unplayed.
+    const thirdPlaceDone =
+      !b.thirdPlaceMatchId ||
+      ["complete", "bye", "skipped"].includes(
+        bracketMatchById(t, b.thirdPlaceMatchId).status,
+      );
+    if (final && final.status === "complete" && thirdPlaceDone) {
       b.champion = final.winnerId;
       t.status = "finished";
       t.finishedAt = t.finishedAt || new Date().toISOString();
@@ -447,6 +481,10 @@ async function createTournament(input) {
     fideRated = false,
     isTest = false,
     chess960: chess960Enabled = false,
+    // Only meaningful for system === "single_elimination" — see
+    // buildBracketState()/bracket.js for why double elimination doesn't
+    // get one. Harmless (just unused) to pass for any other system.
+    thirdPlaceMatch = false,
   } = input;
 
   // 1. Strict Input Validation
@@ -507,6 +545,7 @@ async function createTournament(input) {
     isTest: Boolean(isTest),
     chess960: Boolean(chess960Enabled),
     currentChess960: null, // set by generateNextRound when chess960 is on
+    thirdPlaceMatch: Boolean(thirdPlaceMatch), // read by buildBracketState() at creation time, below
 
     registrationOpen: false,
     registrationToken: null,
@@ -2332,7 +2371,13 @@ async function updateTournamentDetails(id, updates = {}) {
   // value alongside real edits shouldn't trip this — only an actual attempt
   // to change one of them should. Still fails loudly for a genuine change,
   // which is the case this guard exists to catch.
-  for (const locked of ["format", "system", "variant", "chess960"]) {
+  for (const locked of [
+    "format",
+    "system",
+    "variant",
+    "chess960",
+    "thirdPlaceMatch",
+  ]) {
     if (updates[locked] !== undefined && updates[locked] !== t[locked]) {
       const e = new Error(
         `"${locked}" can't be changed after creation — it determines how pairings/brackets are generated.`,
@@ -2700,8 +2745,12 @@ function serializeBracket(t) {
     lbRounds: t.bracket.lbRounds,
     grandFinalId: t.bracket.grandFinalId,
     grandFinalResetId: t.bracket.grandFinalResetId,
+    thirdPlaceMatchId: t.bracket.thirdPlaceMatchId || null,
     champion: t.bracket.champion
       ? { id: t.bracket.champion, name: nameOf(t.bracket.champion) }
+      : null,
+    thirdPlace: t.bracket.thirdPlace
+      ? { id: t.bracket.thirdPlace, name: nameOf(t.bracket.thirdPlace) }
       : null,
     seeds: t.bracket.seeds.map((s) => ({
       seed: s.seed,
@@ -3028,6 +3077,7 @@ function serializeTournament(t) {
     winner: t.status === "finished" ? computeWinner(t) : null,
     chess960: t.chess960,
     currentChess960: t.currentChess960,
+    thirdPlaceMatch: t.thirdPlaceMatch,
     registrationOpen: t.registrationOpen,
     registrationToken: t.registrationToken,
     publicViewOpen: t.publicViewOpen,

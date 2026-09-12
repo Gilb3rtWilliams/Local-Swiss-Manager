@@ -235,6 +235,8 @@ function ScoreModal({
                 ? "Winners"
                 : match.bracket === "L"
                 ? "Losers"
+                : match.bracket === "3P"
+                ? "3rd Place Match"
                 : "Grand Final"}{" "}
               · Round {match.round}
             </div>
@@ -355,6 +357,19 @@ export default function Module() {
           <div>
             <p className="bx-champion-eyebrow">Tournament Champion</p>
             <h2>{b.champion.name}</h2>
+          </div>
+        </div>
+      )}
+
+      {/* Shown as soon as the 3rd-place match is decided, independent of
+          the champion banner above — the two matches can be played (and
+          finish) in either order. */}
+      {b.thirdPlace && (
+        <div className="bx-champion-banner" style={{ opacity: 0.85 }}>
+          <span className="bx-champion-icon">🥉</span>
+          <div>
+            <p className="bx-champion-eyebrow">3rd Place</p>
+            <h2>{b.thirdPlace.name}</h2>
           </div>
         </div>
       )}
