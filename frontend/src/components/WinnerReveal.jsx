@@ -89,8 +89,16 @@ const RevealPrompt = ({ closeToast, onAccept, onDecline }) => {
 };
 
 export default function WinnerReveal({ t }) {
+  // Tracks which tournament id this component last evaluated. WinnerReveal
+  // lives inside TournamentLayout, which React Router reuses across every
+  // /tournament/:id navigation — clicking a different tournament from the
+  // Dashboard does NOT remount this component, it just re-renders it with
+  // new props. Without this, celebratedRef below would latch permanently
+  // after the very first tournament you ever view in a session, silently
+  // breaking the whole feature (no prompt, no auto-play) for every
+  // tournament after that.
+  const lastTournamentIdRef = useRef(null);
   const celebratedRef = useRef(false);
-  const initialLoadRef = useRef(true);
   const [stage, setStage] = useState("idle");
   const [dismissed, setDismissed] = useState(false);
   const [triggerFlash, setTriggerFlash] = useState(false);
@@ -98,10 +106,22 @@ export default function WinnerReveal({ t }) {
   useEffect(() => {
     if (!t) return;
 
-    if (initialLoadRef.current) {
-      initialLoadRef.current = false;
+    // True on the actual first mount, AND every time you navigate to a
+    // *different* tournament than the one this component last evaluated —
+    // both cases mean "the person just arrived here," which is exactly
+    // when a finished tournament should ask before celebrating rather than
+    // auto-play.
+    const isFreshArrival = t.id !== lastTournamentIdRef.current;
+    if (isFreshArrival) {
+      lastTournamentIdRef.current = t.id;
+      celebratedRef.current = false;
+      setStage("idle");
+      setDismissed(false);
+      setTriggerFlash(false);
+    }
 
-      if (t.status === "finished" && !celebratedRef.current) {
+    if (t.status === "finished" && !celebratedRef.current) {
+      if (isFreshArrival) {
         toast(
           <RevealPrompt
             onAccept={() => {
@@ -121,9 +141,10 @@ export default function WinnerReveal({ t }) {
             className: "wr-toast-custom",
           },
         );
-      }
-    } else {
-      if (t.status === "finished" && !celebratedRef.current) {
+      } else {
+        // Not a fresh arrival — this tournament just transitioned to
+        // finished while already being viewed (e.g. the last result was
+        // just submitted), so celebrate immediately without asking.
         celebratedRef.current = true;
         setDismissed(false);
         setStage("suspense");
