@@ -2231,6 +2231,7 @@ function listPublicTournaments() {
           status: full.status,
           currentRound: full.currentRound,
           totalRounds: full.totalRounds,
+          bracketProgress: isEliminationSystem(t) ? bracketProgress(t) : null,
           competitorCount:
             full.format === "team" ? full.teams.length : full.players.length,
           winner: full.winner,
@@ -2669,6 +2670,23 @@ async function deleteTournament(id) {
 }
 
 // ─── Reads / serialization ──────────────────────────────────────────────────
+// Real matches only — "skipped" entries are structural placeholders (one
+// bye advancing straight into another bye slot) that never represented an
+// actual decision, so they're excluded from both sides of the fraction
+// rather than counted as either done or pending. A "bye" advance IS counted
+// as done: it's a genuine bracket slot, just one that resolved without
+// requiring admin input. By construction (resolveBracket only activates a
+// match once both its input slots are resolved), this reaches exactly
+// 100% at the same moment finalizeBracketIfDone marks the tournament
+// finished — no separate reconciliation needed between the two.
+function bracketProgress(t) {
+  const real = t.bracket.matches.filter((m) => m.status !== "skipped");
+  const completed = real.filter(
+    (m) => m.status === "complete" || m.status === "bye",
+  ).length;
+  return { completed, total: real.length };
+}
+
 function listTournaments() {
   return Object.values(db.tournaments)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
@@ -2680,10 +2698,12 @@ function listTournaments() {
         federation: t.federation,
         format: t.format,
         variant: t.variant,
+        system: t.system,
         timeControl: t.timeControl,
         status: t.status,
         currentRound: t.currentRound,
         totalRounds: t.totalRounds,
+        bracketProgress: isEliminationSystem(t) ? bracketProgress(t) : null,
         competitorCount:
           t.format === "team" ? t.teams.length : t.players.length,
         createdAt: t.createdAt,

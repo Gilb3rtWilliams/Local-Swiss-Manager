@@ -342,11 +342,32 @@ export default function Dashboard() {
           {filtered && filtered.length > 0 && (
             <div className="tourney-grid tourney-grid-layout">
               {filtered.map((t) => {
-                const totalRounds = t.totalRounds || 1;
-                const roundProgress = Math.min(
-                  100,
-                  Math.max(0, (t.currentRound / totalRounds) * 100),
-                );
+                const isElimination =
+                  t.system === "single_elimination" ||
+                  t.system === "double_elimination";
+
+                let progressPercent;
+                let progressLabel;
+                if (isElimination && t.bracketProgress) {
+                  const { completed, total } = t.bracketProgress;
+                  progressPercent =
+                    total > 0 ? Math.min(100, (completed / total) * 100) : 0;
+                  progressLabel = `${completed} / ${total} matches`;
+                } else {
+                  const totalRounds = t.totalRounds || 1;
+                  progressPercent = Math.min(
+                    100,
+                    Math.max(0, (t.currentRound / totalRounds) * 100),
+                  );
+                  progressLabel = `Round ${t.currentRound} / ${t.totalRounds}`;
+                }
+                // A finished tournament is always 100% done — this is the
+                // ground-truth signal, so it wins regardless of what either
+                // fraction above computed. Round-based tournaments already
+                // reach 100% naturally when finished, but this guards the
+                // bracket case too without needing the two calculations to
+                // line up exactly.
+                if (t.status === "finished") progressPercent = 100;
 
                 return (
                   <div
@@ -396,15 +417,13 @@ export default function Dashboard() {
                           className={`tourney-progress-fill ${
                             t.status === "finished" ? "is-muted" : ""
                           }`}
-                          style={{ width: `${roundProgress}%` }}
+                          style={{ width: `${progressPercent}%` }}
                         />
                       </div>
                     </div>
 
                     <div className="tourney-footer">
-                      <span>
-                        Round {t.currentRound} / {t.totalRounds}
-                      </span>
+                      <span>{progressLabel}</span>
                       <span>
                         {t.competitorCount}{" "}
                         {t.format === "team" ? "teams" : "players"}
