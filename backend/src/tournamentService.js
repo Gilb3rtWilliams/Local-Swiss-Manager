@@ -2741,6 +2741,219 @@ function listTournaments() {
     });
 }
 
+// ─── Tie-break decider ──────────────────────────────────────────────────────
+// Individual/team Swiss and round-robin only — elimination brackets already
+// produce a sole champion through decisive matches by construction, so a
+// "tie for first" isn't a concept that applies there.
+//
+// The bar for a real, unbreakable tie is deliberately strict: engine.
+// sortedStandings() already cascades score -> Buchholz Cut-1 -> Buchholz ->
+// Sonneborn-Berger to order the table, so two competitors only end up
+// genuinely indistinguishable here if every one of those four numbers
+// matches exactly. An equal score alone is common; equal score AND
+// identical strength-of-schedule numbers is rare, since two players with
+// the same score usually faced different opponents along the way.
+function detectTieForFirst(t) {
+  if (isEliminationSystem(t)) return null;
+  const competitors =
+    t.format === "team" ? t.teams.map(teamCompetitor) : t.players;
+  if (competitors.length < 2) return null;
+
+  const sorted = engine.sortedStandings(competitors);
+  if (sorted.length < 2) return null;
+
+  const byIdMap = byId(competitors);
+  // Rounded before comparing — these are sums of 0.5-point increments, but
+  // comparing raw floats for exact equality is asking for trouble.
+  const metricsOf = (c) => [
+    Math.round(c.score * 100),
+    Math.round(engine.buchholzCut1(c, byIdMap) * 100),
+    Math.round(engine.buchholz(c, byIdMap) * 100),
+    Math.round(engine.sonnenbornBerger(c, byIdMap) * 100),
+  ];
+
+  const topMetrics = metricsOf(sorted[0]);
+  const tiedGroup = sorted.filter((c) =>
+    metricsOf(c).every((v, i) => v === topMetrics[i]),
+  );
+  if (tiedGroup.length < 2) return null;
+
+  const nameOf =
+    t.format === "team"
+      ? (id) => t.teams.find((x) => x.id === id)?.name || "???"
+      : (id) => t.players.find((p) => p.id === id)?.name || "???";
+
+  return {
+    competitors: tiedGroup.map((c) => ({ id: c.id, name: nameOf(c.id) })),
+  };
+}
+
+// One game per unique pair among the given competitors — a single game for
+// a 2-way tie, a full mini round-robin for a 3+ way tie.
+function buildDeciderGames(competitors) {
+  const games = [];
+  for (let i = 0; i < competitors.length; i++) {
+    for (let j = i + 1; j < competitors.length; j++) {
+      games.push({
+        id: uid(),
+        a: competitors[i],
+        b: competitors[j],
+        result: null,
+      });
+    }
+  }
+  return games;
+}
+
+function tallyDeciderPoints(d) {
+  const points = new Map(d.competitors.map((c) => [c.id, 0]));
+  d.games.forEach((g) => {
+    if (g.result === "A") points.set(g.a.id, (points.get(g.a.id) || 0) + 1);
+    else if (g.result === "B")
+      points.set(g.b.id, (points.get(g.b.id) || 0) + 1);
+    else if (g.result === "draw") {
+      points.set(g.a.id, (points.get(g.a.id) || 0) + 0.5);
+      points.set(g.b.id, (points.get(g.b.id) || 0) + 0.5);
+    }
+  });
+  return points;
+}
+
+// Re-evaluates status after every game result. "unresolved" specifically
+// means every scheduled game has been played and the tied group is STILL
+// exactly level — that's the state that unlocks "add a sudden-death round"
+// on the frontend. currentLeaders is internal bookkeeping (stripped out in
+// serializeDecider) so a 3+ way tie correctly narrows to just the players
+// still tied at the top for subsequent rounds, instead of replaying
+// everyone who was ever involved.
+function resolveDeciderIfPossible(t) {
+  const d = t.decider;
+  const allPlayed = d.games.every((g) => g.result !== null);
+  if (!allPlayed) {
+    d.status = "in_progress";
+    return;
+  }
+  const points = tallyDeciderPoints(d);
+  const maxPoints = Math.max(...points.values());
+  const leaders = d.competitors.filter((c) => points.get(c.id) === maxPoints);
+  if (leaders.length === 1) {
+    d.status = "resolved";
+    d.winner = leaders[0];
+  } else {
+    d.status = "unresolved";
+    d.currentLeaders = leaders;
+  }
+}
+
+function serializeDecider(d) {
+  return {
+    id: d.id,
+    competitors: d.competitors,
+    games: d.games,
+    status: d.status,
+    winner: d.winner || null,
+  };
+}
+
+async function startDecider(id) {
+  const t = assertTournament(id);
+  if (t.decider) {
+    const e = new Error(
+      "A decider has already been started for this tournament",
+    );
+    e.status = 409;
+    throw e;
+  }
+  // Re-validated server-side rather than trusting the client — the same
+  // posture as every other mutation in this file.
+  const tie = detectTieForFirst(t);
+  if (!tie) {
+    const e = new Error("There is no tie for first place to resolve");
+    e.status = 400;
+    throw e;
+  }
+  t.decider = {
+    id: uid(),
+    competitors: tie.competitors,
+    games: buildDeciderGames(tie.competitors),
+    status: "in_progress",
+    winner: null,
+    currentLeaders: null,
+    createdAt: new Date().toISOString(),
+  };
+  await persist();
+  return serializeTournament(t);
+}
+
+async function submitDeciderGameResult(id, gameId, result) {
+  const t = assertTournament(id);
+  if (!t.decider) {
+    const e = new Error("No decider is active for this tournament");
+    e.status = 400;
+    throw e;
+  }
+  if (!["A", "B", "draw"].includes(result)) {
+    const e = new Error(
+      `"${result}" isn't a valid decider result — expected "A", "B", or "draw"`,
+    );
+    e.status = 400;
+    throw e;
+  }
+  const game = t.decider.games.find((g) => g.id === gameId);
+  if (!game) {
+    const e = new Error("Decider game not found");
+    e.status = 404;
+    throw e;
+  }
+  game.result = result;
+  resolveDeciderIfPossible(t);
+  await persist();
+  return serializeTournament(t);
+}
+
+async function addDeciderRound(id) {
+  const t = assertTournament(id);
+  if (!t.decider) {
+    const e = new Error("No decider is active for this tournament");
+    e.status = 400;
+    throw e;
+  }
+  if (t.decider.status !== "unresolved") {
+    const e = new Error(
+      "Can only add a sudden-death round once every scheduled game is played and the decider is still fully tied",
+    );
+    e.status = 409;
+    throw e;
+  }
+  const stillTied =
+    t.decider.currentLeaders && t.decider.currentLeaders.length >= 2
+      ? t.decider.currentLeaders
+      : t.decider.competitors;
+  t.decider.games.push(...buildDeciderGames(stillTied));
+  t.decider.status = "in_progress";
+  await persist();
+  return serializeTournament(t);
+}
+
+async function declareDeciderWinner(id, competitorId) {
+  const t = assertTournament(id);
+  if (!t.decider) {
+    const e = new Error("No decider is active for this tournament");
+    e.status = 400;
+    throw e;
+  }
+  const winner = t.decider.competitors.find((c) => c.id === competitorId);
+  if (!winner) {
+    const e = new Error("That competitor isn't part of this decider");
+    e.status = 400;
+    throw e;
+  }
+  t.decider.status = "resolved";
+  t.decider.winner = winner;
+  await persist();
+  return serializeTournament(t);
+}
+
 function computeWinner(t) {
   if (isEliminationSystem(t)) {
     if (!t.bracket || !t.bracket.champion) return null;
@@ -2748,6 +2961,15 @@ function computeWinner(t) {
       ? t.teams.find((x) => x.id === t.bracket.champion)?.name || null
       : t.players.find((p) => p.id === t.bracket.champion)?.name || null;
   }
+  // A decider that hasn't resolved yet means there is no champion to
+  // announce — this is the check WinnerReveal relies on (via t.winner) to
+  // avoid celebrating an arbitrary name out of a genuine tie.
+  if (t.decider) {
+    return t.decider.status === "resolved" ? t.decider.winner.name : null;
+  }
+  // Tied and no decider started yet — same "nothing to announce" logic,
+  // computed fresh rather than trusting a stale flag.
+  if (detectTieForFirst(t)) return null;
   if (t.format === "team") {
     const standings = engine.sortedStandings(t.teams.map(teamCompetitor));
     const top = standings[0];
@@ -3240,6 +3462,9 @@ function serializeTournament(t) {
     startingRankList,
     bracket: serializeBracket(t),
     winner: t.status === "finished" ? computeWinner(t) : null,
+    tieForFirst:
+      t.status === "finished" && !t.decider ? detectTieForFirst(t) : null,
+    decider: t.decider ? serializeDecider(t.decider) : null,
     chess960: t.chess960,
     currentChess960: t.currentChess960,
     thirdPlaceMatch: t.thirdPlaceMatch,
@@ -3333,6 +3558,10 @@ module.exports = {
   getBracket,
   getPlayerProfile,
   getPublicPlayerProfile,
+  startDecider,
+  submitDeciderGameResult,
+  addDeciderRound,
+  declareDeciderWinner,
   validateBughouseTeams,
   enableRegistration,
   disableRegistration,
