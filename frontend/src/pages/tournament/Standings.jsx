@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
-import { api } from "../../api.js";
+import { api } from "../api.js";
 import StandingsTable from "../../components/StandingsTable.jsx";
 import TeamStandingsTable from "../../components/TeamStandingsTable.jsx";
 import CrossTable from "../../components/CrossTable.jsx";
