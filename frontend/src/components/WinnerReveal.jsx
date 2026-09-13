@@ -49,7 +49,7 @@ const RevealPrompt = ({ closeToast, onAccept, onDecline }) => {
       <div className="wr-mini-burst"></div>
 
       <span style={{ fontSize: "14px", fontWeight: 600, color: "#e8e8e8" }}>
-        Play the winner reveal?
+        Play the winner reveal animation?
       </span>
 
       <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>

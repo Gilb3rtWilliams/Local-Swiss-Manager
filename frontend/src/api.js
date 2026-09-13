@@ -58,6 +58,8 @@ export const api = {
     request(`/tournaments/${id}/players/${playerId}/profile`),
   extendTournament: (id) =>
     request(`/tournaments/${id}/extend`, { method: "POST" }),
+  getStandingsAtRound: (id, round) =>
+    request(`/tournaments/${id}/standings/${round}`),
 
   getBracket: (id) => request(`/tournaments/${id}/bracket`),
   submitBracketResult: (id, matchId, payload) =>
@@ -79,6 +81,8 @@ export const api = {
       body: JSON.stringify(payload),
     }),
   getPublicResults: (token) => request(`/tournaments/public-view/${token}`),
+  getPublicStandingsAtRound: (token, round) =>
+    request(`/tournaments/public-view/${token}/standings/${round}`),
   getPublicPlayerProfile: (token, playerId) =>
     request(`/tournaments/public-view/${token}/players/${playerId}/profile`),
   enablePublicView: (id) =>

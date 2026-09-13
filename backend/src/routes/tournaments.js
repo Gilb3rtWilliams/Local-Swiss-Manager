@@ -196,4 +196,8 @@ router.get("/:id/pairings/export", requireAdmin, async (req, res) => {
   }
 });
 
+router.get("/api/tournaments/:id/standings/:round", (req, res) => {
+  res.json(tournamentService.standingsAtRound(req.params.id, req.params.round));
+});
+
 module.exports = router;

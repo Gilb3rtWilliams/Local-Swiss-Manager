@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { api } from "../../api.js";
 import StandingsTable from "../../components/StandingsTable.jsx";
@@ -13,6 +13,54 @@ export default function Standings() {
 
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState("");
+
+  // Elimination brackets don't have a round-by-round standings table (see
+  // tournamentService.js's standingsAtRound) — the picker below only makes
+  // sense for Swiss/round-robin, and only once at least one round exists.
+  const roundsPlayed = isElimination ? 0 : t.rounds?.length || 0;
+
+  // null = always follow the live/current standings (t.standings etc, no
+  // fetch needed). A specific number pins the view to that past round,
+  // fetched from the standingsAtRound snapshot endpoint, and stays pinned
+  // even if more rounds get generated while it's open — picking "Latest"
+  // again is what un-pins it.
+  const [viewRound, setViewRound] = useState(null);
+  const [snapshot, setSnapshot] = useState(null);
+  const [snapshotLoading, setSnapshotLoading] = useState(false);
+  const [snapshotError, setSnapshotError] = useState("");
+
+  const isViewingPast = viewRound !== null && viewRound !== roundsPlayed;
+
+  useEffect(() => {
+    if (!isViewingPast) {
+      setSnapshot(null);
+      setSnapshotError("");
+      return;
+    }
+    let cancelled = false;
+    setSnapshotLoading(true);
+    setSnapshotError("");
+    api
+      .getStandingsAtRound(t.id, viewRound)
+      .then((data) => {
+        if (!cancelled) setSnapshot(data);
+      })
+      .catch((e) => {
+        if (!cancelled) setSnapshotError(e.message);
+      })
+      .finally(() => {
+        if (!cancelled) setSnapshotLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [t.id, viewRound, isViewingPast]);
+
+  const displayStandings = isViewingPast ? snapshot?.standings : t.standings;
+  const displayTeamStandings = isViewingPast
+    ? snapshot?.teamStandings
+    : t.teamStandings;
+  const displayCrossTable = isViewingPast ? snapshot?.crossTable : t.crossTable;
 
   async function handleExport() {
     setExporting(true);
@@ -73,7 +121,8 @@ export default function Standings() {
       <div
         style={{
           display: "flex",
-          justifyContent: isElimination ? "space-between" : "flex-end",
+          justifyContent:
+            isElimination || roundsPlayed > 0 ? "space-between" : "flex-end",
           alignItems: "center",
           flexWrap: "wrap",
           gap: 16,
@@ -94,6 +143,52 @@ export default function Standings() {
             each match is decided, independent of any other match. See the
             Bracket tab for who's still alive.
           </p>
+        )}
+        {!isElimination && roundsPlayed > 0 && (
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: "0.05em",
+              textTransform: "uppercase",
+              color: "#8a8a9a",
+            }}
+          >
+            Viewing
+            <select
+              value={viewRound === null ? "latest" : String(viewRound)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setViewRound(v === "latest" ? null : Number(v));
+              }}
+              style={{
+                background: "#1a1a24",
+                border: "1px solid #353545",
+                color: "#e8e8e8",
+                padding: "8px 12px",
+                borderRadius: 8,
+                fontFamily: "inherit",
+                fontSize: 12,
+                fontWeight: 600,
+                outline: "none",
+                cursor: "pointer",
+                textTransform: "none",
+                letterSpacing: "normal",
+              }}
+            >
+              <option value="latest">Latest (Round {roundsPlayed})</option>
+              {Array.from({ length: roundsPlayed }, (_, i) => i + 1).map(
+                (r) => (
+                  <option key={r} value={r}>
+                    After Round {r}
+                  </option>
+                ),
+              )}
+            </select>
+          </label>
         )}
         <div
           style={{
@@ -132,107 +227,166 @@ export default function Standings() {
         </div>
       </div>
 
-      {/* Main Tables Grid */}
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: "24px",
-        }}
-      >
-        {/* Primary Standings Card */}
+      {isViewingPast && snapshotLoading && (
         <div
           style={{
             background: "#13131a",
             border: "1px solid #252532",
             borderRadius: 12,
-            padding: "24px",
-            overflowX: "auto",
+            padding: 40,
+            textAlign: "center",
+            color: "#8a8a9a",
+            fontSize: 14,
           }}
         >
-          <h2
+          <p style={{ margin: 0 }}>
+            Loading standings after Round {viewRound}…
+          </p>
+        </div>
+      )}
+
+      {isViewingPast && !snapshotLoading && snapshotError && (
+        <div
+          style={{
+            background: "#13131a",
+            border: "1px solid #3a2222",
+            borderRadius: 12,
+            padding: 40,
+            textAlign: "center",
+            color: "#ff6b6b",
+            fontSize: 14,
+          }}
+        >
+          <p style={{ margin: 0 }}>{snapshotError}</p>
+        </div>
+      )}
+
+      {(!isViewingPast || (!snapshotLoading && !snapshotError)) && (
+        <>
+          {/* Main Tables Grid */}
+          <div
             style={{
-              fontSize: 16,
-              fontWeight: 700,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: "#e8e8e8",
-              marginTop: 0,
-              marginBottom: 20,
-              borderBottom: "1px solid #252532",
-              paddingBottom: 12,
+              display: "flex",
+              flexDirection: "column",
+              gap: "24px",
             }}
           >
-            Standings
-          </h2>
-          {isTeam && t.teamStandings ? (
-            <TeamStandingsTable teamStandings={t.teamStandings} />
-          ) : (
-            <StandingsTable standings={t.standings} />
+            {/* Primary Standings Card */}
+            <div
+              style={{
+                background: "#13131a",
+                border: "1px solid #252532",
+                borderRadius: 12,
+                padding: "24px",
+                overflowX: "auto",
+              }}
+            >
+              <h2
+                style={{
+                  fontSize: 16,
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "#e8e8e8",
+                  marginTop: 0,
+                  marginBottom: 20,
+                  borderBottom: "1px solid #252532",
+                  paddingBottom: 12,
+                  display: "flex",
+                  alignItems: "baseline",
+                  gap: 10,
+                  flexWrap: "wrap",
+                }}
+              >
+                Standings
+                {isViewingPast && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      letterSpacing: "0.05em",
+                      textTransform: "none",
+                      color: "#d4a853",
+                      background: "rgba(212, 168, 83, 0.1)",
+                      border: "1px solid rgba(212, 168, 83, 0.25)",
+                      padding: "3px 8px",
+                      borderRadius: 6,
+                    }}
+                  >
+                    as of Round {viewRound}
+                  </span>
+                )}
+              </h2>
+              {isTeam && displayTeamStandings ? (
+                <TeamStandingsTable teamStandings={displayTeamStandings} />
+              ) : (
+                <StandingsTable standings={displayStandings} />
+              )}
+            </div>
+
+            {/* Cross Table Card */}
+            <div
+              style={{
+                background: "#13131a",
+                border: "1px solid #252532",
+                borderRadius: 12,
+                padding: "24px",
+                overflowX: "auto",
+              }}
+            >
+              <h2
+                style={{
+                  fontSize: 16,
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "#e8e8e8",
+                  marginTop: 0,
+                  marginBottom: 20,
+                  borderBottom: "1px solid #252532",
+                  paddingBottom: 12,
+                }}
+              >
+                Cross Table
+              </h2>
+              <CrossTable crossTable={displayCrossTable} />
+            </div>
+          </div>
+
+          {/* Individual Board Standings (Team Events Only) */}
+          {isTeam && (
+            <div
+              style={{
+                background: "#13131a",
+                border: "1px solid #252532",
+                borderRadius: 12,
+                padding: "24px",
+                overflowX: "auto",
+              }}
+            >
+              <h2
+                style={{
+                  fontSize: 16,
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "#e8e8e8",
+                  marginTop: 0,
+                  marginBottom: 20,
+                  borderBottom: "1px solid #252532",
+                  paddingBottom: 12,
+                }}
+              >
+                Individual Board Standings
+              </h2>
+              <StandingsTable
+                standings={displayStandings}
+                showTiebreaks={false}
+                showTeam
+              />
+            </div>
           )}
-        </div>
-
-        {/* Cross Table Card */}
-        <div
-          style={{
-            background: "#13131a",
-            border: "1px solid #252532",
-            borderRadius: 12,
-            padding: "24px",
-            overflowX: "auto",
-          }}
-        >
-          <h2
-            style={{
-              fontSize: 16,
-              fontWeight: 700,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: "#e8e8e8",
-              marginTop: 0,
-              marginBottom: 20,
-              borderBottom: "1px solid #252532",
-              paddingBottom: 12,
-            }}
-          >
-            Cross Table
-          </h2>
-          <CrossTable crossTable={t.crossTable} />
-        </div>
-      </div>
-
-      {/* Individual Board Standings (Team Events Only) */}
-      {isTeam && (
-        <div
-          style={{
-            background: "#13131a",
-            border: "1px solid #252532",
-            borderRadius: 12,
-            padding: "24px",
-            overflowX: "auto",
-          }}
-        >
-          <h2
-            style={{
-              fontSize: 16,
-              fontWeight: 700,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: "#e8e8e8",
-              marginTop: 0,
-              marginBottom: 20,
-              borderBottom: "1px solid #252532",
-              paddingBottom: 12,
-            }}
-          >
-            Individual Board Standings
-          </h2>
-          <StandingsTable
-            standings={t.standings}
-            showTiebreaks={false}
-            showTeam
-          />
-        </div>
+        </>
       )}
     </div>
   );

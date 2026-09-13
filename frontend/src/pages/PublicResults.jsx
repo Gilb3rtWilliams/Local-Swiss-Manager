@@ -320,6 +320,45 @@ export default function PublicResults() {
   const [loadError, setLoadError] = useState("");
   const [selectedRound, setSelectedRound] = useState(null); // number, or "current"
 
+  // The pairings pill picker above already lets a spectator jump to any
+  // past round — this reuses that exact same selection to drive the
+  // standings/cross-table section too, instead of a second independent
+  // control. "current" (the in-progress round) and the most recently
+  // completed round both just show the live data already in `data` (no
+  // fetch needed); only a genuinely earlier round triggers a lookup.
+  const latestCompletedRound = data?.rounds?.at(-1)?.round ?? null;
+  const isViewingPastRound =
+    typeof selectedRound === "number" && selectedRound !== latestCompletedRound;
+
+  const [standingsSnapshot, setStandingsSnapshot] = useState(null);
+  const [standingsLoading, setStandingsLoading] = useState(false);
+  const [standingsError, setStandingsError] = useState("");
+
+  useEffect(() => {
+    if (!isViewingPastRound) {
+      setStandingsSnapshot(null);
+      setStandingsError("");
+      return;
+    }
+    let cancelled = false;
+    setStandingsLoading(true);
+    setStandingsError("");
+    api
+      .getPublicStandingsAtRound(token, selectedRound)
+      .then((snap) => {
+        if (!cancelled) setStandingsSnapshot(snap);
+      })
+      .catch((e) => {
+        if (!cancelled) setStandingsError(e.message);
+      })
+      .finally(() => {
+        if (!cancelled) setStandingsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, selectedRound, isViewingPastRound]);
+
   useEffect(() => {
     api
       .getPublicResults(token)
@@ -488,45 +527,86 @@ export default function PublicResults() {
           </div>
         )}
 
-        {data.standings.length > 0 && (
-          <>
-            <div className="pv-two-col">
-              <div className="pv-card">
-                <h2>Standings</h2>
-                {isTeam && data.teamStandings ? (
-                  <TeamStandingsTable
-                    teamStandings={data.teamStandings}
-                    basePath={`/results/${token}`}
-                  />
-                ) : (
-                  <StandingsTable
-                    standings={data.standings}
-                    basePath={`/results/${token}`}
-                  />
-                )}
-              </div>
-              <div className="pv-card pv-cross-card">
-                <h2>Cross Table</h2>
-                <CrossTable
-                  crossTable={data.crossTable}
-                  basePath={`/results/${token}`}
-                />
-              </div>
-            </div>
-
-            {isTeam && (
-              <div className="pv-card">
-                <h2>Individual Board Standings</h2>
-                <StandingsTable
-                  standings={data.standings}
-                  showTiebreaks={false}
-                  showTeam
-                  basePath={`/results/${token}`}
-                />
-              </div>
-            )}
-          </>
+        {isViewingPastRound && standingsLoading && (
+          <div className="pv-card">
+            <p className="pv-empty">
+              Loading standings after Round {selectedRound}…
+            </p>
+          </div>
         )}
+
+        {isViewingPastRound && !standingsLoading && standingsError && (
+          <div className="pv-card">
+            <p className="pv-empty">{standingsError}</p>
+          </div>
+        )}
+
+        {data.standings.length > 0 &&
+          (!isViewingPastRound || (!standingsLoading && !standingsError)) && (
+            <>
+              <div className="pv-two-col">
+                <div className="pv-card">
+                  <h2>
+                    Standings
+                    {isViewingPastRound && (
+                      <span className="pv-status" style={{ marginLeft: 10 }}>
+                        as of Round {selectedRound}
+                      </span>
+                    )}
+                  </h2>
+                  {isTeam &&
+                  (isViewingPastRound
+                    ? standingsSnapshot?.teamStandings
+                    : data.teamStandings) ? (
+                    <TeamStandingsTable
+                      teamStandings={
+                        isViewingPastRound
+                          ? standingsSnapshot.teamStandings
+                          : data.teamStandings
+                      }
+                      basePath={`/results/${token}`}
+                    />
+                  ) : (
+                    <StandingsTable
+                      standings={
+                        isViewingPastRound
+                          ? standingsSnapshot?.standings
+                          : data.standings
+                      }
+                      basePath={`/results/${token}`}
+                    />
+                  )}
+                </div>
+                <div className="pv-card pv-cross-card">
+                  <h2>Cross Table</h2>
+                  <CrossTable
+                    crossTable={
+                      isViewingPastRound
+                        ? standingsSnapshot?.crossTable
+                        : data.crossTable
+                    }
+                    basePath={`/results/${token}`}
+                  />
+                </div>
+              </div>
+
+              {isTeam && (
+                <div className="pv-card">
+                  <h2>Individual Board Standings</h2>
+                  <StandingsTable
+                    standings={
+                      isViewingPastRound
+                        ? standingsSnapshot?.standings
+                        : data.standings
+                    }
+                    showTiebreaks={false}
+                    showTeam
+                    basePath={`/results/${token}`}
+                  />
+                </div>
+              )}
+            </>
+          )}
 
         <p className="pv-footnote">Read-only view — shared by the organizer.</p>
       </div>

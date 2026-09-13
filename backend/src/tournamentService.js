@@ -287,7 +287,15 @@ function activateMatch(t, m) {
   m.status = "ready";
   if (t.chess960) {
     if (!t.bracket.roundChess960) t.bracket.roundChess960 = {};
-    const tierKey = `${m.bracket}${m.round}`;
+    // The Grand Final and the third-place playoff are both effectively the
+    // event's final round, decided at the same time — they should share one
+    // position rather than each rolling its own, even though they carry
+    // different internal bracket/round tags (the third-place match isn't
+    // part of the "W" bracket's own round numbering, so it would otherwise
+    // land in a different tier than the final it's paired with).
+    const isFinalsPairing =
+      m.id === t.bracket.grandFinalId || m.id === t.bracket.thirdPlaceMatchId;
+    const tierKey = isFinalsPairing ? "FINALS" : `${m.bracket}${m.round}`;
     if (!t.bracket.roundChess960[tierKey]) {
       t.bracket.roundChess960[tierKey] = chess960.randomChess960Position();
     }
@@ -1095,25 +1103,29 @@ async function submitResults(id, resultsInput) {
 // the one edited/deleted — exactly like a real arbiter fixing a scoresheet
 // after the fact, correcting history doesn't retroactively unpair rounds
 // that were already played on the old numbers.
-function resetCompetitorState(c) {
-  c.score = 0;
-  c.colorDiff = 0;
-  c.lastColor = null;
-  c.colorHistory = [];
-  c.opponents = new Set();
-  c.results = {};
-  c.byeRounds = 0;
+function blankCompetitorFields() {
+  return {
+    score: 0,
+    colorDiff: 0,
+    lastColor: null,
+    colorHistory: [],
+    opponents: new Set(),
+    results: {},
+    byeRounds: 0,
+  };
 }
 
-function recomputeStandingsFromRounds(t) {
-  t.players.forEach(resetCompetitorState);
-  if (t.format === "team") t.teams.forEach(resetCompetitorState);
+function resetCompetitorState(c) {
+  Object.assign(c, blankCompetitorFields());
+}
 
-  const pById = byId(t.players);
-  const tById = t.format === "team" ? byId(t.teams) : null;
-
-  t.rounds.forEach((roundRecord) => {
-    if (t.format === "team") {
+// The actual round-by-round replay, factored out of recomputeStandingsFromRounds
+// so it can also power standingsAtRound() below — same scoring primitives,
+// just driven off whatever `pById`/`tById` maps and `rounds` slice are handed
+// in, rather than always the tournament's own live players/teams/t.rounds.
+function replayRoundsInto(format, variant, pById, tById, rounds) {
+  rounds.forEach((roundRecord) => {
+    if (format === "team") {
       roundRecord.pairings.forEach((pairing) => {
         if (pairing.type === "bye") {
           const team = tById.get(pairing.team);
@@ -1121,7 +1133,7 @@ function recomputeStandingsFromRounds(t) {
           team.score += 1;
           team.byeRounds += 1;
           team.colorHistory.push(null);
-          t.players
+          [...pById.values()]
             .filter((p) => p.teamId === team.id)
             .forEach((p) => {
               p.score += 1;
@@ -1153,7 +1165,7 @@ function recomputeStandingsFromRounds(t) {
           blackPoints += bScore;
         });
 
-        if (t.variant === "bughouse") {
+        if (variant === "bughouse") {
           const b1 = pairing.boards[0];
           const b2 = pairing.boards[1];
           const teamWhiteWon =
@@ -1197,6 +1209,16 @@ function recomputeStandingsFromRounds(t) {
       });
     }
   });
+}
+
+function recomputeStandingsFromRounds(t) {
+  t.players.forEach(resetCompetitorState);
+  if (t.format === "team") t.teams.forEach(resetCompetitorState);
+
+  const pById = byId(t.players);
+  const tById = t.format === "team" ? byId(t.teams) : null;
+
+  replayRoundsInto(t.format, t.variant, pById, tById, t.rounds);
 }
 
 // ─── Edit a previously-submitted result ─────────────────────────────────────
@@ -2817,6 +2839,190 @@ function serializeBracket(t) {
   };
 }
 
+// Standings/tiebreaks/cross-table computation, extracted out of
+// serializeTournament() so standingsAtRound() (below) can produce the exact
+// same shape of output from a replayed historical snapshot instead of the
+// live tournament state. Takes plain players/teams arrays (each already
+// carrying score/colorDiff/opponents/results/byeRounds — either the live
+// competitor objects or a replayed snapshot) rather than closing over `t`.
+function computeStandingsBlock(format, players, teams, remainingRounds) {
+  let standings,
+    teamStandings = null,
+    crossTable = null;
+
+  if (format === "team") {
+    const teamComps = teams.map(teamCompetitor);
+    const sortedTeams = engine.sortedStandings(teamComps);
+    const teamByIdMap = byId(teams);
+    const leaderScore = sortedTeams.length ? sortedTeams[0].score : 0;
+    teamStandings = sortedTeams.map((c) => {
+      const team = teamByIdMap.get(c.id);
+      const byIdMap = byId(teamComps);
+      const maxGainPerRound = Math.max(team.playerIds.length, 1);
+      const inContention =
+        c.score + remainingRounds * maxGainPerRound >= leaderScore;
+      const resolvedPlayers = team.playerIds
+        .map((id) => players.find((p) => p.id === id))
+        .filter(Boolean) // Safely remove undefined
+        .map((p) => ({
+          name: p.name,
+          title: p.title || null,
+          fideId: p.fideId || null,
+        }));
+      return {
+        id: team.id,
+        name: team.name,
+
+        score: engine.formatScore(c.score),
+        inContention,
+        buchholz: engine.buchholz(c, byIdMap).toFixed(1),
+        sb: engine.sonnenbornBerger(c, byIdMap).toFixed(2),
+        playerCount: team.playerIds.length,
+        players: resolvedPlayers,
+      };
+    });
+    // Individual board standings within the team event.
+    const sortedPlayers = engine.sortedStandings(players);
+    standings = sortedPlayers.map((p) => ({
+      id: p.id,
+      name: p.name,
+      title: p.title || null,
+      fideId: p.fideId || null,
+      rating: p.rating,
+      teamId: p.teamId,
+      teamName: teams.find((x) => x.id === p.teamId)?.name || "???",
+      score: engine.formatScore(p.score),
+    }));
+    crossTable = buildCrossTable(
+      sortedTeams,
+      teams.map((x) => x.id),
+      teams,
+    );
+  } else {
+    const sortedPlayers = engine.sortedStandings(players);
+    const byIdMap = byId(players);
+    const leaderScore = sortedPlayers.length ? sortedPlayers[0].score : 0;
+    standings = sortedPlayers.map((p) => {
+      const inContention = p.score + remainingRounds >= leaderScore;
+      return {
+        id: p.id,
+        name: p.name,
+        title: p.title || null,
+        fideId: p.fideId || null,
+        rating: p.rating,
+        score: engine.formatScore(p.score),
+        inContention,
+        buchholz: engine.buchholz(p, byIdMap).toFixed(1),
+        sb: engine.sonnenbornBerger(p, byIdMap).toFixed(2),
+      };
+    });
+    crossTable = buildCrossTable(
+      sortedPlayers,
+      players.map((x) => x.id),
+      players,
+    );
+  }
+
+  return { standings, teamStandings, crossTable };
+}
+
+// Builds the standings table as it stood right after a specific past round,
+// without touching the live tournament state — lets an organizer or
+// spectator look back at any round's table, including after the event has
+// finished. Works by replaying a snapshot of blank competitors through only
+// t.rounds[0..roundNumber] using the exact same scoring primitives as
+// recomputeStandingsFromRounds(), so results are guaranteed consistent with
+// the live standings once roundNumber reaches the most recent round.
+//
+// Only meaningful for round-based systems (Swiss/round-robin) — elimination
+// brackets don't have a round-by-round standings table, just the bracket
+// itself (see getBracket()).
+function standingsAtRound(id, roundNumber) {
+  const t = assertTournament(id);
+  return standingsAtRoundForTournament(t, roundNumber);
+}
+
+// Public: same standings-as-of-a-past-round lookup as standingsAtRound()
+// above, but resolved from a public results token instead of the real
+// tournament id — same auth story as getPublicResults() (requires
+// t.publicViewOpen), so a spectator link never needs or exposes the id-based
+// admin route.
+function getPublicStandingsAtRound(token, roundNumber) {
+  const t = findByPublicViewToken(token);
+  if (!t.publicViewOpen) {
+    const e = new Error("Results aren't public for this tournament right now");
+    e.status = 403;
+    throw e;
+  }
+  return standingsAtRoundForTournament(t, roundNumber);
+}
+
+function standingsAtRoundForTournament(t, roundNumber) {
+  if (isEliminationSystem(t)) {
+    const e = new Error(
+      "This is a bracket tournament — there's no round-by-round standings table, only the bracket itself.",
+    );
+    e.status = 400;
+    throw e;
+  }
+
+  const n = Number(roundNumber);
+  const roundsPlayed = t.rounds.length;
+  if (!Number.isInteger(n) || n < 1 || n > roundsPlayed) {
+    const e = new Error(
+      roundsPlayed
+        ? `roundNumber must be an integer between 1 and ${roundsPlayed} (rounds played so far)`
+        : "No rounds have been played yet",
+    );
+    e.status = 400;
+    throw e;
+  }
+
+  const players = t.players.map((p) => ({
+    id: p.id,
+    name: p.name,
+    title: p.title || null,
+    fideId: p.fideId || null,
+    rating: p.rating,
+    teamId: p.teamId || null,
+    startingRank: p.startingRank,
+    ...blankCompetitorFields(),
+  }));
+  const teams =
+    t.format === "team"
+      ? t.teams.map((team) => ({
+          id: team.id,
+          name: team.name,
+          playerIds: [...team.playerIds],
+          ...blankCompetitorFields(),
+        }))
+      : [];
+
+  const pById = byId(players);
+  const tById = t.format === "team" ? byId(teams) : null;
+  const roundsThrough = t.rounds.filter((r) => r.round <= n);
+  replayRoundsInto(t.format, t.variant, pById, tById, roundsThrough);
+
+  const remainingRounds = Math.max(t.totalRounds - n, 0);
+  const { standings, teamStandings, crossTable } = computeStandingsBlock(
+    t.format,
+    players,
+    teams,
+    remainingRounds,
+  );
+
+  return {
+    id: t.id,
+    round: n,
+    roundsPlayed,
+    totalRounds: t.totalRounds,
+    isFinalRound: n === roundsPlayed,
+    standings,
+    teamStandings,
+    crossTable,
+  };
+}
+
 function serializeTournament(t) {
   const playersOut = t.players.map((p) => ({
     id: p.id,
@@ -2882,84 +3088,13 @@ function serializeTournament(t) {
       })
     : null;
 
-  let standings,
-    teamStandings = null,
-    crossTable = null;
   const remainingRounds = Math.max(t.totalRounds - t.rounds.length, 0);
-
-  if (t.format === "team") {
-    const teamComps = t.teams.map(teamCompetitor);
-    const sortedTeams = engine.sortedStandings(teamComps);
-    const teamByIdMap = byId(t.teams);
-    const leaderScore = sortedTeams.length ? sortedTeams[0].score : 0;
-    teamStandings = sortedTeams.map((c) => {
-      const team = teamByIdMap.get(c.id);
-      const byIdMap = byId(teamComps);
-      const maxGainPerRound = Math.max(team.playerIds.length, 1);
-      const inContention =
-        c.score + remainingRounds * maxGainPerRound >= leaderScore;
-      // <-- ADD THIS TO RESOLVE PLAYERS WITH TITLES
-      const resolvedPlayers = team.playerIds
-        .map((id) => t.players.find((p) => p.id === id))
-        .filter(Boolean) // Safely remove undefined
-        .map((p) => ({
-          name: p.name,
-          title: p.title || null,
-          fideId: p.fideId || null,
-        }));
-      return {
-        id: team.id,
-        name: team.name,
-
-        score: engine.formatScore(c.score),
-        inContention,
-        buchholz: engine.buchholz(c, byIdMap).toFixed(1),
-        sb: engine.sonnenbornBerger(c, byIdMap).toFixed(2),
-        playerCount: team.playerIds.length,
-        players: resolvedPlayers,
-      };
-    });
-    // Individual board standings within the team event.
-    const sortedPlayers = engine.sortedStandings(t.players);
-    standings = sortedPlayers.map((p) => ({
-      id: p.id,
-      name: p.name,
-      title: p.title || null,
-      fideId: p.fideId || null,
-      rating: p.rating,
-      teamId: p.teamId,
-      teamName: teamNameOf(p.teamId),
-      score: engine.formatScore(p.score),
-    }));
-    crossTable = buildCrossTable(
-      sortedTeams,
-      t.teams.map((x) => x.id),
-      t.teams,
-    );
-  } else {
-    const sortedPlayers = engine.sortedStandings(t.players);
-    const byIdMap = byId(t.players);
-    const leaderScore = sortedPlayers.length ? sortedPlayers[0].score : 0;
-    standings = sortedPlayers.map((p) => {
-      const inContention = p.score + remainingRounds >= leaderScore;
-      return {
-        id: p.id,
-        name: p.name,
-        title: p.title || null,
-        fideId: p.fideId || null,
-        rating: p.rating,
-        score: engine.formatScore(p.score),
-        inContention,
-        buchholz: engine.buchholz(p, byIdMap).toFixed(1),
-        sb: engine.sonnenbornBerger(p, byIdMap).toFixed(2),
-      };
-    });
-    crossTable = buildCrossTable(
-      sortedPlayers,
-      t.players.map((x) => x.id),
-      t.players,
-    );
-  }
+  const { standings, teamStandings, crossTable } = computeStandingsBlock(
+    t.format,
+    t.players,
+    t.teams,
+    remainingRounds,
+  );
 
   const rounds = t.rounds.map((rr) => ({
     round: rr.round,
@@ -3183,6 +3318,7 @@ module.exports = {
   deleteTournament,
   listTournaments,
   getTournament,
+  standingsAtRound,
   submitBracketMatchResult,
   getBracket,
   getPlayerProfile,
@@ -3195,6 +3331,7 @@ module.exports = {
   enablePublicView,
   disablePublicView,
   getPublicResults,
+  getPublicStandingsAtRound,
   listPublicTournaments,
   exportStandingsWorkbook,
   singleRoundRobinSchedule: roundRobin.singleRoundRobinSchedule,
