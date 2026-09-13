@@ -30,6 +30,14 @@ export default function Standings() {
   const [snapshotError, setSnapshotError] = useState("");
 
   const isViewingPast = viewRound !== null && viewRound !== roundsPlayed;
+  // True only once `snapshot` actually corresponds to `viewRound`. Right
+  // after picking a past round, isViewingPast flips to true on the same
+  // render the effect below hasn't run yet, so snapshot/snapshotLoading are
+  // still whatever they were before — checking snapshot.round here (instead
+  // of just !snapshotLoading) is what keeps that transient render from
+  // handing StandingsTable an undefined array and crashing.
+  const snapshotMatchesSelection =
+    snapshot && !snapshotLoading && snapshot.round === viewRound;
 
   useEffect(() => {
     if (!isViewingPast) {
@@ -56,6 +64,7 @@ export default function Standings() {
     };
   }, [t.id, viewRound, isViewingPast]);
 
+  const tablesReady = !isViewingPast || snapshotMatchesSelection;
   const displayStandings = isViewingPast ? snapshot?.standings : t.standings;
   const displayTeamStandings = isViewingPast
     ? snapshot?.teamStandings
@@ -227,7 +236,7 @@ export default function Standings() {
         </div>
       </div>
 
-      {isViewingPast && snapshotLoading && (
+      {isViewingPast && !snapshotError && !snapshotMatchesSelection && (
         <div
           style={{
             background: "#13131a",
@@ -261,7 +270,7 @@ export default function Standings() {
         </div>
       )}
 
-      {(!isViewingPast || (!snapshotLoading && !snapshotError)) && (
+      {tablesReady && (
         <>
           {/* Main Tables Grid */}
           <div
