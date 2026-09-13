@@ -60,6 +60,20 @@ export const api = {
     request(`/tournaments/${id}/extend`, { method: "POST" }),
   getStandingsAtRound: (id, round) =>
     request(`/tournaments/${id}/standings/${round}`),
+  startDecider: (id) =>
+    request(`/tournaments/${id}/decider`, { method: "POST" }),
+  submitDeciderGameResult: (id, gameId, result) =>
+    request(`/tournaments/${id}/decider/games/${gameId}/result`, {
+      method: "POST",
+      body: JSON.stringify({ result }),
+    }),
+  addDeciderRound: (id) =>
+    request(`/tournaments/${id}/decider/round`, { method: "POST" }),
+  declareDeciderWinner: (id, competitorId) =>
+    request(`/tournaments/${id}/decider/declare`, {
+      method: "POST",
+      body: JSON.stringify({ competitorId }),
+    }),
 
   getBracket: (id) => request(`/tournaments/${id}/bracket`),
   submitBracketResult: (id, matchId, payload) =>

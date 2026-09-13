@@ -206,6 +206,44 @@ router.get(
   ),
 );
 
+// ─── Decider (tie-break playoff for a tied 1st place) ───────────────────
+// Only reachable once t.tieForFirst is populated on the tournament (see
+// serializeTournament) — svc.startDecider() itself re-validates the tie
+// exists rather than trusting the client, but there's nothing to show the
+// organizer here until the standings say a decider is possible.
+router.post(
+  "/:id/decider",
+  requireAdmin,
+  wrap((req) => svc.startDecider(req.params.id)),
+);
+
+router.post(
+  "/:id/decider/games/:gameId/result",
+  requireAdmin,
+  wrap((req) =>
+    svc.submitDeciderGameResult(
+      req.params.id,
+      req.params.gameId,
+      req.body.result,
+    ),
+  ),
+);
+
+// Sudden-death escalation — only valid once the current decider round ends
+// "unresolved" (every game played, still fully tied); svc enforces that.
+router.post(
+  "/:id/decider/round",
+  requireAdmin,
+  wrap((req) => svc.addDeciderRound(req.params.id)),
+);
+
+// Organizer override — settles the decider directly, any time.
+router.post(
+  "/:id/decider/declare",
+  requireAdmin,
+  wrap((req) => svc.declareDeciderWinner(req.params.id, req.body.competitorId)),
+);
+
 // ─── Current standings export ───────────────────────────────────────────
 router.get("/:id/standings/export", requireAdmin, async (req, res) => {
   try {

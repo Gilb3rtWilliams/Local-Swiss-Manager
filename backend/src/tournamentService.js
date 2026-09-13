@@ -438,6 +438,7 @@ const DEFAULT_TIEBREAKS = [
   "buchholz",
   "sonneborn_berger",
   "direct_encounter",
+  "wins",
 ];
 
 // ─── Create Tournament ──────────────────────────────────────────────────────
@@ -454,14 +455,19 @@ async function createTournament(input) {
     format = "individual", // 'individual' | 'team'
     variant = "standard", // 'standard' | 'bughouse' | 'league'
     system = "swiss",
-    // scoringSystem, ratingType, and tiebreaks are accepted, validated, and
-    // stored below, but NOT YET enforced anywhere else in the app —
-    // swissEngine.js's sortedStandings()/buchholz()/sonnenbornBerger() use a
-    // fixed order and don't know about "buchholz_cut1" or "direct_encounter",
-    // and scoreFromResult() always scores 1/0.5/0 regardless of
-    // scoringSystem. Selecting anything other than the defaults here
-    // currently changes what's *displayed*, not what's *computed*. Treat
-    // these three as reserved for a follow-up, not as working features yet.
+    // scoringSystem and ratingType are accepted, validated, and stored
+    // below, but NOT YET enforced anywhere else in the app — scoreFromResult()
+    // always scores 1/0.5/0 regardless of scoringSystem. Selecting anything
+    // other than the default there currently changes what's *displayed*,
+    // not what's *computed*. Treat that one as reserved for a follow-up.
+    //
+    // tiebreaks, by contrast, now IS enforced: swissEngine.js's
+    // sortedStandings() runs the fixed cascade score -> Buchholz Cut-1 ->
+    // Buchholz -> Sonneborn-Berger -> direct encounter (2-player ties only,
+    // since head-to-head isn't transitive across 3+) -> number of wins.
+    // That cascade order is hard-coded to match DEFAULT_TIEBREAKS below —
+    // this field doesn't yet let an organizer reorder or drop individual
+    // criteria, it's just recorded as-is for display/export.
     scoringSystem = "standard", // 'standard' (1/0.5/0) | '3-1-0' | 'double_round'
     ratingType = "standard", // 'standard' | 'rapid' | 'blitz'
     timeControl = "",
@@ -2875,8 +2881,10 @@ function computeStandingsBlock(format, players, teams, remainingRounds) {
 
         score: engine.formatScore(c.score),
         inContention,
+        buchholzCut1: engine.buchholzCut1(c, byIdMap).toFixed(1),
         buchholz: engine.buchholz(c, byIdMap).toFixed(1),
         sb: engine.sonnenbornBerger(c, byIdMap).toFixed(2),
+        wins: engine.numberOfWins(c),
         playerCount: team.playerIds.length,
         players: resolvedPlayers,
       };
@@ -2912,8 +2920,10 @@ function computeStandingsBlock(format, players, teams, remainingRounds) {
         rating: p.rating,
         score: engine.formatScore(p.score),
         inContention,
+        buchholzCut1: engine.buchholzCut1(p, byIdMap).toFixed(1),
         buchholz: engine.buchholz(p, byIdMap).toFixed(1),
         sb: engine.sonnenbornBerger(p, byIdMap).toFixed(2),
+        wins: engine.numberOfWins(p),
       };
     });
     crossTable = buildCrossTable(

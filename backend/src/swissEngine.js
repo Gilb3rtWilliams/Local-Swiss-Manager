@@ -292,14 +292,122 @@ function sonnenbornBerger(competitor, byId) {
   return sb;
 }
 
+// Buchholz Cut-1: sum of opponents' scores, dropping the single weakest
+// one. With 0 or 1 opponents there's nothing meaningful to cut (dropping a
+// player's only game would zero out their tiebreak for reasons that have
+// nothing to do with strength of schedule), so this falls back to the
+// plain (uncut) sum in that case — same convention as buchholz() above,
+// just documented explicitly since the "cut" is a no-op there.
+function buchholzCut1(competitor, byId) {
+  const opponentScores = [];
+  competitor.opponents.forEach((oppId) => {
+    const opp = byId.get(oppId);
+    if (opp) opponentScores.push(opp.score);
+  });
+  const total = opponentScores.reduce((sum, s) => sum + s, 0);
+  if (opponentScores.length <= 1) return total;
+  return total - Math.min(...opponentScores);
+}
+
+// Result of a's game against b specifically: 1 = a won, -1 = b won, 0 = drew
+// or the two never played each other (no information either way). Object
+// property access coerces the key to a string regardless of whether ids are
+// numbers or strings, so no defensive isNaN/Number dance is needed here the
+// way sonnenbornBerger() needs one for its byId.get() lookups.
+function headToHeadResult(a, b) {
+  const r = a.results[b.id];
+  if (r === undefined) return 0;
+  if (r > 0.5) return 1;
+  if (r < 0.5) return -1;
+  return 0;
+}
+
+function numberOfWins(competitor) {
+  return Object.values(competitor.results).filter((r) => r === 1).length;
+}
+
+// Stable sort of result[start:end) by number of wins, descending. Stable so
+// that competitors still tied on wins too keep whatever relative order they
+// were already in — arbitrary at that point, but at least consistent.
+function orderByWins(result, start, end) {
+  const withWins = result
+    .slice(start, end)
+    .map((c, idx) => ({ c, wins: numberOfWins(c), idx }));
+  withWins.sort((x, y) => y.wins - x.wins || x.idx - y.idx);
+  for (let k = 0; k < withWins.length; k++) result[start + k] = withWins[k].c;
+}
+
+// Full cascade: score -> Buchholz Cut-1 -> Buchholz -> Sonneborn-Berger ->
+// direct encounter (2-player ties only) -> number of wins. Anything still
+// tied after all of that is a *genuine* tie — same score and every math
+// tiebreak the app computes — which is exactly the signal a decider/playoff
+// system should key off of.
 function sortedStandings(competitors) {
   const byId = new Map(competitors.map((c) => [c.id, c]));
-  return [...competitors].sort((a, b) => {
-    if (b.score !== a.score) return b.score - a.score;
-    const bh = buchholz(b, byId) - buchholz(a, byId);
-    if (bh !== 0) return bh;
-    return sonnenbornBerger(b, byId) - sonnenbornBerger(a, byId);
+
+  // The first four criteria are all plain sums over a competitor's own
+  // games, so comparing any two independently is always consistent with
+  // comparing the whole field — safe to hand straight to Array.sort().
+  // Direct encounter is different: it's only meaningful pairwise and isn't
+  // guaranteed transitive across 3+ players, so it's deliberately excluded
+  // from this comparator and handled separately below, only where it's
+  // well-defined.
+  const withKeys = competitors.map((c) => ({
+    c,
+    score: c.score,
+    cut1: buchholzCut1(c, byId),
+    bh: buchholz(c, byId),
+    sb: sonnenbornBerger(c, byId),
+  }));
+
+  withKeys.sort((x, y) => {
+    if (y.score !== x.score) return y.score - x.score;
+    if (y.cut1 !== x.cut1) return y.cut1 - x.cut1;
+    if (y.bh !== x.bh) return y.bh - x.bh;
+    return y.sb - x.sb;
   });
+
+  const result = withKeys.map((k) => k.c);
+
+  // Walk runs of competitors still fully tied on all four additive
+  // criteria above (withKeys is in the same order as result, since result
+  // was derived from it, so index-aligned comparisons here are valid).
+  let i = 0;
+  while (i < result.length) {
+    let j = i + 1;
+    while (
+      j < result.length &&
+      withKeys[j].score === withKeys[i].score &&
+      withKeys[j].cut1 === withKeys[i].cut1 &&
+      withKeys[j].bh === withKeys[i].bh &&
+      withKeys[j].sb === withKeys[i].sb
+    ) {
+      j++;
+    }
+
+    const runSize = j - i;
+    if (runSize === 2) {
+      // Direct encounter cleanly decides an exact pair, when they actually
+      // played each other and it wasn't a draw. FIDE limits this tiebreak
+      // to head-to-head pairs specifically — not multi-way groups — which
+      // is exactly the case this branch covers.
+      const h2h = headToHeadResult(result[i], result[i + 1]);
+      if (h2h < 0) {
+        const tmp = result[i];
+        result[i] = result[i + 1];
+        result[i + 1] = tmp;
+      } else if (h2h === 0) {
+        orderByWins(result, i, j);
+      }
+      // h2h > 0: already in the right order, nothing to do.
+    } else if (runSize > 2) {
+      orderByWins(result, i, j);
+    }
+
+    i = j;
+  }
+
+  return result;
 }
 
 function formatScore(s) {
@@ -319,7 +427,10 @@ module.exports = {
   assignColors,
   generatePairings,
   buchholz,
+  buchholzCut1,
   sonnenbornBerger,
+  headToHeadResult,
+  numberOfWins,
   sortedStandings,
   formatScore,
 };
