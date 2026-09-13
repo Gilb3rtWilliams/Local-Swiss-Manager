@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { api } from "../../api.js";
+import { api } from "..src/api.js";
 
 // Shown on the Standings page whenever the tournament finished with a
 // genuine tie for 1st (t.tieAlert) or already has a decider in some state
