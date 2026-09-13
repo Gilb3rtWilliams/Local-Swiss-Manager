@@ -19,8 +19,10 @@ export default function TeamStandingsTable({ teamStandings, basePath }) {
           <th>Team</th>
           <th>Players</th>
           <th>Match Pts</th>
+          <th>Buchholz Cut-1</th>
           <th>Buchholz</th>
           <th>SB</th>
+          <th>Wins</th>
         </tr>
       </thead>
       <tbody>
@@ -59,8 +61,10 @@ export default function TeamStandingsTable({ teamStandings, basePath }) {
                 : t.playerCount}
             </td>
             <td className="score-col">{t.score}</td>
+            <td className="tiebreak-col">{t.buchholzCut1}</td>
             <td className="tiebreak-col">{t.buchholz}</td>
             <td className="tiebreak-col">{t.sb}</td>
+            <td className="tiebreak-col">{t.wins}</td>
           </tr>
         ))}
       </tbody>

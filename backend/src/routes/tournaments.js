@@ -121,6 +121,36 @@ router.get(
   wrap((req) => svc.validateBughouseTeams(req.params.id)),
 );
 
+// ─── Tiebreak Decider (playoff) system ──────────────────────────────────
+// See tournamentService.js's Decider section for the full data model.
+// GET /:id already returns tieAlert/decider on every fetch, so there's no
+// separate "check for a tie" endpoint — these three just mutate.
+router.post(
+  "/:id/decider/start",
+  requireAdmin,
+  wrap((req) => svc.startDecider(req.params.id, req.body)),
+);
+
+router.post(
+  "/:id/decider/result",
+  requireAdmin,
+  wrap((req) => svc.recordDeciderResult(req.params.id, req.body)),
+);
+
+router.post(
+  "/:id/decider/cancel",
+  requireAdmin,
+  wrap((req) => svc.cancelDecider(req.params.id)),
+);
+
+// Escape hatch for the "stuck" cap (a round-robin that repeatedly fails to
+// narrow the tied group) — lets the organizer pick the winner directly.
+router.post(
+  "/:id/decider/resolve",
+  requireAdmin,
+  wrap((req) => svc.resolveDeciderManually(req.params.id, req.body.winnerId)),
+);
+
 // ─── Self-registration ──────────────────────────────────────────────────
 // Admin controls (tournament id, same auth posture as everything else above).
 router.post(
@@ -204,44 +234,6 @@ router.get(
   wrap((req) =>
     svc.standingsAtRound(req.params.id, parseInt(req.params.round, 10)),
   ),
-);
-
-// ─── Decider (tie-break playoff for a tied 1st place) ───────────────────
-// Only reachable once t.tieForFirst is populated on the tournament (see
-// serializeTournament) — svc.startDecider() itself re-validates the tie
-// exists rather than trusting the client, but there's nothing to show the
-// organizer here until the standings say a decider is possible.
-router.post(
-  "/:id/decider",
-  requireAdmin,
-  wrap((req) => svc.startDecider(req.params.id)),
-);
-
-router.post(
-  "/:id/decider/games/:gameId/result",
-  requireAdmin,
-  wrap((req) =>
-    svc.submitDeciderGameResult(
-      req.params.id,
-      req.params.gameId,
-      req.body.result,
-    ),
-  ),
-);
-
-// Sudden-death escalation — only valid once the current decider round ends
-// "unresolved" (every game played, still fully tied); svc enforces that.
-router.post(
-  "/:id/decider/round",
-  requireAdmin,
-  wrap((req) => svc.addDeciderRound(req.params.id)),
-);
-
-// Organizer override — settles the decider directly, any time.
-router.post(
-  "/:id/decider/declare",
-  requireAdmin,
-  wrap((req) => svc.declareDeciderWinner(req.params.id, req.body.competitorId)),
 );
 
 // ─── Current standings export ───────────────────────────────────────────

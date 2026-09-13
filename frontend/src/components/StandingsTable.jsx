@@ -23,8 +23,10 @@ export default function StandingsTable({
           <th>FIDE ID</th>
           {showTeam && <th>Team</th>}
           <th>Score</th>
+          {showTiebreaks && <th>Buchholz Cut-1</th>}
           {showTiebreaks && <th>Buchholz</th>}
           {showTiebreaks && <th>Sonneborn-Berger</th>}
+          {showTiebreaks && <th>Wins</th>}
         </tr>
       </thead>
       <tbody>
@@ -60,8 +62,12 @@ export default function StandingsTable({
             </td>
             {showTeam && <td>{p.teamName}</td>}
             <td className="score-col">{p.score}</td>
+            {showTiebreaks && (
+              <td className="tiebreak-col">{p.buchholzCut1}</td>
+            )}
             {showTiebreaks && <td className="tiebreak-col">{p.buchholz}</td>}
             {showTiebreaks && <td className="tiebreak-col">{p.sb}</td>}
+            {showTiebreaks && <td className="tiebreak-col">{p.wins}</td>}
           </tr>
         ))}
       </tbody>

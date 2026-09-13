@@ -342,6 +342,52 @@ function orderByWins(result, start, end) {
 // tied after all of that is a *genuine* tie — same score and every math
 // tiebreak the app computes — which is exactly the signal a decider/playoff
 // system should key off of.
+// Returns the competitors still tied for the top spot after the full
+// cascade sortedStandings() applies (score -> Buchholz Cut-1 -> Buchholz ->
+// Sonneborn-Berger -> direct encounter (2-player ties only) -> wins) —
+// i.e. exactly the group the cascade could NOT separate. Length 1 means
+// there's a sole leader; length 2+ is a genuine tie a decider/playoff
+// system should resolve. This is the single source of truth for "is there
+// a tie" — it re-derives the same criteria sortedStandings() used rather
+// than guessing from score alone, so it can never disagree with what the
+// standings table actually displays.
+function topTieGroup(competitors) {
+  const standings = sortedStandings(competitors);
+  if (standings.length === 0) return [];
+
+  const byId = new Map(competitors.map((c) => [c.id, c]));
+  const leader = standings[0];
+  const leaderKey = {
+    score: leader.score,
+    cut1: buchholzCut1(leader, byId),
+    bh: buchholz(leader, byId),
+    sb: sonnenbornBerger(leader, byId),
+    wins: numberOfWins(leader),
+  };
+
+  const tied = standings.filter((c) => {
+    return (
+      c.score === leaderKey.score &&
+      buchholzCut1(c, byId) === leaderKey.cut1 &&
+      buchholz(c, byId) === leaderKey.bh &&
+      sonnenbornBerger(c, byId) === leaderKey.sb &&
+      numberOfWins(c) === leaderKey.wins
+    );
+  });
+
+  // A tied pair where sortedStandings() already broke the tie via direct
+  // encounter isn't a genuine tie — it's just two competitors who happen to
+  // match on every additive stat but have a decisive head-to-head result
+  // between them. (3+ groups skip this check entirely: direct encounter is
+  // never applied to multi-way groups in sortedStandings() either, for the
+  // transitivity reasons documented there.)
+  if (tied.length === 2 && headToHeadResult(tied[0], tied[1]) !== 0) {
+    return [tied[0]];
+  }
+
+  return tied;
+}
+
 function sortedStandings(competitors) {
   const byId = new Map(competitors.map((c) => [c.id, c]));
 
@@ -431,6 +477,7 @@ module.exports = {
   sonnenbornBerger,
   headToHeadResult,
   numberOfWins,
+  topTieGroup,
   sortedStandings,
   formatScore,
 };

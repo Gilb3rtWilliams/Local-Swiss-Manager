@@ -120,7 +120,7 @@ export default function WinnerReveal({ t }) {
       setTriggerFlash(false);
     }
 
-    if (t.status === "finished" && !celebratedRef.current) {
+    if (t.status === "finished" && t.winner && !celebratedRef.current) {
       if (isFreshArrival) {
         toast(
           <RevealPrompt
@@ -142,16 +142,25 @@ export default function WinnerReveal({ t }) {
           },
         );
       } else {
-        // Not a fresh arrival — this tournament just transitioned to
-        // finished while already being viewed (e.g. the last result was
-        // just submitted), so celebrate immediately without asking.
+        // Not a fresh arrival — either this tournament just transitioned to
+        // finished-with-a-winner while already being viewed (the last
+        // result was just submitted), or a tie that was live just got
+        // resolved (a decider finished, or was resolved manually) — either
+        // way, celebrate immediately without asking.
         celebratedRef.current = true;
         setDismissed(false);
         setStage("suspense");
       }
     }
 
-    if (t.status !== "finished") {
+    // Reset whenever there's no sole winner to celebrate yet — this covers
+    // the tournament going back to active, AND a finished tournament that's
+    // tied for 1st with no winner decided yet (t.winner is null while a
+    // decider is pending/in progress). Resetting celebratedRef here, rather
+    // than only checking status, is what lets the celebration correctly
+    // fire the moment a tie *does* get resolved, instead of never firing at
+    // all because an earlier tied render already latched celebratedRef.
+    if (!(t.status === "finished" && t.winner)) {
       celebratedRef.current = false;
       setStage("idle");
     }
@@ -173,7 +182,12 @@ export default function WinnerReveal({ t }) {
     return () => clearTimeout(timer);
   }, [stage]);
 
-  if (!t || t.status !== "finished" || stage === "idle") return null;
+  // stage only ever leaves "idle" once t.status === "finished" && t.winner
+  // (see the effect above), so this check is mostly redundant with that —
+  // but it's cheap insurance against a stray render slipping through if
+  // that invariant ever changes.
+  if (!t || t.status !== "finished" || !t.winner || stage === "idle")
+    return null;
 
   const isTeam = t.format === "team";
   const standingsList = isTeam ? t.teamStandings : t.standings;
