@@ -45,12 +45,36 @@ function PlayerLink({ basePath, id, title, name, titleColor = "#c25555" }) {
   );
 }
 
-function ResultButtons({
+// Bughouse-specific: cross-color pairing means the team on, say, the left
+// side is White on board 1 but Black on board 2 — so generic color-labeled
+// buttons ("1-0"/"0-1") silently mean the opposite team on the second board
+// unless you re-read the color badge every single click. These buttons are
+// labeled by TEAM instead, and translate the click into the correct
+// color-coded result string internally based on teamAIsWhite for *this*
+// board — the person never has to reason about color at all, only "which
+// team's player won," which is what they actually mean to record.
+function BughouseResultButtons({
   results,
   matchKey,
   onSetResult,
-  rOptions = ["1-0", "1/2-1/2", "0-1", "1F-0F", "0F-0F", "0F-1F"],
+  teamAIsWhite,
+  teamAName,
+  teamBName,
 }) {
+  const options = [
+    { label: `${teamAName} wins`, result: teamAIsWhite ? "1-0" : "0-1" },
+    { label: "Draw", result: "1/2-1/2" },
+    { label: `${teamBName} wins`, result: teamAIsWhite ? "0-1" : "1-0" },
+    {
+      label: `${teamAName} wins (forfeit)`,
+      result: teamAIsWhite ? "1F-0F" : "0F-1F",
+    },
+    { label: "Double forfeit", result: "0F-0F" },
+    {
+      label: `${teamBName} wins (forfeit)`,
+      result: teamAIsWhite ? "0F-1F" : "1F-0F",
+    },
+  ];
   return (
     <div
       style={{
@@ -59,15 +83,16 @@ function ResultButtons({
         flexWrap: "wrap",
         justifyContent: "center",
         marginTop: 8,
+        maxWidth: 220,
       }}
     >
-      {rOptions.map((r) => {
-        const isActive = results[matchKey] === r;
+      {options.map(({ label, result }) => {
+        const isActive = results[matchKey] === result;
         return (
           <button
             type="button"
-            key={r}
-            onClick={() => onSetResult(r)}
+            key={label}
+            onClick={() => onSetResult(result)}
             style={{
               background: isActive ? "#3a3a4a" : "transparent",
               border: `1px solid ${isActive ? "#5a5a6a" : "#2a2a35"}`,
@@ -77,9 +102,10 @@ function ResultButtons({
               borderRadius: 4,
               cursor: "pointer",
               fontFamily: "inherit",
+              transition: "all 0.2s ease",
             }}
           >
-            {r}
+            {label}
           </button>
         );
       })}
@@ -371,10 +397,13 @@ function BughouseMatch({
                   Decided on Board {decisiveBoard.boardNum}
                 </div>
               ) : (
-                <ResultButtons
+                <BughouseResultButtons
                   results={results}
                   matchKey={key}
                   onSetResult={(r) => onSetBoardResult(p.idx, b.boardNum, r)}
+                  teamAIsWhite={teamAIsWhite}
+                  teamAName={teamAPlayer.name}
+                  teamBName={teamBPlayer.name}
                 />
               )}
             </div>
