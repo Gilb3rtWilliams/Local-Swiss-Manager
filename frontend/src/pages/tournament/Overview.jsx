@@ -1474,6 +1474,14 @@ export default function Overview() {
                         : `Round ${t.currentRound + 1}`
                     } Pairings`}
               </button>
+              <button
+                className="btn-secondary"
+                style={{ marginLeft: 8 }}
+                disabled={busy}
+                onClick={() => navigate(`/tournament/${t.id}/pair-manual`)}
+              >
+                Pair Manually
+              </button>
             </div>
           )}
 

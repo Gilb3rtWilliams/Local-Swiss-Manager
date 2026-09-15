@@ -63,6 +63,16 @@ router.post(
   wrap((req) => svc.generateNextRound(req.params.id)),
 );
 
+// Manual round: organizer specifies who plays whom (and optionally who's
+// White) instead of the automatic Swiss/round-robin algorithm. Same
+// preconditions as the route above (svc.generateManualRound enforces them);
+// see that function's own doc comment for the payload shape.
+router.post(
+  "/:id/round/manual",
+  requireAdmin,
+  wrap((req) => svc.generateManualRound(req.params.id, req.body)),
+);
+
 router.post(
   "/:id/results",
   requireAdmin,

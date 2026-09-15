@@ -801,6 +801,189 @@ async function generateNextRound(id, updates = {}) {
   return serializeTournament(t);
 }
 
+// ─── Manual round pairing ────────────────────────────────────────────────
+// Alternative to generateNextRound()'s algorithmic pairing: the organizer
+// specifies exactly who plays whom (and optionally who's White) themselves.
+// Deliberately unconstrained beyond basic structural validity — no
+// rematch/no-repeat-opponent check, no color-balance enforcement. The whole
+// point of a manual override is organizer discretion; the automatic pairing
+// path already exists for anyone who wants those constraints enforced.
+//
+// Same preconditions as generateNextRound() (open round must be closed
+// first, tournament can't already be finished, elimination brackets are
+// out of scope entirely — those submit results match-by-match through the
+// bracket, there's no "round" here to pair by hand).
+//
+// payload shape:
+//   {
+//     pairs: [{ aId, bId, color? }],  // color: "aWhite" | "bWhite" | omit to auto-assign
+//     byeId?: <competitor id>,        // required iff the field is odd
+//   }
+// aId/bId/byeId are player ids for individual tournaments, team ids for
+// team tournaments (including bughouse — buildTeamBoards() below handles
+// the board cross-pairing exactly like the automatic path does once it
+// knows which team is White for the match).
+function resolveManualColors(a, b, colorChoice) {
+  if (colorChoice === "aWhite") return { white: a, black: b };
+  if (colorChoice === "bWhite") return { white: b, black: a };
+  // No explicit choice — fall back to the same fairness-aware assignment
+  // (color-history/color-debt aware) the automatic pairing path uses.
+  return engine.assignColors(a, b);
+}
+
+async function generateManualRound(id, payload = {}) {
+  const t = assertTournament(id);
+  if (isEliminationSystem(t)) {
+    const e = new Error(
+      "This is a bracket tournament — results are submitted match-by-match via the bracket. Manual round pairing isn't available here.",
+    );
+    e.status = 400;
+    throw e;
+  }
+  if (t.currentPairings) {
+    const e = new Error("Current round is still open — submit results first");
+    e.status = 409;
+    throw e;
+  }
+  if (t.status === "finished") {
+    const e = new Error("Tournament already finished");
+    e.status = 409;
+    throw e;
+  }
+
+  const isTeam = t.format === "team";
+  const pool = isTeam ? t.teams : t.players;
+  const byId = new Map(pool.map((c) => [c.id, c]));
+
+  const pairs = Array.isArray(payload.pairs) ? payload.pairs : [];
+  const byeId = payload.byeId || null;
+
+  const nameOfEntry = (cid) => byId.get(cid)?.name || cid;
+
+  // ── Structural validation: every competitor accounted for exactly once ──
+  const seen = new Set();
+  pairs.forEach((pr, i) => {
+    if (!pr || !pr.aId || !pr.bId) {
+      const e = new Error(`Pair ${i + 1} is missing a competitor`);
+      e.status = 400;
+      throw e;
+    }
+    if (pr.aId === pr.bId) {
+      const e = new Error(
+        `Pair ${i + 1} pairs "${nameOfEntry(pr.aId)}" against themselves`,
+      );
+      e.status = 400;
+      throw e;
+    }
+    [pr.aId, pr.bId].forEach((cid) => {
+      if (!byId.has(cid)) {
+        const e = new Error(`Unknown competitor id "${cid}"`);
+        e.status = 400;
+        throw e;
+      }
+      if (seen.has(cid)) {
+        const e = new Error(
+          `"${nameOfEntry(cid)}" appears more than once in the manual pairings`,
+        );
+        e.status = 400;
+        throw e;
+      }
+      seen.add(cid);
+    });
+  });
+
+  if (byeId) {
+    if (!byId.has(byeId)) {
+      const e = new Error(`Unknown competitor id "${byeId}" for the bye`);
+      e.status = 400;
+      throw e;
+    }
+    if (seen.has(byeId)) {
+      const e = new Error("The bye competitor can't also appear in a pair");
+      e.status = 400;
+      throw e;
+    }
+    seen.add(byeId);
+  }
+
+  const missing = pool.filter((c) => !seen.has(c.id));
+  if (missing.length > 0) {
+    const e = new Error(
+      `${
+        missing.length
+      } competitor(s) aren't paired or assigned a bye: ${missing
+        .map((c) => c.name)
+        .join(", ")}`,
+    );
+    e.status = 400;
+    throw e;
+  }
+  if (pool.length % 2 === 0 && byeId) {
+    const e = new Error(
+      "There's an even number of competitors — no bye is needed this round",
+    );
+    e.status = 400;
+    throw e;
+  }
+  if (pool.length % 2 === 1 && !byeId) {
+    const e = new Error(
+      "There's an odd number of competitors — one must be assigned a bye",
+    );
+    e.status = 400;
+    throw e;
+  }
+
+  t.currentRound += 1;
+  t.status = "active";
+  t.currentChess960 = t.chess960 ? chess960.randomChess960Position() : null;
+
+  if (isTeam) {
+    t.currentPairings = pairs.map((pr) => {
+      const a = byId.get(pr.aId);
+      const b = byId.get(pr.bId);
+      const { white: teamWhite, black: teamBlack } = resolveManualColors(
+        a,
+        b,
+        pr.color,
+      );
+      const boards = buildTeamBoards(t, teamWhite, teamBlack);
+      return {
+        type: "match",
+        teamWhite: teamWhite.id,
+        teamBlack: teamBlack.id,
+        boards,
+      };
+    });
+    if (byeId) {
+      t.currentPairings.push({ type: "bye", team: byeId, boards: [] });
+    }
+  } else {
+    t.currentPairings = pairs.map((pr) => {
+      const a = byId.get(pr.aId);
+      const b = byId.get(pr.bId);
+      const { white, black } = resolveManualColors(a, b, pr.color);
+      return {
+        type: "individual",
+        white: white.id,
+        black: black.id,
+        result: undefined,
+      };
+    });
+    if (byeId) {
+      t.currentPairings.push({
+        type: "bye",
+        white: byeId,
+        black: null,
+        result: undefined,
+      });
+    }
+  }
+
+  t.updatedAt = new Date().toISOString();
+  await persist();
+  return serializeTournament(t);
+}
+
 // ─── Results submission ─────────────────────────────────────────────────────
 // Forfeit codes read the same as a normal decisive result almost everywhere
 // (someone still won the board, the other lost) — the one exception is
@@ -4113,6 +4296,7 @@ module.exports = {
   init,
   createTournament,
   generateNextRound,
+  generateManualRound,
   submitResults,
   editResult,
   deleteRound,

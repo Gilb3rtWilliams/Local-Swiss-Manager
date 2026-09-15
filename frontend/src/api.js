@@ -47,6 +47,11 @@ export const api = {
     request(`/tournaments/${id}/rounds/${round}`, { method: "DELETE" }),
   generateNextRound: (id) =>
     request(`/tournaments/${id}/round`, { method: "POST" }),
+  generateManualRound: (id, payload) =>
+    request(`/tournaments/${id}/round/manual`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
   addLatePlayer: (id, body) =>
     request(`/tournaments/${id}/players`, {
       method: "POST",

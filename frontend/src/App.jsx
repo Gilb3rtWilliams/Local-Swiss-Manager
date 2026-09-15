@@ -13,6 +13,7 @@ import PlayerProfile from "./pages/tournament/PlayerProfile.jsx";
 import StartingRank from "./pages/tournament/StartingRank.jsx";
 import Overview from "./pages/tournament/Overview.jsx";
 import Pairings from "./pages/tournament/Pairings.jsx";
+import ManualPairing from "./pages/tournament/ManualPairing.jsx";
 import RoundHistoryPage from "./pages/tournament/RoundHistoryPage.jsx";
 import Standings from "./pages/tournament/Standings.jsx";
 import Module from "./pages/tournament/Module.jsx";
@@ -52,6 +53,7 @@ export default function App() {
           <Route path="starting-rank" element={<StartingRank />} />
           <Route path="overview" element={<Overview />} />
           <Route path="pairings" element={<Pairings />} />
+          <Route path="pair-manual" element={<ManualPairing />} />
           <Route path="rounds" element={<RoundHistoryPage />} />
           <Route path="standings" element={<Standings />} />
           <Route path="module" element={<Module />} />
