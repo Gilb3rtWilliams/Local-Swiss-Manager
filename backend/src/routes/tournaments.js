@@ -107,6 +107,12 @@ router.get(
   wrap((req) => svc.getPlayerProfile(req.params.id, req.params.playerId)),
 );
 
+router.get(
+  "/:id/teams/:teamId/profile",
+  requireAdmin,
+  wrap((req) => svc.getTeamProfile(req.params.id, req.params.teamId)),
+);
+
 router.post(
   "/:id/bracket/matches/:matchId/result",
   requireAdmin,
@@ -204,6 +210,12 @@ router.get(
   wrap((req) =>
     svc.getPublicPlayerProfile(req.params.token, req.params.playerId),
   ),
+);
+
+// Public team profile.
+router.get(
+  "/public-view/:token/teams/:teamId/profile",
+  wrap((req) => svc.getPublicTeamProfile(req.params.token, req.params.teamId)),
 );
 
 // ─── Historical public standings ────────────────────────────────────────

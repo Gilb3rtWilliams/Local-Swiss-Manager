@@ -37,13 +37,13 @@
 .dash-root h1,
 .dash-root h2,
 .dash-root h3 {
-  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-family: "Georgia", "Times New Roman", serif;
   font-weight: 700;
   letter-spacing: -0.01em;
 }
 
 .dash-mono {
-  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-family: "Georgia", "Times New Roman", serif;
 }
 
 /* ── Background: quiet, near-flat — a faint board-grid watermark is the
@@ -61,8 +61,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background:
-    radial-gradient(
+  background: radial-gradient(
       120% 70% at 50% -10%,
       rgba(0, 212, 168, 0.06) 0%,
       transparent 55%
@@ -78,8 +77,7 @@
   content: "";
   position: absolute;
   inset: -20%;
-  background-image:
-    repeating-linear-gradient(
+  background-image: repeating-linear-gradient(
       0deg,
       rgba(232, 230, 240, 0.035) 0 1px,
       transparent 1px 64px
@@ -257,10 +255,7 @@
   padding: 5px 14px;
   font-size: 0.78rem;
   cursor: pointer;
-  transition:
-    background 0.15s ease,
-    color 0.15s ease,
-    border-color 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .dash-chip:hover {
@@ -278,9 +273,7 @@
 /* ── Tournament grid ──────────────────────────────────────────────────── */
 .dash-root .tourney-card {
   cursor: pointer;
-  transition:
-    transform 0.15s ease,
-    border-color 0.15s ease;
+  transition: transform 0.15s ease, border-color 0.15s ease;
 }
 
 .dash-root .tourney-card:hover {

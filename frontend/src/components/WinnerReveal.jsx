@@ -192,6 +192,7 @@ export default function WinnerReveal({ t }) {
   const isTeam = t.format === "team";
   const standingsList = isTeam ? t.teamStandings : t.standings;
   const top3 = (standingsList || []).slice(0, 3);
+  const boardMVPs = isTeam ? t.boardMVPs || [] : [];
   const winnerName = t.winner || top3[0]?.name || "Champion";
   const showEffects = stage === "reveal" || stage === "podium";
 
@@ -229,19 +230,67 @@ export default function WinnerReveal({ t }) {
             </div>
           )}
 
-          {stage === "podium" && top3.length > 0 && (
-            <div className="wr-podium">
-              {top3.map((c, i) => (
-                <div
-                  className={`wr-podium-card ${MEDALS[i].cls}`}
-                  key={c.id || c.name}
-                >
-                  <div className="wr-medal">{MEDALS[i].trophy}</div>
-                  <div className="wr-podium-place">{MEDALS[i].place}</div>
-                  <div className="wr-podium-name">{c.name}</div>
-                  <div className="wr-podium-score">{scoreOf(c)} pts</div>
+          {stage === "podium" && (top3.length > 0 || boardMVPs.length > 0) && (
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 32,
+                justifyContent: "center",
+                alignItems: "flex-start",
+              }}
+            >
+              {top3.length > 0 && (
+                <div>
+                  {/* Only labeled when there's a second podium (board MVPs)
+                      next to it to disambiguate from — the individual-format
+                      case keeps its original unlabeled single podium. */}
+                  {isTeam && boardMVPs.length > 0 && (
+                    <p className="wr-winner-sub" style={{ marginBottom: 8 }}>
+                      Team Champions
+                    </p>
+                  )}
+                  <div className="wr-podium">
+                    {top3.map((c, i) => (
+                      <div
+                        className={`wr-podium-card ${MEDALS[i].cls}`}
+                        key={c.id || c.name}
+                      >
+                        <div className="wr-medal">{MEDALS[i].trophy}</div>
+                        <div className="wr-podium-place">{MEDALS[i].place}</div>
+                        <div className="wr-podium-name">{c.name}</div>
+                        <div className="wr-podium-score">{scoreOf(c)} pts</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
+              )}
+
+              {isTeam && boardMVPs.length > 0 && (
+                <div>
+                  <p className="wr-winner-sub" style={{ marginBottom: 8 }}>
+                    Best Individual Boards
+                  </p>
+                  <div className="wr-podium">
+                    {boardMVPs.map((p, i) => (
+                      <div
+                        className={`wr-podium-card ${MEDALS[i].cls}`}
+                        key={p.id}
+                      >
+                        <div className="wr-medal">{MEDALS[i].trophy}</div>
+                        <div className="wr-podium-place">{MEDALS[i].place}</div>
+                        <div className="wr-podium-name">{p.name}</div>
+                        <div className="wr-podium-score">{p.score} pts</div>
+                        <div
+                          style={{ fontSize: 11, opacity: 0.75, marginTop: 2 }}
+                        >
+                          {p.teamName}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

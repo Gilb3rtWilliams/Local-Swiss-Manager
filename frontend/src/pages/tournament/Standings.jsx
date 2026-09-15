@@ -400,6 +400,64 @@ export default function Standings() {
               />
             </div>
           )}
+
+          {/* Board Rankings (Team Events Only) — every team's Board 1
+              ranked against every other team's Board 1, then Board 2
+              against Board 2, etc. Different from the flat "Individual
+              Board Standings" above, which mixes every board into one
+              list. Only computed for the live view — historical
+              per-round snapshots don't carry this breakdown. */}
+          {isTeam && !isViewingPast && (t.boardRankings || []).length > 0 && (
+            <div
+              style={{
+                background: "#13131a",
+                border: "1px solid #252532",
+                borderRadius: 12,
+                padding: "24px",
+                overflowX: "auto",
+              }}
+            >
+              <h2
+                style={{
+                  fontSize: 16,
+                  fontWeight: 700,
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "#e8e8e8",
+                  marginTop: 0,
+                  marginBottom: 8,
+                  borderBottom: "1px solid #252532",
+                  paddingBottom: 12,
+                }}
+              >
+                Board Rankings
+              </h2>
+              <p style={{ margin: "0 0 20px", color: "#8a8a9a", fontSize: 12 }}>
+                Every team's Board 1 ranked against every other team's Board 1,
+                then Board 2 against Board 2, and so on.
+              </p>
+              {t.boardRankings.map((board, i) => (
+                <div
+                  key={board.boardNum}
+                  style={{ marginTop: i === 0 ? 0 : 28 }}
+                >
+                  <h3
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 700,
+                      letterSpacing: "0.05em",
+                      textTransform: "uppercase",
+                      color: "#d4a853",
+                      margin: "0 0 10px",
+                    }}
+                  >
+                    Board {board.boardNum}
+                  </h3>
+                  <StandingsTable standings={board.players} showTeam />
+                </div>
+              ))}
+            </div>
+          )}
         </>
       )}
     </div>

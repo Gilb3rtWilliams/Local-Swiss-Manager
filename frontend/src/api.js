@@ -56,6 +56,8 @@ export const api = {
     request(`/tournaments/${id}/players/${playerId}`, { method: "DELETE" }),
   getPlayerProfile: (id, playerId) =>
     request(`/tournaments/${id}/players/${playerId}/profile`),
+  getTeamProfile: (id, teamId) =>
+    request(`/tournaments/${id}/teams/${teamId}/profile`),
   extendTournament: (id) =>
     request(`/tournaments/${id}/extend`, { method: "POST" }),
   getStandingsAtRound: (id, round) =>
@@ -103,6 +105,8 @@ export const api = {
     request(`/tournaments/public-view/${token}/standings/${round}`),
   getPublicPlayerProfile: (token, playerId) =>
     request(`/tournaments/public-view/${token}/players/${playerId}/profile`),
+  getPublicTeamProfile: (token, teamId) =>
+    request(`/tournaments/public-view/${token}/teams/${teamId}/profile`),
   enablePublicView: (id) =>
     request(`/tournaments/${id}/public-view/enable`, { method: "POST" }),
   disablePublicView: (id) =>

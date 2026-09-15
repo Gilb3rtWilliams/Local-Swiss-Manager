@@ -1750,6 +1750,200 @@ function getPublicPlayerProfile(token, playerId) {
   return buildPlayerProfile(t, playerId);
 }
 
+// Team counterpart to buildPlayerProfile() above — same shape of idea
+// (round-by-round history, reversed to most-recent-first before returning),
+// adapted for a team match being several boards at once rather than one
+// game. Only meaningful for team-format tournaments.
+function buildTeamProfile(t, teamId) {
+  if (t.format !== "team") {
+    const e = new Error("This tournament doesn't have teams.");
+    e.status = 400;
+    throw e;
+  }
+  const team = (t.teams || []).find((x) => x.id === teamId);
+  if (!team) {
+    const e = new Error("Team not found");
+    e.status = 404;
+    throw e;
+  }
+  const teamsById = byId(t.teams || []);
+  const playersById = byId(t.players || []);
+
+  const matches = [];
+  (t.rounds || []).forEach((roundRecord) => {
+    roundRecord.pairings.forEach((pairing) => {
+      if (pairing.type === "bye" && pairing.team === teamId) {
+        matches.push({
+          round: roundRecord.round,
+          opponentId: null,
+          opponentName: null,
+          boards: [],
+          ourScore: 1,
+          opponentScore: 0,
+          result: "bye",
+        });
+        return;
+      }
+      if (pairing.type !== "match") return;
+      const isWhite = pairing.teamWhite === teamId;
+      const isBlack = pairing.teamBlack === teamId;
+      if (!isWhite && !isBlack) return;
+
+      const opponentTeamId = isWhite ? pairing.teamBlack : pairing.teamWhite;
+      const opponentTeam = teamsById.get(opponentTeamId);
+
+      let ourScore = 0;
+      let opponentScore = 0;
+      let anyUndecided = false;
+      // Which team is White vs Black *alternates by board index* within a
+      // match (see buildTeamBoards()'s evenBoard logic) — it is NOT fixed
+      // for the whole match the way pairing.teamWhite/teamBlack might
+      // suggest. So "which side is ours" is determined per board, from
+      // each actual player's own teamId, not inherited from the match
+      // level. Same two committed shapes buildPlayerProfile/
+      // computeBoardNumbers deal with: sit-outs store a single `player`
+      // id, played (or still-in-progress) boards store `white`/`black`
+      // ids directly.
+      const boards = [];
+      (pairing.boards || []).forEach((board) => {
+        if (board.sitOut) {
+          const soloId = board.player ?? board.white ?? board.black;
+          const solo = soloId ? playersById.get(soloId) : null;
+          // A sit-out means the OTHER side ran short of players, so the
+          // lone player is usually the opponent's — only show this board
+          // in OUR profile if that lone player is actually one of ours
+          // (i.e. WE were the side that ran short, and it's our own
+          // player recorded as sitting out unopposed).
+          if (!solo || solo.teamId !== teamId) return;
+          boards.push({
+            boardNum: board.boardNum,
+            sitOut: true,
+            ourPlayerId: solo.id,
+            ourPlayerName: solo.name,
+            opponentPlayerId: null,
+            opponentPlayerName: null,
+            color: null,
+            result: null,
+            points: null,
+          });
+          return;
+        }
+
+        const whitePlayer = playersById.get(board.white);
+        const blackPlayer = playersById.get(board.black);
+        const ourIsWhite = whitePlayer?.teamId === teamId;
+        const ourPlayer = ourIsWhite ? whitePlayer : blackPlayer;
+        const opponentPlayer = ourIsWhite ? blackPlayer : whitePlayer;
+        if (!ourPlayer) return; // shouldn't happen, but don't fabricate a row
+
+        if (!board.result) {
+          anyUndecided = true;
+          boards.push({
+            boardNum: board.boardNum,
+            sitOut: false,
+            ourPlayerId: ourPlayer.id,
+            ourPlayerName: ourPlayer.name,
+            opponentPlayerId: opponentPlayer?.id || null,
+            opponentPlayerName: opponentPlayer?.name || null,
+            color: ourIsWhite ? "W" : "B",
+            result: null,
+            points: null,
+          });
+          return;
+        }
+
+        const ourSide = ourIsWhite ? "white" : "black";
+        const points = scoreFromResult(board.result, ourSide);
+        ourScore += points;
+        opponentScore += scoreFromResult(
+          board.result,
+          ourIsWhite ? "black" : "white",
+        );
+        boards.push({
+          boardNum: board.boardNum,
+          sitOut: false,
+          ourPlayerId: ourPlayer.id,
+          ourPlayerName: ourPlayer.name,
+          opponentPlayerId: opponentPlayer?.id || null,
+          opponentPlayerName: opponentPlayer?.name || null,
+          color: ourIsWhite ? "W" : "B",
+          result: board.result,
+          points,
+        });
+      });
+
+      matches.push({
+        round: roundRecord.round,
+        opponentId: opponentTeamId,
+        opponentName: opponentTeam ? opponentTeam.name : "Unknown team",
+        boards,
+        ourScore,
+        opponentScore,
+        result: anyUndecided
+          ? null
+          : ourScore > opponentScore
+          ? "W"
+          : ourScore < opponentScore
+          ? "L"
+          : "D",
+      });
+    });
+  });
+
+  const teamComps = t.teams.map(teamCompetitor);
+  const teamByIdMap = byId(teamComps);
+  const thisComp = teamComps.find((c) => c.id === teamId);
+  const sortedTeams = engine.sortedStandings(teamComps);
+  const rank = sortedTeams.findIndex((c) => c.id === teamId) + 1;
+
+  const boardNumbers = computeBoardNumbers(t);
+  const roster = (team.playerIds || [])
+    .map((id) => playersById.get(id))
+    .filter(Boolean)
+    .map((p) => ({
+      id: p.id,
+      name: p.name,
+      title: p.title || null,
+      fideId: p.fideId || null,
+      rating: p.rating ?? null,
+      boardNum: boardNumbers.get(p.id) ?? null,
+      score: engine.formatScore(p.score),
+    }));
+
+  return {
+    id: team.id,
+    name: team.name,
+    rank: rank || null,
+    teamCount: t.teams.length,
+    score: engine.formatScore(team.score),
+    buchholzCut1: engine.buchholzCut1(thisComp, teamByIdMap).toFixed(1),
+    buchholz: engine.buchholz(thisComp, teamByIdMap).toFixed(1),
+    sb: engine.sonnenbornBerger(thisComp, teamByIdMap).toFixed(2),
+    wins: engine.numberOfWins(thisComp),
+    roster,
+    matches: [...matches].reverse(), // most recent round first
+  };
+}
+
+// Admin path — same auth posture as getPlayerProfile/everything else gated
+// by requireAdmin in the router.
+function getTeamProfile(id, teamId) {
+  const t = assertTournament(id);
+  return buildTeamProfile(t, teamId);
+}
+
+// Public path — same resolution and "is this actually public yet" check as
+// getPublicPlayerProfile.
+function getPublicTeamProfile(token, teamId) {
+  const t = findByPublicViewToken(token);
+  if (!t.publicViewOpen) {
+    const e = new Error("Results aren't public for this tournament right now");
+    e.status = 403;
+    throw e;
+  }
+  return buildTeamProfile(t, teamId);
+}
+
 // Pre-flight roster check for the bughouse variant — lets the frontend warn
 // before attempting to generate a round/pairing, rather than surfacing a
 // 400 from deep inside board-building. Not applicable outside team+bughouse.
@@ -3299,6 +3493,131 @@ function serializeBracket(t) {
 // live tournament state. Takes plain players/teams arrays (each already
 // carrying score/colorDiff/opponents/results/byeRounds — either the live
 // competitor objects or a replayed snapshot) rather than closing over `t`.
+// ─── Per-board breakdowns (team format) ─────────────────────────────────────
+// Board number isn't stored as a persistent field on a player — buildTeamBoards()
+// re-derives it every round from each team's roster sorted by rating
+// descending. In practice that's stable round to round (rosters and ratings
+// don't change mid-event outside late registration), but to be robust
+// against the rare case where it isn't, this takes the *mode* (most
+// frequent) board number a player was actually assigned across every
+// completed round rather than trusting just the latest one. Players who've
+// never appeared on a team board yet (no completed rounds) aren't included.
+function computeBoardNumbers(t) {
+  const counts = new Map(); // playerId -> Map<boardNum, timesAssigned>
+  function bump(pid, boardNum) {
+    if (!pid) return;
+    if (!counts.has(pid)) counts.set(pid, new Map());
+    const perBoard = counts.get(pid);
+    perBoard.set(boardNum, (perBoard.get(boardNum) || 0) + 1);
+  }
+
+  (t.rounds || []).forEach((roundRecord) => {
+    roundRecord.pairings.forEach((pairing) => {
+      if (pairing.type !== "match") return;
+      (pairing.boards || []).forEach((board) => {
+        // Committed round records store two different shapes depending on
+        // whether the board was actually played (see submitResults()):
+        // sit-outs/no-result boards get a single `player` id, played
+        // boards get `white`/`black` ids directly (already unwrapped from
+        // the live pairing's player-object references at commit time).
+        if (board.sitOut) {
+          bump(board.player, board.boardNum);
+          return;
+        }
+        bump(board.white, board.boardNum);
+        bump(board.black, board.boardNum);
+      });
+    });
+  });
+
+  const boardNumbers = new Map();
+  counts.forEach((perBoard, pid) => {
+    let best = null,
+      bestCount = -1;
+    perBoard.forEach((count, boardNum) => {
+      if (count > bestCount) {
+        best = boardNum;
+        bestCount = count;
+      }
+    });
+    boardNumbers.set(pid, best);
+  });
+  return boardNumbers;
+}
+
+// Ranks players separately within each board number — every team's Board 1
+// player against every other team's Board 1 player, then Board 2 against
+// Board 2, etc. Different from the existing flat "individual board
+// standings" (computeStandingsBlock's team-branch `standings`), which mixes
+// every board into one list.
+//
+// Caveat: buchholzCut1/buchholz/sb below are computed with the tiebreak
+// cascade's byId lookup scoped to just this board's group of players, not
+// the whole field. Since buildTeamBoards() always pairs same-index boards
+// against each other, a player's real opponents already fall inside their
+// own board group in the overwhelming common case, so this is equivalent to
+// the "real" tiebreak numbers in practice — it would only silently
+// undercount if a mid-event roster/rating change ever caused a genuine
+// cross-board pairing in some round. Score and wins are unaffected either
+// way, since neither needs an opponent lookup.
+function computeBoardRankings(t) {
+  if (t.format !== "team") return [];
+
+  const boardNumbers = computeBoardNumbers(t);
+  const byBoard = new Map(); // boardNum -> player[]
+  t.players.forEach((p) => {
+    const bn = boardNumbers.get(p.id);
+    if (bn == null) return;
+    if (!byBoard.has(bn)) byBoard.set(bn, []);
+    byBoard.get(bn).push(p);
+  });
+
+  return [...byBoard.keys()]
+    .sort((a, b) => a - b)
+    .map((boardNum) => {
+      const group = byBoard.get(boardNum);
+      const sorted = engine.sortedStandings(group);
+      const groupByIdMap = byId(group);
+      return {
+        boardNum,
+        players: sorted.map((p) => ({
+          id: p.id,
+          name: p.name,
+          title: p.title || null,
+          fideId: p.fideId || null,
+          rating: p.rating,
+          teamId: p.teamId,
+          teamName: t.teams.find((x) => x.id === p.teamId)?.name || "???",
+          score: engine.formatScore(p.score),
+          buchholzCut1: engine.buchholzCut1(p, groupByIdMap).toFixed(1),
+          buchholz: engine.buchholz(p, groupByIdMap).toFixed(1),
+          sb: engine.sonnenbornBerger(p, groupByIdMap).toFixed(2),
+          wins: engine.numberOfWins(p),
+        })),
+      };
+    });
+}
+
+// Top 3 of the flat "individual board standings" (every player across every
+// board/team, ranked by the same score+tiebreak cascade as everything
+// else) — surfaced separately so the frontend (WinnerReveal) doesn't need
+// to know that's where these medalists come from, and so it doesn't have
+// to re-derive "top 3" itself from the full standings array.
+function computeBoardMVPs(t) {
+  if (t.format !== "team" || t.players.length === 0) return [];
+  const sorted = engine.sortedStandings(t.players);
+  return sorted.slice(0, 3).map((p, i) => ({
+    place: i + 1,
+    id: p.id,
+    name: p.name,
+    title: p.title || null,
+    fideId: p.fideId || null,
+    teamId: p.teamId,
+    teamName: t.teams.find((x) => x.id === p.teamId)?.name || "???",
+    score: engine.formatScore(p.score),
+  }));
+}
+
 function computeStandingsBlock(format, players, teams, remainingRounds) {
   let standings,
     teamStandings = null,
@@ -3568,6 +3887,12 @@ function serializeTournament(t) {
       (row, i) => ({ ...row, rank: i + 1 }),
     );
   }
+  // Team-format extras — empty arrays for individual-format tournaments.
+  // Independent of the decider above: that's about who wins the whole
+  // event, these are about individual board performance, which the
+  // decider never touches.
+  const boardRankings = computeBoardRankings(t);
+  const boardMVPs = computeBoardMVPs(t);
 
   const rounds = t.rounds.map((rr) => ({
     round: rr.round,
@@ -3699,6 +4024,8 @@ function serializeTournament(t) {
     standings,
     teamStandings,
     crossTable,
+    boardRankings,
+    boardMVPs,
     rounds,
     startingRankList,
     bracket: serializeBracket(t),
@@ -3801,6 +4128,8 @@ module.exports = {
   getBracket,
   getPlayerProfile,
   getPublicPlayerProfile,
+  getTeamProfile,
+  getPublicTeamProfile,
   validateBughouseTeams,
   enableRegistration,
   disableRegistration,

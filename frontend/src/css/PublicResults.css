@@ -631,6 +631,42 @@
   color: var(--pv-brass);
 }
 
+/* ── Team profile: match history cards ──────────────────────────────── */
+.pv-match-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--pv-border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+
+.pv-match-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pv-board-list {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--pv-border);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pv-board-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: var(--pv-muted);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 @media (max-width: 640px) {
   .pv-shell {
     padding: 36px 16px 0;
