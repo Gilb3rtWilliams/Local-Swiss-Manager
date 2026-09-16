@@ -506,7 +506,7 @@ export default function CageMatch() {
       {cm.tiebreak && (
         <div className="cm-section-card cm-tiebreak-card">
           <div className="cm-section-head">
-            <h3>Tiebreak — Mini-Match (first to 2.5)</h3>
+            <h3>Tiebreak — Mini-Match (first to 2.5 points)</h3>
             <span className="cm-section-meta">
               {cm.tiebreak.miniMatch.score.A} – {cm.tiebreak.miniMatch.score.B}
             </span>
