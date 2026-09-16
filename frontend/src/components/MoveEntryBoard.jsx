@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Chess } from "chess.js";
 import "../css/ChessBoard.css";
 import "../css/MoveEntryBoard.css";
@@ -21,6 +21,57 @@ const PIECE_NAME = {
 };
 
 const PROMOTION_CHOICES = ["q", "r", "b", "n"];
+
+// PGN's Result tag only knows 1-0 / 0-1 / 1/2-1/2 / * — forfeits aren't
+// standard PGN notation, so they collapse onto whichever side the forfeit
+// awarded the point to. A double forfeit has no sensible PGN result, so it
+// falls back to "*" (unknown/no result), same as an ongoing game.
+const PGN_RESULT = {
+  "1-0": "1-0",
+  "0-1": "0-1",
+  "1/2-1/2": "1/2-1/2",
+  "1F-0F": "1-0",
+  "0F-1F": "0-1",
+  "0F-0F": "*",
+};
+
+function safeFileSegment(s) {
+  return (s || "player").replace(/[^a-z0-9]+/gi, "_");
+}
+
+// Builds a standalone PGN string straight from the same startFen/moves the
+// board already replays for rendering — no backend round-trip needed, and
+// no risk of drifting from what's actually shown on screen. A Chess960
+// starting position (any non-default game.startFen) gets an explicit
+// [Variant "Chess960"] header on top of the [FEN]/[SetUp] chess.js already
+// adds automatically for a non-default start.
+function buildPgn(game) {
+  const c = new Chess(game.startFen || undefined, { chess960: true });
+  if (game.whiteName) c.header("White", game.whiteName);
+  if (game.blackName) c.header("Black", game.blackName);
+  if (game.startFen) c.header("Variant", "Chess960");
+  c.header("Result", game.result ? PGN_RESULT[game.result] || "*" : "*");
+  for (const san of game.moves || []) {
+    const r = c.move(san, { strict: false });
+    if (!r) break; // shouldn't happen — server data is the source of truth
+  }
+  return c.pgn();
+}
+
+function downloadPgn(game) {
+  const pgn = buildPgn(game);
+  const blob = new Blob([pgn], { type: "application/x-chess-pgn" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${safeFileSegment(game.whiteName)}_vs_${safeFileSegment(
+    game.blackName,
+  )}_game${game.gameNum ?? ""}.pgn`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
 
 // Same {color}{TYPE} code convention as ChessBoard.jsx's pieceAt() (e.g.
 // "wP", "bN") so both components resolve to the exact same SVG filenames
@@ -45,6 +96,8 @@ function codeFor(type, color) {
  *                position when relevant; chess.js replays `moves` on top
  *                of it purely for rendering/legality — the backend remains
  *                the source of truth once onMove's result comes back.
+ *                whiteName/blackName/gameNum (when present on the same
+ *                object) are used for the PGN download's headers/filename.
  *   onMove     — called with { from, to, promotion? } once a legal move is
  *                clicked through; the backend validates it again.
  *   onUndo     — optional; removes the most recently recorded move.
@@ -57,6 +110,13 @@ function codeFor(type, color) {
  *                skin the rest of the tournament is using.
  *   error      — optional message shown under the board (API errors happen
  *                in the parent's onMove handler, not inside this component).
+ *
+ * Move browsing: the board can step back through any earlier position via
+ * the move-navigation row — this works whether the game is still in
+ * progress or already complete, since it's driven by a separate viewIndex
+ * rather than by game.status. Only the *live* (full) position is ever
+ * editable; stepping away from it disables making new moves until you jump
+ * back to the latest position.
  */
 export default function MoveEntryBoard({
   game,
@@ -72,14 +132,33 @@ export default function MoveEntryBoard({
   const [selected, setSelected] = useState(null);
   const [pendingPromotion, setPendingPromotion] = useState(null);
 
+  const liveMoves = game.moves || [];
+  const [viewIndex, setViewIndex] = useState(liveMoves.length);
+  // Snap to the latest move whenever the move count changes — a new move
+  // just got recorded (or the game loaded for the first time). This is
+  // what makes new moves show up immediately without stranding the viewer
+  // on a stale position, while still letting them freely step back
+  // afterward.
+  useEffect(() => {
+    setViewIndex(liveMoves.length);
+  }, [liveMoves.length]);
+
+  function jumpTo(index) {
+    setSelected(null);
+    setPendingPromotion(null);
+    setViewIndex(Math.max(0, Math.min(liveMoves.length, index)));
+  }
+
+  const isLatest = viewIndex === liveMoves.length;
+
   const colors = BOARD_THEMES[theme] || BOARD_THEMES[DEFAULT_BOARD_THEME];
   const pieces = PIECE_THEMES[pieceTheme] || PIECE_THEMES[DEFAULT_PIECE_THEME];
   const squareSize = size / 8;
 
-  // Replay the game's moves purely for rendering/legal-move purposes — see
-  // the file-level doc comment above. Also captures the last applied move
-  // (for the "last move" highlight) since the backend's serialized game
-  // only carries the SAN list, not a from/to pair.
+  // Replay the game's *full* move list — this is the real, live position:
+  // source of truth for whose turn it is and what's legal to play. Kept
+  // separate from what's actually rendered (see displayChess below) so
+  // browsing history never has to touch turn/legality logic.
   const { chess, lastMove } = useMemo(() => {
     const c = new Chess(game.startFen || undefined, { chess960: true });
     let last = null;
@@ -91,9 +170,28 @@ export default function MoveEntryBoard({
     return { chess: c, lastMove: last };
   }, [game.startFen, game.moves]);
 
-  const board = chess.board();
+  // What's actually drawn on the board. Identical to the live position at
+  // viewIndex === liveMoves.length; a fresh, shorter replay otherwise — this
+  // is what lets "go back to an earlier move" work regardless of whether
+  // the game is complete, since it never touches game.status at all.
+  const { displayChess, displayLastMove } = useMemo(() => {
+    if (isLatest) return { displayChess: chess, displayLastMove: lastMove };
+    const c = new Chess(game.startFen || undefined, { chess960: true });
+    let last = null;
+    for (let i = 0; i < viewIndex; i++) {
+      const r = c.move(liveMoves[i], { strict: false });
+      if (!r) break;
+      last = r;
+    }
+    return { displayChess: c, displayLastMove: last };
+  }, [isLatest, chess, lastMove, game.startFen, liveMoves, viewIndex]);
+
+  const board = displayChess.board();
   const turn = chess.turn();
-  const interactive = !disabled && game.status !== "complete";
+  // Interactive play requires being at the live/latest position — stepping
+  // back to review an earlier move (whether the game is complete or still
+  // in progress) disables making new moves until you jump back to latest.
+  const interactive = !disabled && game.status !== "complete" && isLatest;
 
   const legalByTarget = useMemo(() => {
     if (!selected) return {};
@@ -198,8 +296,9 @@ export default function MoveEntryBoard({
                 const isSelected = selected === square;
                 const isTarget = !!legalByTarget[square];
                 const isLastMove =
-                  lastMove &&
-                  (lastMove.from === square || lastMove.to === square);
+                  displayLastMove &&
+                  (displayLastMove.from === square ||
+                    displayLastMove.to === square);
 
                 return (
                   <button
@@ -246,6 +345,104 @@ export default function MoveEntryBoard({
         </div>
       </div>
 
+      {liveMoves.length > 0 && (
+        <div
+          className="me-move-nav"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 6,
+            marginTop: 10,
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => jumpTo(0)}
+            disabled={viewIndex === 0}
+            aria-label="First move"
+            style={{
+              background: "#1a1a24",
+              border: "1px solid #353545",
+              color: viewIndex === 0 ? "#4a4a5a" : "#e8e8e8",
+              borderRadius: 6,
+              padding: "4px 8px",
+              cursor: viewIndex === 0 ? "default" : "pointer",
+              fontFamily: "inherit",
+              fontSize: 12,
+            }}
+          >
+            ⏮
+          </button>
+          <button
+            type="button"
+            onClick={() => jumpTo(viewIndex - 1)}
+            disabled={viewIndex === 0}
+            aria-label="Previous move"
+            style={{
+              background: "#1a1a24",
+              border: "1px solid #353545",
+              color: viewIndex === 0 ? "#4a4a5a" : "#e8e8e8",
+              borderRadius: 6,
+              padding: "4px 8px",
+              cursor: viewIndex === 0 ? "default" : "pointer",
+              fontFamily: "inherit",
+              fontSize: 12,
+            }}
+          >
+            ◀
+          </button>
+          <span
+            style={{
+              fontSize: 11,
+              color: "#8a8a9a",
+              minWidth: 92,
+              textAlign: "center",
+            }}
+          >
+            {viewIndex === 0
+              ? "Start"
+              : `Move ${viewIndex} / ${liveMoves.length}`}
+          </span>
+          <button
+            type="button"
+            onClick={() => jumpTo(viewIndex + 1)}
+            disabled={isLatest}
+            aria-label="Next move"
+            style={{
+              background: "#1a1a24",
+              border: "1px solid #353545",
+              color: isLatest ? "#4a4a5a" : "#e8e8e8",
+              borderRadius: 6,
+              padding: "4px 8px",
+              cursor: isLatest ? "default" : "pointer",
+              fontFamily: "inherit",
+              fontSize: 12,
+            }}
+          >
+            ▶
+          </button>
+          <button
+            type="button"
+            onClick={() => jumpTo(liveMoves.length)}
+            disabled={isLatest}
+            aria-label="Latest move"
+            style={{
+              background: "#1a1a24",
+              border: "1px solid #353545",
+              color: isLatest ? "#4a4a5a" : "#e8e8e8",
+              borderRadius: 6,
+              padding: "4px 8px",
+              cursor: isLatest ? "default" : "pointer",
+              fontFamily: "inherit",
+              fontSize: 12,
+            }}
+          >
+            ⏭
+          </button>
+        </div>
+      )}
+
       {pendingPromotion && (
         <div className="me-promotion-picker">
           <span className="me-promotion-label">Promote to:</span>
@@ -276,13 +473,34 @@ export default function MoveEntryBoard({
 
       <div className="me-footer">
         <span className="me-turn-indicator">
-          {game.status === "complete"
+          {!isLatest
+            ? `Viewing move ${viewIndex} of ${liveMoves.length}`
+            : game.status === "complete"
             ? "Game complete"
             : `${turn === "w" ? "White" : "Black"} to move`}
         </span>
         {onUndo && interactive && game.moves && game.moves.length > 0 && (
           <button type="button" className="me-undo" onClick={onUndo}>
             ↶ Undo last move
+          </button>
+        )}
+        {(liveMoves.length > 0 || game.result) && (
+          <button
+            type="button"
+            onClick={() => downloadPgn(game)}
+            style={{
+              background: "#1a1a24",
+              border: "1px solid #353545",
+              color: "#e8e8e8",
+              borderRadius: 6,
+              padding: "4px 10px",
+              cursor: "pointer",
+              fontFamily: "inherit",
+              fontSize: 12,
+              marginLeft: 8,
+            }}
+          >
+            ⬇ Download PGN
           </button>
         )}
       </div>

@@ -1,8 +1,20 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useOutletContext, useParams } from "react-router-dom";
 import { api } from "../../api.js";
 import MoveEntryBoard from "../../components/MoveEntryBoard.jsx";
+import {
+  BOARD_THEMES,
+  DEFAULT_BOARD_THEME,
+  PIECE_THEMES,
+  DEFAULT_PIECE_THEME,
+} from "../../components/chessThemes.js";
 import "../../css/CageMatch.css";
+
+// Same keys Chess960.jsx persists under — a board/piece theme picked on
+// either page carries over to the other, rather than tracking two
+// independent preferences for what's really one setting.
+const THEME_STORAGE_KEY = "c960-board-theme";
+const PIECE_THEME_STORAGE_KEY = "c960-piece-theme";
 
 const RESULT_OPTIONS = [
   { value: "", label: "—" },
@@ -78,6 +90,8 @@ function GameRow({
   onMove,
   onUndo,
   busy,
+  theme,
+  pieceTheme,
 }) {
   return (
     <div className="cm-game-row-wrap">
@@ -116,6 +130,8 @@ function GameRow({
             disabled={busy}
             onMove={onMove}
             onUndo={game.moves.length ? onUndo : null}
+            theme={theme}
+            pieceTheme={pieceTheme}
           />
           {game.suggestedResult && game.status !== "complete" && (
             <div className="cm-suggested-result">
@@ -244,6 +260,39 @@ export default function CageMatch() {
   const [busy, setBusy] = useState(false);
   const [uploadingSide, setUploadingSide] = useState(null);
 
+  const [theme, setTheme] = useState(() => {
+    try {
+      const saved = localStorage.getItem(THEME_STORAGE_KEY);
+      return saved && BOARD_THEMES[saved] ? saved : DEFAULT_BOARD_THEME;
+    } catch {
+      return DEFAULT_BOARD_THEME;
+    }
+  });
+  const [pieceTheme, setPieceTheme] = useState(() => {
+    try {
+      const saved = localStorage.getItem(PIECE_THEME_STORAGE_KEY);
+      return saved && PIECE_THEMES[saved] ? saved : DEFAULT_PIECE_THEME;
+    } catch {
+      return DEFAULT_PIECE_THEME;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } catch {
+      // Private browsing / storage disabled — theme just won't persist, no big deal.
+    }
+  }, [theme]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(PIECE_THEME_STORAGE_KEY, pieceTheme);
+    } catch {
+      // Same as above — non-fatal.
+    }
+  }, [pieceTheme]);
+
   async function run(fn) {
     setBusy(true);
     setError("");
@@ -276,8 +325,54 @@ export default function CageMatch() {
     setOpenGameKey((prev) => (prev === key ? null : key));
   }
 
+  const selectStyle = {
+    background: "#1a1a24",
+    border: "1px solid #353545",
+    color: "#e8e8e8",
+    padding: "6px 12px",
+    borderRadius: 6,
+    fontFamily: "inherit",
+    fontSize: 12,
+    outline: "none",
+    cursor: "pointer",
+  };
+
   return (
     <div className="cm-root">
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          gap: 10,
+          marginBottom: 12,
+        }}
+      >
+        <select
+          value={theme}
+          onChange={(e) => setTheme(e.target.value)}
+          aria-label="Board theme"
+          style={selectStyle}
+        >
+          {Object.entries(BOARD_THEMES).map(([key, th]) => (
+            <option key={key} value={key}>
+              {th.label}
+            </option>
+          ))}
+        </select>
+        <select
+          value={pieceTheme}
+          onChange={(e) => setPieceTheme(e.target.value)}
+          aria-label="Piece theme"
+          style={selectStyle}
+        >
+          {Object.entries(PIECE_THEMES).map(([key, pt]) => (
+            <option key={key} value={key}>
+              {pt.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div className="cm-scoreboard">
         <div className="cm-competitor">
           <Avatar
@@ -345,6 +440,8 @@ export default function CageMatch() {
                   key={game.id}
                   game={game}
                   busy={busy}
+                  theme={theme}
+                  pieceTheme={pieceTheme}
                   isOpen={openGameKey === key}
                   onToggleBoard={() => toggleBoard(key)}
                   onSetResult={(result) =>
