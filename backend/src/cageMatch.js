@@ -103,18 +103,36 @@ const VALID_VARIANTS = new Set(["standard", "chess960"]);
 // draw rather than the whole match/section sharing one position. If you'd
 // rather a section share a single draw, generate it once per section here
 // instead and pass the same value into every game below.
-function startFenFor(variant) {
+//
+// Keeps the FULL position object — { id, backRank, fen } — the same shape
+// chess960.randomChess960Position() already returns for Swiss/bracket
+// rounds (see tournamentService.js's t.currentChess960/roundChess960), not
+// just the bare FEN string. The Chess960 tab (Chess960.jsx) reads
+// `.backRank` and `.id` directly; dropping those in favor of just a FEN
+// string is what made a Cage Match's chess960 games invisible/broken there.
+function chess960PositionFor(variant) {
   if (variant !== "chess960") return null;
-  return chessGame.chess960StartFen(chess960.randomChess960Position());
+  const position = chess960.randomChess960Position();
+  // Normalize so `.fen` is always present even if a given
+  // chess960.randomChess960Position() implementation only returns
+  // { id, backRank } without a precomputed FEN — chessGame's builder
+  // covers that case; otherwise this is a no-op pass-through.
+  const fen = position.fen || chessGame.chess960StartFen(position);
+  return { ...position, fen };
 }
 
 function makeGame(gameNum, whiteId, blackId, variant) {
+  const chess960Position = chess960PositionFor(variant);
   return {
     id: uid(),
     gameNum,
     whiteId,
     blackId,
-    startFen: startFenFor(variant),
+    // Display metadata for the Chess960 tab — null for standard-variant
+    // games.
+    chess960: chess960Position,
+    // What chess.js/MoveEntryBoard actually load the game from.
+    startFen: chess960Position ? chess960Position.fen : null,
     moves: [],
     fen: null,
     pgn: null,
@@ -652,6 +670,7 @@ function serializeGame(g, nameOf) {
     whiteName: nameOf(g.whiteId),
     blackId: g.blackId,
     blackName: nameOf(g.blackId),
+    chess960: g.chess960,
     startFen: g.startFen,
     moves: g.moves,
     fen: g.fen,

@@ -58,6 +58,54 @@ function competitorNames(m) {
   return `${a} vs ${b}`;
 }
 
+// Cage Match has no shared "round" the way Swiss/round-robin does, and no
+// "match" the way a bracket does — a Chess960-variant section can carry
+// several games, and each game gets its own independent random draw (see
+// cageMatch.js's chess960PositionFor), so the picker here lists every
+// individual chess960 game across every such section.
+function CageGamePicker({ games, selectedId, onSelect }) {
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+      {games.map((g) => {
+        const active = g.id === selectedId;
+        return (
+          <button
+            key={g.id}
+            type="button"
+            onClick={() => onSelect(g.id)}
+            style={{
+              background: active ? "#252532" : "#1a1a24",
+              border: `1px solid ${active ? "#d4a853" : "#353545"}`,
+              color: active ? "#e8e8e8" : "#8a8a9a",
+              fontSize: 11,
+              fontWeight: 600,
+              padding: "8px 12px",
+              borderRadius: 8,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              textAlign: "left",
+              lineHeight: 1.4,
+            }}
+          >
+            <div
+              style={{
+                letterSpacing: "0.05em",
+                textTransform: "uppercase",
+                fontSize: 10,
+              }}
+            >
+              {g.sectionLabel} · Game {g.gameNum}
+            </div>
+            <div>
+              {g.whiteName} vs {g.blackName}
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // Bracket matches don't share a synchronous "round" the way Swiss/round-robin
 // rounds do — a match's Chess960 position is rolled the moment its two sides
 // are known (see tournamentService.js's activateMatch), which can happen at
@@ -131,17 +179,41 @@ export default function Chess960() {
     }
   });
 
+  const isCageMatch = t.format === "match" && t.matchType === "cage";
   const isBracket = Boolean(t.bracket);
 
   // Swiss/round-robin: one position per round, keyed by round number.
-  const roundHistory = t.rounds.filter((r) => r.chess960);
+  // t.rounds only exists for individual/team tournaments — a Cage Match
+  // tournament has neither t.rounds nor t.bracket, so both of these must
+  // be skipped rather than attempted for it.
+  const roundHistory =
+    !isCageMatch && !isBracket ? t.rounds.filter((r) => r.chess960) : [];
   // Elimination brackets: one position per match, keyed by match id.
   const matchHistory = isBracket
     ? (t.bracket.matches || []).filter((m) => m.chess960)
     : [];
+  // Cage Match: one position per GAME (not per round or per match) — every
+  // chess960-variant section can carry several games, and each gets its
+  // own independent random draw (see cageMatch.js), so this flattens every
+  // such game across every chess960 section into one flat, pickable list.
+  const cageGameHistory = isCageMatch
+    ? t.cageMatch.sections.flatMap((s) =>
+        s.variant === "chess960"
+          ? s.games.map((g) => ({
+              id: g.id,
+              sectionLabel: s.label,
+              gameNum: g.gameNum,
+              whiteName: g.whiteName,
+              blackName: g.blackName,
+              chess960: g.chess960,
+            }))
+          : [],
+      )
+    : [];
 
   const [selectedRound, setSelectedRound] = useState(t.currentRound);
   const [selectedMatchId, setSelectedMatchId] = useState(null);
+  const [selectedCageGameId, setSelectedCageGameId] = useState(null);
 
   useEffect(() => {
     try {
@@ -178,7 +250,20 @@ export default function Chess960() {
     );
   }, [matchHistory.length]);
 
-  if (!t.chess960) {
+  useEffect(() => {
+    if (!cageGameHistory.length) return;
+    setSelectedCageGameId((prev) =>
+      prev && cageGameHistory.some((g) => g.id === prev)
+        ? prev
+        : cageGameHistory[0].id,
+    );
+  }, [cageGameHistory.length]);
+
+  const usesChess960 = isCageMatch
+    ? t.cageMatch.sections.some((s) => s.variant === "chess960")
+    : t.chess960;
+
+  if (!usesChess960) {
     return (
       <div
         style={{
@@ -201,22 +286,38 @@ export default function Chess960() {
     ? matchHistory.find((m) => m.id === selectedMatchId)
     : null;
 
-  const current = isBracket
+  const selectedCageGame = isCageMatch
+    ? cageGameHistory.find((g) => g.id === selectedCageGameId)
+    : null;
+
+  const current = isCageMatch
+    ? selectedCageGame?.chess960 ?? null
+    : isBracket
     ? selectedMatch?.chess960 ?? null
     : roundHistory.find((r) => r.round === selectedRound)?.chess960 ??
       t.currentChess960;
 
-  const badgeLabel = isBracket
+  const badgeLabel = isCageMatch
+    ? selectedCageGame
+      ? `${selectedCageGame.sectionLabel} · Game ${selectedCageGame.gameNum}`
+      : null
+    : isBracket
     ? selectedMatch
       ? `${bracketLabel(selectedMatch)} · Round ${selectedMatch.round}`
       : null
     : `Round ${selectedRound ?? t.currentRound}`;
 
-  const emptyStateHint = isBracket
+  const emptyStateHint = isCageMatch
+    ? "Each Chess960 game gets its own random starting position — check back once that section's games are set up."
+    : isBracket
     ? "Each match gets its own random position the moment both sides are known — check back once the bracket starts filling in."
     : "A fresh random position is drawn the moment Round 1 is generated — check back once pairings are up.";
 
-  const footerHint = isBracket
+  const footerHint = isCageMatch
+    ? selectedCageGame
+      ? `This board starts from this position for ${selectedCageGame.whiteName} vs ${selectedCageGame.blackName} (${selectedCageGame.sectionLabel}, Game ${selectedCageGame.gameNum}) — set the board up accordingly before play begins.`
+      : "This board starts from this position — set it up accordingly before play begins."
+    : isBracket
     ? selectedMatch
       ? `Every board in ${competitorNames(
           selectedMatch,
@@ -348,6 +449,16 @@ export default function Chess960() {
           </div>
         )}
 
+        {isCageMatch && cageGameHistory.length > 0 && (
+          <div style={{ marginBottom: 20 }}>
+            <CageGamePicker
+              games={cageGameHistory}
+              selectedId={selectedCageGameId}
+              onSelect={setSelectedCageGameId}
+            />
+          </div>
+        )}
+
         {!current ? (
           <p style={{ color: "#8a8a9a", fontSize: 14, margin: 0 }}>
             {emptyStateHint}
@@ -467,7 +578,7 @@ export default function Chess960() {
         )}
       </div>
 
-      {!isBracket && (
+      {!isBracket && !isCageMatch && (
         <Chess960History
           history={roundHistory}
           selectedRound={selectedRound}
