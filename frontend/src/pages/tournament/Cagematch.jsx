@@ -32,30 +32,59 @@ function resultLabel(result) {
 }
 
 // Shared result dropdown used for section games, mini-match games, and the
-// Armageddon result — picking a value sets the result immediately, picking
-// "—" clears it (only allowed where `allowClear` is true, since mini-match/
-// Armageddon results aren't meant to be un-set once the next stage may
-// already depend on them).
-function ResultPicker({ value, onSet, onClear, disabled, allowClear = true }) {
+// Armageddon result. Selecting a value only stages it locally — nothing is
+// submitted until Submit is clicked, and the button is disabled until the
+// pending selection actually differs from the persisted result. The blank
+// placeholder option is always rendered (never filtered out), since hiding
+// it while still controlling the <select> with an empty-string value was
+// exactly what caused the previous silent-default-to-"1-0" bug: with no
+// matching <option value=""> in the DOM, the browser fell back to
+// displaying the first real option without that ever counting as a
+// selection, so clicking that same option again fired no onChange at all.
+function ResultPicker({ value, onSet, onClear = () => {}, disabled, busy }) {
+  const [pending, setPending] = useState(value || "");
+
+  // Stay in sync with the real persisted value — e.g. once a submit
+  // resolves and refresh() brings the new result back, or if it changed
+  // from elsewhere. A local, unsent edit only survives until then or until
+  // Submit is clicked.
+  useEffect(() => {
+    setPending(value || "");
+  }, [value]);
+
+  const hasChanged = pending !== (value || "");
+
+  function handleSubmit() {
+    if (!hasChanged) return;
+    if (pending === "") {
+      onClear();
+    } else {
+      onSet(pending);
+    }
+  }
+
   return (
-    <select
-      value={value || ""}
-      disabled={disabled}
-      onChange={(e) => {
-        const val = e.target.value;
-        if (!val) {
-          if (allowClear) onClear();
-        } else {
-          onSet(val);
-        }
-      }}
-    >
-      {RESULT_OPTIONS.filter((o) => allowClear || o.value).map((o) => (
-        <option key={o.value || "none"} value={o.value}>
-          {o.label}
-        </option>
-      ))}
-    </select>
+    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+      <select
+        value={pending}
+        disabled={disabled}
+        onChange={(e) => setPending(e.target.value)}
+      >
+        {RESULT_OPTIONS.map((o) => (
+          <option key={o.value || "none"} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+      <button
+        type="button"
+        className="btn-secondary btn-sm"
+        disabled={disabled || busy || !hasChanged}
+        onClick={handleSubmit}
+      >
+        Submit
+      </button>
+    </div>
   );
 }
 
@@ -111,6 +140,7 @@ function GameRow({
         <ResultPicker
           value={game.result}
           disabled={busy}
+          busy={busy}
           onSet={onSetResult}
           onClear={onClearResult}
         />
@@ -229,9 +259,8 @@ function ArmageddonPanel({ armageddon, busy, onBid, onResult }) {
           <ResultPicker
             value={armageddon.result}
             disabled={busy}
-            allowClear={false}
+            busy={busy}
             onSet={onResult}
-            onClear={() => {}}
           />
         </div>
       </div>
@@ -497,13 +526,12 @@ export default function CageMatch() {
                 <ResultPicker
                   value={game.result}
                   disabled={busy || !!game.result}
-                  allowClear={false}
+                  busy={busy}
                   onSet={(result) =>
                     run(() =>
                       api.recordCageMatchTiebreakResult(id, game.id, result),
                     )
                   }
-                  onClear={() => {}}
                 />
               </div>
             ))}
