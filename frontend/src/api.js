@@ -20,6 +20,21 @@ export const api = {
   logout: () => request("/auth/logout", { method: "POST" }),
   getAuthStatus: () => request("/auth/me"),
 
+  // Not a JSON body — multipart upload, handled separately from request().
+  uploadImage: async (file) => {
+    const form = new FormData();
+    form.append("image", file);
+    const res = await fetch(`${BASE}/uploads/image`, {
+      method: "POST",
+      credentials: "include",
+      body: form,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok)
+      throw new Error(data.error || `Request failed (${res.status})`);
+    return data;
+  },
+
   listTournaments: () => request("/tournaments"),
   listPublicTournaments: () => request("/tournaments/public"),
   getTournament: (id) => request(`/tournaments/${id}`),
@@ -76,6 +91,55 @@ export const api = {
     }),
   validateBughouseTeams: (id) =>
     request(`/tournaments/${id}/bughouse/validate`),
+
+  // ─── Cage Match (1 vs 1 match format) ──────────────────────────────────
+  recordCageMatchMove: (id, sectionId, gameId, move) =>
+    request(
+      `/tournaments/${id}/cagematch/sections/${sectionId}/games/${gameId}/move`,
+      { method: "POST", body: JSON.stringify({ move }) },
+    ),
+  undoCageMatchMove: (id, sectionId, gameId) =>
+    request(
+      `/tournaments/${id}/cagematch/sections/${sectionId}/games/${gameId}/move`,
+      { method: "DELETE" },
+    ),
+  setCageMatchGameResult: (id, sectionId, gameId, result) =>
+    request(
+      `/tournaments/${id}/cagematch/sections/${sectionId}/games/${gameId}/result`,
+      { method: "POST", body: JSON.stringify({ result }) },
+    ),
+  clearCageMatchGameResult: (id, sectionId, gameId) =>
+    request(
+      `/tournaments/${id}/cagematch/sections/${sectionId}/games/${gameId}/result`,
+      { method: "DELETE" },
+    ),
+  startCageMatchTiebreak: (id) =>
+    request(`/tournaments/${id}/cagematch/tiebreak/start`, {
+      method: "POST",
+    }),
+  recordCageMatchTiebreakResult: (id, gameId, result) =>
+    request(`/tournaments/${id}/cagematch/tiebreak/result`, {
+      method: "POST",
+      body: JSON.stringify({ gameId, result }),
+    }),
+  recordCageMatchArmageddonBids: (id, bidA, bidB) =>
+    request(`/tournaments/${id}/cagematch/tiebreak/armageddon/bids`, {
+      method: "POST",
+      body: JSON.stringify({ bidA, bidB }),
+    }),
+  recordCageMatchArmageddonResult: (id, result) =>
+    request(`/tournaments/${id}/cagematch/tiebreak/armageddon/result`, {
+      method: "POST",
+      body: JSON.stringify({ result }),
+    }),
+  getCageMatchHistory: (id) => request(`/tournaments/${id}/cagematch/history`),
+  getCageMatchSectionPerformance: (id) =>
+    request(`/tournaments/${id}/cagematch/performance`),
+  setCageMatchCompetitorPicture: (id, side, pictureUrl) =>
+    request(`/tournaments/${id}/cagematch/competitors/${side}/picture`, {
+      method: "POST",
+      body: JSON.stringify({ pictureUrl }),
+    }),
 
   startDecider: (id, payload) =>
     request(`/tournaments/${id}/decider/start`, {

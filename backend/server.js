@@ -34,6 +34,7 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const path = require("path");
 const tournamentsRouter = require("./src/routes/tournaments");
+const uploadsRouter = require("./src/routes/uploads");
 const authRouter = require("./src/routes/routes-auth");
 const reviewsRouter = require("./src/routes/reviews");
 const tournamentService = require("./src/tournamentService");
@@ -67,7 +68,15 @@ app.use(cookieParser());
 
 app.use("/api/auth", authRouter);
 app.use("/api/tournaments", tournamentsRouter);
+app.use("/api/uploads", uploadsRouter);
 app.use("/api/reviews", reviewsRouter);
+
+// Serves back whatever imageUpload.js writes to src/uploads/images (Cage
+// Match competitor pictures, today) at the /uploads/images/<file> URLs
+// POST /api/uploads/image returns. Placed ahead of the frontend's own
+// static/catch-all block below so it isn't shadowed by that block's
+// wildcard route.
+app.use("/uploads", express.static(path.join(__dirname, "src", "uploads")));
 
 app.get("/api/health", async (req, res) => {
   try {

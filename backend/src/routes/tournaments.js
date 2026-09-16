@@ -137,6 +137,150 @@ router.get(
   wrap((req) => svc.validateBughouseTeams(req.params.id)),
 );
 
+// ─── Cage Match (1 vs 1 match format) ────────────────────────────────────
+// See tournamentService.js's Cage Match section / cageMatch.js for the full
+// data model. GET /:id already returns the whole `cageMatch` sub-object
+// (score, tieAlert, tiebreak state) on every fetch, same pattern as the
+// standings decider above — these routes just mutate.
+
+// Manual move entry — moves are validated (legality) and reflected live,
+// same "instantly visible to the client" pattern as round results elsewhere
+// in the app. Body: { move: "e4" } or { move: { from, to, promotion? } }.
+router.post(
+  "/:id/cagematch/sections/:sectionId/games/:gameId/move",
+  requireAdmin,
+  wrap((req) =>
+    svc.recordCageMatchMove(req.params.id, {
+      sectionId: req.params.sectionId,
+      gameId: req.params.gameId,
+      move: req.body.move,
+    }),
+  ),
+);
+
+// Corrects a mis-entered move — removes only the most recent one.
+router.delete(
+  "/:id/cagematch/sections/:sectionId/games/:gameId/move",
+  requireAdmin,
+  wrap((req) =>
+    svc.undoCageMatchMove(req.params.id, {
+      sectionId: req.params.sectionId,
+      gameId: req.params.gameId,
+    }),
+  ),
+);
+
+// Records the final result for a section game — resignation, timeout,
+// agreed draw, or confirming a board-detected checkmate/stalemate the move
+// list already reflects. Body: { result: "1-0" | "0-1" | "1/2-1/2" | "1F-0F" | "0F-1F" | "0F-0F" }.
+router.post(
+  "/:id/cagematch/sections/:sectionId/games/:gameId/result",
+  requireAdmin,
+  wrap((req) =>
+    svc.setCageMatchGameResult(req.params.id, {
+      sectionId: req.params.sectionId,
+      gameId: req.params.gameId,
+      result: req.body.result,
+    }),
+  ),
+);
+
+// Escape hatch for a mis-recorded result. If a tiebreak had already started
+// off the back of what turns out to be a false tie, this clears it too.
+router.delete(
+  "/:id/cagematch/sections/:sectionId/games/:gameId/result",
+  requireAdmin,
+  wrap((req) =>
+    svc.clearCageMatchGameResult(req.params.id, {
+      sectionId: req.params.sectionId,
+      gameId: req.params.gameId,
+    }),
+  ),
+);
+
+// Starts the 4-game mini-match — only valid once every section game is
+// played and the combined score is level (GET /:id's cageMatch.tieAlert
+// tells the frontend when to offer this).
+router.post(
+  "/:id/cagematch/tiebreak/start",
+  requireAdmin,
+  wrap((req) => svc.startCageMatchTiebreak(req.params.id)),
+);
+
+// Records a result for the current mini-match game. Stops automatically
+// (no further games needed) once a side has clinched more than half the
+// available points — cageMatch.js handles that, this just records what's
+// given. Once both bestOf games are played still level, this same match
+// object flips into Armageddon automatically; see the two routes below.
+router.post(
+  "/:id/cagematch/tiebreak/result",
+  requireAdmin,
+  wrap((req) =>
+    svc.recordCageMatchTiebreakResult(req.params.id, {
+      gameId: req.body.gameId,
+      result: req.body.result,
+    }),
+  ),
+);
+
+// Arbiter enters both players' privately-collected bids (seconds) at once.
+// Lower bid gets Black with draw odds. Equal bids come back with
+// tiebreak.armageddon.status === "bid_tie" (not an error) — call this route
+// again with a fresh pair once the arbiter has collected a re-bid.
+router.post(
+  "/:id/cagematch/tiebreak/armageddon/bids",
+  requireAdmin,
+  wrap((req) =>
+    svc.recordCageMatchArmageddonBids(req.params.id, {
+      bidA: req.body.bidA,
+      bidB: req.body.bidB,
+    }),
+  ),
+);
+
+// Records the Armageddon result. Anything other than a clean White win
+// (including a draw or double forfeit) goes to Black by draw odds — always
+// decisive, and finishes the match.
+router.post(
+  "/:id/cagematch/tiebreak/armageddon/result",
+  requireAdmin,
+  wrap((req) =>
+    svc.recordCageMatchArmageddonResult(req.params.id, {
+      result: req.body.result,
+    }),
+  ),
+);
+
+// Game History tab — flat, chronological list of every game across every
+// section plus the tiebreak/Armageddon, each with its full move list/PGN.
+router.get(
+  "/:id/cagematch/history",
+  requireAdmin,
+  wrap((req) => svc.getCageMatchHistory(req.params.id)),
+);
+
+// Section Performance tab — per-section, per-competitor W/L/D + points.
+router.get(
+  "/:id/cagematch/performance",
+  requireAdmin,
+  wrap((req) => svc.getCageMatchSectionPerformance(req.params.id)),
+);
+
+// Sets/replaces a competitor's picture. `side` is "A" or "B". Body:
+// { pictureUrl } — obtained beforehand from POST /api/uploads/image (see
+// uploads.js), not uploaded directly through this route.
+router.post(
+  "/:id/cagematch/competitors/:side/picture",
+  requireAdmin,
+  wrap((req) =>
+    svc.setCageMatchCompetitorPicture(
+      req.params.id,
+      req.params.side,
+      req.body.pictureUrl,
+    ),
+  ),
+);
+
 // ─── Tiebreak Decider (playoff) system ──────────────────────────────────
 // See tournamentService.js's Decider section for the full data model.
 // GET /:id already returns tieAlert/decider on every fetch, so there's no

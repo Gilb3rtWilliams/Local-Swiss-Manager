@@ -131,6 +131,80 @@
   animation: wrTrophyFloat 2.4s ease-in-out infinite;
 }
 
+/* ── Cage Match: winner photo in place of the trophy ─────────────────── */
+.wr-cage-winner-photo {
+  width: clamp(110px, 20vw, 160px);
+  height: clamp(110px, 20vw, 160px);
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #d4a853;
+  box-shadow: 0 0 30px rgba(212, 168, 83, 0.6);
+  animation: wrTrophyFloat 2.4s ease-in-out infinite;
+}
+
+.wr-cage-score-line {
+  font-family: var(--font-mono, "SF Mono", Monaco, "Cascadia Code", monospace);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #d4a853;
+  margin: 10px 0 0;
+}
+
+/* ── Cage Match: winner vs. runner-up scorecard (podium stage) ───────── */
+.wr-cage-scorecard {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.wr-cage-competitor {
+  background: rgba(25, 25, 36, 0.85);
+  border: 1px solid #252532;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-radius: 14px;
+  padding: 18px 24px;
+  min-width: 150px;
+  color: #e8e8e8;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+  animation: wrPodiumUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.wr-cage-winner {
+  padding-top: 26px;
+  padding-bottom: 26px;
+  border-color: rgba(212, 168, 83, 0.6);
+  box-shadow: 0 0 24px rgba(212, 168, 83, 0.2);
+  animation-delay: 0.15s;
+}
+
+.wr-cage-avatar-sm {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #353545;
+  margin-bottom: 8px;
+}
+
+.wr-cage-winner .wr-cage-avatar-sm {
+  border-color: #d4a853;
+}
+
+.wr-cage-avatar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
 @keyframes wrTrophyFloat {
   0%,
   100% {
@@ -293,6 +367,10 @@
     order: initial;
     padding: 16px 20px;
   }
+  .wr-cage-scorecard {
+    flex-direction: column;
+    align-items: center;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -301,7 +379,9 @@
   .wr-dots span,
   .wr-reveal,
   .wr-trophy,
+  .wr-cage-winner-photo,
   .wr-podium-card,
+  .wr-cage-competitor,
   .wr-dismiss {
     animation: none !important;
     position: relative;

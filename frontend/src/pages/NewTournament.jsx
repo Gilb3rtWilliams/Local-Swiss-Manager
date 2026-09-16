@@ -34,6 +34,15 @@ function emptyPlayer() {
 function emptyTeam() {
   return { key: rowId(), name: "", players: [emptyPlayer(), emptyPlayer()] };
 }
+function emptyCageSection() {
+  return {
+    key: rowId(),
+    label: "",
+    numberOfGames: 4,
+    variant: "standard",
+    timeControl: "",
+  };
+}
 
 function avgRating(list) {
   const rated = list.filter(
@@ -132,12 +141,29 @@ export default function NewTournament() {
   ]);
   const [teams, setTeams] = useState([emptyTeam(), emptyTeam()]);
 
+  // Cage Match (format === "match"). "tournament" (multiple opponents) is a
+  // planned follow-up — the option is shown but disabled below.
+  const [matchType, setMatchType] = useState("cage");
+  const [competitorAName, setCompetitorAName] = useState("");
+  const [competitorAPictureUrl, setCompetitorAPictureUrl] = useState("");
+  const [competitorAUploading, setCompetitorAUploading] = useState(false);
+  const [competitorBName, setCompetitorBName] = useState("");
+  const [competitorBPictureUrl, setCompetitorBPictureUrl] = useState("");
+  const [competitorBUploading, setCompetitorBUploading] = useState(false);
+  // Freeform sections (time formats) — label is a name or a number, exactly
+  // like the rest of this form's "empty array" convention. Each section
+  // gets its own game count, variant, and time control so a match can mix
+  // e.g. 4 Classical games with 2 Blitz games.
+  const [cageSections, setCageSections] = useState([emptyCageSection()]);
+
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const competitorCount =
-    format === "team"
+    format === "match"
+      ? 2
+      : format === "team"
       ? teams.length
       : players.filter((p) => p.name.trim()).length;
 
@@ -215,12 +241,119 @@ export default function NewTournament() {
     );
   }
 
+  function updateCageSection(idx, field, value) {
+    setCageSections((secs) =>
+      secs.map((s, i) => (i === idx ? { ...s, [field]: value } : s)),
+    );
+  }
+  function addCageSection() {
+    setCageSections((secs) => [...secs, emptyCageSection()]);
+  }
+  function removeCageSection(idx) {
+    setCageSections((secs) => secs.filter((_, i) => i !== idx));
+  }
+
+  // Uploads immediately on file selection (rather than waiting for form
+  // submit) so the picture is ready to attach the moment the tournament is
+  // created, and so the person gets instant feedback/errors on the image
+  // itself rather than discovering a problem after filling in everything
+  // else. The returned URL is just held in state until submit.
+  async function handleCompetitorPicture(side, file) {
+    if (!file) return;
+    const setUploading =
+      side === "A" ? setCompetitorAUploading : setCompetitorBUploading;
+    const setPictureUrl =
+      side === "A" ? setCompetitorAPictureUrl : setCompetitorBPictureUrl;
+
+    setUploading(true);
+    setError("");
+    try {
+      const data = await api.uploadImage(file);
+      setPictureUrl(data.url);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploading(false);
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
 
     if (!name.trim()) {
       setError("Tournament name is required.");
+      return;
+    }
+
+    if (format === "match") {
+      if (matchType !== "cage") {
+        setError(
+          "Match Tournament (multiple opponents) isn't available yet — choose Cage Match.",
+        );
+        return;
+      }
+      if (!competitorAName.trim() || !competitorBName.trim()) {
+        setError("Both competitors need a name.");
+        return;
+      }
+      if (competitorAUploading || competitorBUploading) {
+        setError("Wait for the picture upload to finish before continuing.");
+        return;
+      }
+
+      const cleanSections = cageSections
+        .map((s) => ({
+          label: s.label.trim(),
+          numberOfGames: Number(s.numberOfGames),
+          variant: s.variant,
+          timeControl: s.timeControl.trim(),
+        }))
+        .filter((s) => s.label && s.numberOfGames > 0);
+
+      if (cleanSections.length === 0) {
+        setError(
+          "Add at least one section (e.g. Classical, Rapid, Blitz) with a name and a number of games.",
+        );
+        return;
+      }
+
+      const matchPayload = {
+        name,
+        category,
+        venue,
+        description,
+        federation,
+        organizerName,
+        organizerContact,
+        chiefArbiter,
+        deputyChiefArbiter,
+        dateFrom,
+        dateTo,
+        fideRated,
+        isTest,
+        format: "match",
+        matchType: "cage",
+        competitorA: {
+          name: competitorAName.trim(),
+          pictureUrl: competitorAPictureUrl || null,
+        },
+        competitorB: {
+          name: competitorBName.trim(),
+          pictureUrl: competitorBPictureUrl || null,
+        },
+        sections: cleanSections,
+      };
+
+      setSubmitting(true);
+      try {
+        const t = await api.createTournament(matchPayload);
+        navigate(`/tournament/${t.id}`);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setSubmitting(false);
+      }
       return;
     }
 
@@ -317,7 +450,9 @@ export default function NewTournament() {
       <div className="container">
         <h1 className="page-title">New Tournament</h1>
         <p className="page-subtitle">
-          Set the details, add competitors, and generate Round 1.
+          {format === "match"
+            ? "Set the details, add both competitors, and start the match."
+            : "Set the details, add competitors, and generate Round 1."}
         </p>
 
         <form onSubmit={handleSubmit}>
@@ -492,8 +627,23 @@ export default function NewTournament() {
                       <option value="team">
                         Team (league, bughouse, etc.)
                       </option>
+                      <option value="match">Match (1 vs 1, etc.)</option>
                     </select>
                   </label>
+                  {format === "match" && (
+                    <label className="field">
+                      <span>Match Type</span>
+                      <select
+                        value={matchType}
+                        onChange={(e) => setMatchType(e.target.value)}
+                      >
+                        <option value="cage">Cage Match (1 vs 1)</option>
+                        <option value="tournament" disabled>
+                          Match Tournament (multiple opponents) — coming soon
+                        </option>
+                      </select>
+                    </label>
+                  )}
                   {format === "team" && (
                     <label className="field">
                       <span>Variant</span>
@@ -509,26 +659,28 @@ export default function NewTournament() {
                       </select>
                     </label>
                   )}
-                  <label className="field">
-                    <span>System</span>
-                    <select
-                      value={system}
-                      onChange={(e) => setSystem(e.target.value)}
-                    >
-                      <option value="swiss">Swiss</option>
-                      <option value="round_robin">Round Robin</option>
-                      <option value="double_round_robin">
-                        Double Round Robin
-                      </option>
-                      <option value="single_elimination">
-                        Single Elimination
-                      </option>
-                      <option value="double_elimination">
-                        Double Elimination
-                      </option>
-                    </select>
-                  </label>
-                  {system === "single_elimination" && (
+                  {format !== "match" && (
+                    <label className="field">
+                      <span>System</span>
+                      <select
+                        value={system}
+                        onChange={(e) => setSystem(e.target.value)}
+                      >
+                        <option value="swiss">Swiss</option>
+                        <option value="round_robin">Round Robin</option>
+                        <option value="double_round_robin">
+                          Double Round Robin
+                        </option>
+                        <option value="single_elimination">
+                          Single Elimination
+                        </option>
+                        <option value="double_elimination">
+                          Double Elimination
+                        </option>
+                      </select>
+                    </label>
+                  )}
+                  {system === "single_elimination" && format !== "match" && (
                     <label className="field">
                       <span>3rd Place Playoff</span>
                       <SegmentedToggle
@@ -542,68 +694,82 @@ export default function NewTournament() {
                       />
                     </label>
                   )}
-                  <label className="field">
-                    <span>Time Control</span>
-                    <input
-                      type="text"
-                      value={timeControl}
-                      onChange={(e) => setTimeControl(e.target.value)}
-                      placeholder="90+30, 5+0, etc."
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Rounds</span>
-                    <div className="rounds-row">
+                  {format !== "match" && (
+                    <label className="field">
+                      <span>Time Control</span>
                       <input
-                        type="number"
-                        min="1"
-                        value={rounds}
-                        disabled={autoRounds || isFixedRounds}
-                        onChange={(e) => setTotalRounds(e.target.value)}
+                        type="text"
+                        value={timeControl}
+                        onChange={(e) => setTimeControl(e.target.value)}
+                        placeholder="90+30, 5+0, etc."
                       />
-                      {!isFixedRounds && (
-                        <label className="checkbox-inline">
-                          <input
-                            type="checkbox"
-                            checked={autoRounds}
-                            onChange={(e) => setAutoRounds(e.target.checked)}
-                          />
-                          Auto
-                        </label>
-                      )}
-                    </div>
-                  </label>
-                  <label className="field">
-                    <span>Chess960 (Fischer Random)</span>
-                    <SegmentedToggle
-                      name="chess960"
-                      value={chess960}
-                      onChange={setChess960}
-                      options={[
-                        { value: false, label: "Off" },
-                        { value: true, label: "On" },
-                      ]}
-                    />
-                  </label>
+                    </label>
+                  )}
+                  {format !== "match" && (
+                    <label className="field">
+                      <span>Rounds</span>
+                      <div className="rounds-row">
+                        <input
+                          type="number"
+                          min="1"
+                          value={rounds}
+                          disabled={autoRounds || isFixedRounds}
+                          onChange={(e) => setTotalRounds(e.target.value)}
+                        />
+                        {!isFixedRounds && (
+                          <label className="checkbox-inline">
+                            <input
+                              type="checkbox"
+                              checked={autoRounds}
+                              onChange={(e) => setAutoRounds(e.target.checked)}
+                            />
+                            Auto
+                          </label>
+                        )}
+                      </div>
+                    </label>
+                  )}
+                  {format !== "match" && (
+                    <label className="field">
+                      <span>Chess960 (Fischer Random)</span>
+                      <SegmentedToggle
+                        name="chess960"
+                        value={chess960}
+                        onChange={setChess960}
+                        options={[
+                          { value: false, label: "Off" },
+                          { value: true, label: "On" },
+                        ]}
+                      />
+                    </label>
+                  )}
                 </div>
                 <p className="hint" style={{ marginTop: 10 }}>
+                  {format === "match" &&
+                    "Time control, game count, and Chess960 are all set per section below — a Cage Match can mix Classical, Rapid, and Blitz sections, each with its own rules."}
                   {isRoundRobin &&
+                    format !== "match" &&
                     `Every competitor faces every other competitor${
                       system === "double_round_robin"
                         ? ", twice (once per color)."
                         : "."
                     }`}
                   {system === "swiss" &&
+                    format !== "match" &&
                     "Pairings adapt each round based on standings."}
                   {system === "single_elimination" &&
+                    format !== "match" &&
                     "Single loss and you're out. The full bracket is drawn as soon as you create the tournament."}
                   {system === "single_elimination" &&
+                    format !== "match" &&
                     (thirdPlaceMatch
                       ? " The two semifinal losers play each other for 3rd place, alongside the final."
                       : " Turn on the 3rd Place Playoff above to also draw a match between the two semifinal losers.")}
                   {system === "double_elimination" &&
+                    format !== "match" &&
                     "Lose once and you drop to the losers bracket; lose twice and you're out — unless you beat the winners-bracket champion in the Grand Final, which triggers a bracket reset."}
                   {chess960 &&
+                    format !== "match" &&
                     (isElimination
                       ? " Each bracket match gets its own random Chess960 starting position, rolled the moment both sides are known — check the match card before boards start."
                       : " A new random Chess960 starting position is drawn each round — check the Chess960 tab before boards start.")}
@@ -611,24 +777,26 @@ export default function NewTournament() {
               </div>
             </div>
 
-            <button
-              type="button"
-              className="nt-advanced-toggle"
-              onClick={() => setAdvancedOpen((o) => !o)}
-              aria-expanded={advancedOpen}
-            >
-              <span className="nt-advanced-toggle-label">
-                <span className="nt-advanced-chevron">
-                  {advancedOpen ? "▾" : "▸"}
+            {format !== "match" && (
+              <button
+                type="button"
+                className="nt-advanced-toggle"
+                onClick={() => setAdvancedOpen((o) => !o)}
+                aria-expanded={advancedOpen}
+              >
+                <span className="nt-advanced-toggle-label">
+                  <span className="nt-advanced-chevron">
+                    {advancedOpen ? "▾" : "▸"}
+                  </span>
+                  Advanced Settings
                 </span>
-                Advanced Settings
-              </span>
-              <span className="nt-advanced-toggle-hint">
-                Rating type, byes, scoring, tiebreaks
-              </span>
-            </button>
+                <span className="nt-advanced-toggle-hint">
+                  Rating type, byes, scoring, tiebreaks
+                </span>
+              </button>
+            )}
 
-            {advancedOpen && (
+            {format !== "match" && advancedOpen && (
               <div className="nt-panel nt-advanced-panel">
                 <div className="form-grid">
                   {fideRated && (
@@ -705,7 +873,188 @@ export default function NewTournament() {
             )}
           </div>
 
-          {format === "individual" ? (
+          {format === "match" ? (
+            <div className="card nt-card nt-roster-card">
+              <div className="nt-section-head">
+                <h2>Competitors</h2>
+                <span className="nt-count-badge">2 vs 2</span>
+              </div>
+
+              <div className="nt-cage-competitors">
+                <div className="nt-competitor-card">
+                  <div
+                    className={`nt-competitor-avatar-wrap ${
+                      competitorAUploading ? "uploading" : ""
+                    }`}
+                  >
+                    {competitorAPictureUrl ? (
+                      <img
+                        className="nt-competitor-avatar"
+                        src={competitorAPictureUrl}
+                        alt=""
+                      />
+                    ) : (
+                      <div className="nt-competitor-avatar-placeholder">🎓</div>
+                    )}
+                    <label className="nt-competitor-avatar-label">
+                      {competitorAUploading ? "Uploading…" : "Upload"}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="nt-competitor-avatar-input"
+                        disabled={competitorAUploading}
+                        onChange={(e) =>
+                          handleCompetitorPicture(
+                            "A",
+                            e.target.files && e.target.files[0],
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+                  <div className="nt-competitor-fields">
+                    <span className="nt-competitor-side-label">
+                      Competitor A
+                    </span>
+                    <input
+                      type="text"
+                      className="nt-competitor-name-input"
+                      placeholder="Magnus Carlsen"
+                      value={competitorAName}
+                      onChange={(e) => setCompetitorAName(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="nt-competitor-card">
+                  <div
+                    className={`nt-competitor-avatar-wrap ${
+                      competitorBUploading ? "uploading" : ""
+                    }`}
+                  >
+                    {competitorBPictureUrl ? (
+                      <img
+                        className="nt-competitor-avatar"
+                        src={competitorBPictureUrl}
+                        alt=""
+                      />
+                    ) : (
+                      <div className="nt-competitor-avatar-placeholder">🎓</div>
+                    )}
+                    <label className="nt-competitor-avatar-label">
+                      {competitorBUploading ? "Uploading…" : "Upload"}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="nt-competitor-avatar-input"
+                        disabled={competitorBUploading}
+                        onChange={(e) =>
+                          handleCompetitorPicture(
+                            "B",
+                            e.target.files && e.target.files[0],
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+                  <div className="nt-competitor-fields">
+                    <span className="nt-competitor-side-label">
+                      Competitor B
+                    </span>
+                    <input
+                      type="text"
+                      className="nt-competitor-name-input"
+                      placeholder="Hikaru Nakamura"
+                      value={competitorBName}
+                      onChange={(e) => setCompetitorBName(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+              <p className="nt-cage-vs">VS</p>
+
+              <div className="nt-section-head">
+                <h2>Sections</h2>
+                <span className="nt-count-badge">
+                  {cageSections.length} section
+                  {cageSections.length === 1 ? "" : "s"}
+                </span>
+              </div>
+              <p className="hint" style={{ margin: "0 0 4px" }}>
+                Add one section per time format (Classical, Rapid, Blitz — or
+                any name/number you like). If the combined score across every
+                section ends level, a 4-game mini-match (first to 2.5) decides
+                it, followed by Armageddon if that's still tied.
+              </p>
+
+              <div className="nt-section-legend">
+                <span />
+                <span>Section</span>
+                <span>Games</span>
+                <span>Variant</span>
+                <span>Time Control</span>
+                <span />
+              </div>
+
+              <div className="nt-roster-list">
+                {cageSections.map((s, idx) => (
+                  <div className="nt-section-row" key={s.key}>
+                    <span className="nt-roster-idx">{idx + 1}</span>
+                    <input
+                      type="text"
+                      placeholder="Classical, Rapid, Blitz, or '1'…"
+                      value={s.label}
+                      onChange={(e) =>
+                        updateCageSection(idx, "label", e.target.value)
+                      }
+                    />
+                    <input
+                      type="number"
+                      min="1"
+                      value={s.numberOfGames}
+                      onChange={(e) =>
+                        updateCageSection(idx, "numberOfGames", e.target.value)
+                      }
+                    />
+                    <select
+                      value={s.variant}
+                      onChange={(e) =>
+                        updateCageSection(idx, "variant", e.target.value)
+                      }
+                    >
+                      <option value="standard">Standard</option>
+                      <option value="chess960">Chess960</option>
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="90+30, 5+0, etc."
+                      value={s.timeControl}
+                      onChange={(e) =>
+                        updateCageSection(idx, "timeControl", e.target.value)
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="nt-row-remove"
+                      onClick={() => removeCageSection(idx)}
+                      title="Remove"
+                      aria-label={`Remove section ${idx + 1}`}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  className="nt-add-row"
+                  onClick={addCageSection}
+                >
+                  <span className="nt-add-row-icon">+</span> Add Section
+                </button>
+              </div>
+            </div>
+          ) : format === "individual" ? (
             <div className="card nt-card nt-roster-card">
               <div className="nt-section-head">
                 <h2>Players</h2>
@@ -962,6 +1311,8 @@ export default function NewTournament() {
             <button className="btn-primary" disabled={submitting}>
               {submitting
                 ? "Creating…"
+                : format === "match"
+                ? "Done — Create Cage Match"
                 : isElimination
                 ? "Done — Draw Bracket"
                 : "Done — Generate Round 1"}

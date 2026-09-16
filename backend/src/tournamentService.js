@@ -6,6 +6,8 @@ const bracketEngine = require("./bracket");
 const bughouse = require("./bughouse");
 const chess960 = require("./chess960");
 const excelExport = require("./excelExport");
+const cageMatch = require("./cageMatch");
+const imageUpload = require("./imageUpload");
 const { title } = require("process");
 
 // `db` used to be populated synchronously at require-time via
@@ -52,6 +54,13 @@ function runLegacyMigrations() {
       }
       if (t.currentChess960 === undefined) {
         t.currentChess960 = null;
+        migrated = true;
+      }
+      if (t.matchType === undefined) {
+        // Tournament predates the Cage Match feature — it's necessarily an
+        // individual/team event, so there's no matchType/cageMatch to infer.
+        t.matchType = null;
+        t.cageMatch = null;
         migrated = true;
       }
       if (t.thirdPlaceMatch === undefined) {
@@ -140,6 +149,20 @@ function roundRobinPairsForRound(t) {
 
 function isEliminationSystem(t) {
   return t.system === "single_elimination" || t.system === "double_elimination";
+}
+
+// Cage Match tournaments are driven entirely through the /cagematch/*
+// endpoints (see the Cage Match section below) — they have no rounds,
+// pairings, standings-tiebreak decider, or late-registration flow for the
+// rest of this file's Swiss/round-robin/elimination machinery to act on.
+function assertNotCageMatch(t) {
+  if (t.format === "match") {
+    const e = new Error(
+      "This is a Cage Match tournament — use the /cagematch endpoints instead.",
+    );
+    e.status = 400;
+    throw e;
+  }
 }
 
 // ─── Elimination bracket state machine ──────────────────────────────────────
@@ -452,7 +475,24 @@ async function createTournament(input) {
     federation = "",
 
     // System & Rules
-    format = "individual", // 'individual' | 'team'
+    format = "individual", // 'individual' | 'team' | 'match'
+    // Only meaningful when format === 'match'. 'cage' = 1 vs 1 (built below).
+    // 'tournament' (multiple opponents / bracketed matches) is a planned
+    // follow-up and intentionally not handled yet — see the format==='match'
+    // branch below.
+    matchType = "cage",
+    // Only read when format === 'match' && matchType === 'cage'. Each is
+    // { name, pictureUrl? } — pictureUrl comes from POST /api/uploads/image,
+    // called separately by the client before tournament creation (or after,
+    // via updateTournamentDetails-style patch — see setCageMatchCompetitorPicture).
+    competitorA,
+    competitorB,
+    // Only read when format === 'match' && matchType === 'cage'. Each entry:
+    // { label, numberOfGames, variant?: 'standard'|'chess960', timeControl? }
+    // Freeform label (name or number) per section, exactly as you described
+    // — this is deliberately not a fixed enum of "classical/rapid/blitz" so
+    // any number of sections, named however you like, are supported.
+    sections,
     variant = "standard", // 'standard' | 'bughouse' | 'league'
     system = "swiss",
     // scoringSystem and ratingType are accepted, validated, and stored
@@ -537,7 +577,9 @@ async function createTournament(input) {
     venue: venue.trim(),
     federation: federation.trim(),
 
-    format, // 'individual' | 'team'
+    format, // 'individual' | 'team' | 'match'
+    matchType: null, // 'cage' | 'tournament', only set when format === 'match'
+    cageMatch: null, // see cageMatch.js — populated below when format === 'match'
     variant, // 'standard' | 'bughouse' | 'league'
     system, // 'swiss' | 'round_robin' | 'double_round_robin' | 'single_elimination' | 'double_elimination'
     scoringSystem, // reserved — see caveat above, not yet enforced
@@ -583,7 +625,38 @@ async function createTournament(input) {
     finishedAt: null,
   };
 
-  // 3. Competitor Processing (Team vs Individual)
+  // 3. Match format short-circuit — a Cage Match has no rounds, pairings,
+  // Swiss/round-robin schedule, or elimination bracket in the sense the
+  // rest of this function builds them; it's driven entirely by
+  // t.cageMatch (see cageMatch.js). Everything below this branch (schedule
+  // length, seeding, bracket generation) is specific to the individual/team
+  // formats and would be meaningless — or actively wrong — applied here, so
+  // we build t.cageMatch, persist, and return early.
+  if (format === "match") {
+    if (matchType !== "cage") {
+      const e = new Error(
+        `Match tournament type "${matchType}" isn't supported yet — only "cage" (1 vs 1) is currently implemented.`,
+      );
+      e.status = 400;
+      throw e;
+    }
+
+    t.matchType = matchType;
+    t.cageMatch = cageMatch.createCageMatch({
+      competitorA,
+      competitorB,
+      sections,
+    });
+    t.status = "active"; // games are immediately ready for move entry — no separate "start" step
+    t.currentRound = null;
+    t.totalRounds = null;
+
+    db.tournaments[t.id] = t;
+    await persist();
+    return serializeTournament(t);
+  }
+
+  // 3b. Competitor Processing (Team vs Individual)
   if (format === "team") {
     if (!Array.isArray(teams) || teams.length < 2) {
       const e = new Error("Need at least 2 teams for a team tournament");
@@ -699,9 +772,170 @@ function assignStartingRanks(list) {
   });
 }
 
+// ─── Cage Match (1 vs 1 match format) ───────────────────────────────────────
+// Thin wrappers around cageMatch.js — this file's job here is just the
+// stuff every other mutating function in this service already does:
+// look up the tournament, guard the format, persist, and return the
+// standard serialized tournament. All the actual match/tiebreak/Armageddon
+// logic lives in cageMatch.js.
+
+function assertCageMatchTournament(t) {
+  if (t.format !== "match" || t.matchType !== "cage") {
+    const e = new Error("This tournament isn't a Cage Match.");
+    e.status = 400;
+    throw e;
+  }
+}
+
+// t.status/t.finishedAt are the fields every other list/summary view in
+// this file already reads (listTournaments, listPublicTournaments,
+// computeWinner's caller sites, etc.) — cageMatch.js only tracks
+// completion on its own sub-object, so every mutation below re-syncs the
+// two rather than duplicating "is it finished" logic at the tournament
+// level.
+function syncCageMatchStatus(t) {
+  t.status = t.cageMatch.status;
+  t.finishedAt = t.cageMatch.finishedAt;
+}
+
+async function recordCageMatchMove(id, { sectionId, gameId, move }) {
+  const t = assertTournament(id);
+  assertCageMatchTournament(t);
+  cageMatch.recordMove(t.cageMatch, { sectionId, gameId, move });
+  syncCageMatchStatus(t);
+  t.updatedAt = new Date().toISOString();
+  await persist();
+  return serializeTournament(t);
+}
+
+async function undoCageMatchMove(id, { sectionId, gameId }) {
+  const t = assertTournament(id);
+  assertCageMatchTournament(t);
+  cageMatch.undoMove(t.cageMatch, { sectionId, gameId });
+  syncCageMatchStatus(t);
+  t.updatedAt = new Date().toISOString();
+  await persist();
+  return serializeTournament(t);
+}
+
+async function setCageMatchGameResult(id, { sectionId, gameId, result }) {
+  const t = assertTournament(id);
+  assertCageMatchTournament(t);
+  cageMatch.setGameResult(t.cageMatch, { sectionId, gameId, result });
+  syncCageMatchStatus(t);
+  t.updatedAt = new Date().toISOString();
+  await persist();
+  return serializeTournament(t);
+}
+
+// Escape hatch for a mis-recorded result — also clears a tiebreak that may
+// have been started off the back of a now-corrected tie (see
+// cageMatch.clearGameResult's own comment for why).
+async function clearCageMatchGameResult(id, { sectionId, gameId }) {
+  const t = assertTournament(id);
+  assertCageMatchTournament(t);
+  cageMatch.clearGameResult(t.cageMatch, { sectionId, gameId });
+  syncCageMatchStatus(t);
+  t.updatedAt = new Date().toISOString();
+  await persist();
+  return serializeTournament(t);
+}
+
+async function startCageMatchTiebreak(id) {
+  const t = assertTournament(id);
+  assertCageMatchTournament(t);
+  cageMatch.startTiebreak(t.cageMatch);
+  syncCageMatchStatus(t);
+  t.updatedAt = new Date().toISOString();
+  await persist();
+  return serializeTournament(t);
+}
+
+async function recordCageMatchTiebreakResult(id, { gameId, result }) {
+  const t = assertTournament(id);
+  assertCageMatchTournament(t);
+  cageMatch.recordTiebreakGameResult(t.cageMatch, { gameId, result });
+  syncCageMatchStatus(t);
+  t.updatedAt = new Date().toISOString();
+  await persist();
+  return serializeTournament(t);
+}
+
+// The arbiter enters both bids at once, having collected them privately
+// from each player beforehand — see cageMatch.recordArmageddonBids for the
+// tie-bid handling (status comes back as "bid_tie" rather than throwing, so
+// the frontend can prompt for a re-bid without treating it as an error).
+async function recordCageMatchArmageddonBids(id, { bidA, bidB }) {
+  const t = assertTournament(id);
+  assertCageMatchTournament(t);
+  cageMatch.recordArmageddonBids(t.cageMatch, { bidA, bidB });
+  syncCageMatchStatus(t);
+  t.updatedAt = new Date().toISOString();
+  await persist();
+  return serializeTournament(t);
+}
+
+async function recordCageMatchArmageddonResult(id, { result }) {
+  const t = assertTournament(id);
+  assertCageMatchTournament(t);
+  cageMatch.recordArmageddonResult(t.cageMatch, { result });
+  syncCageMatchStatus(t);
+  t.updatedAt = new Date().toISOString();
+  await persist();
+  return serializeTournament(t);
+}
+
+// Read-only — Game History tab. Returns the flat, chronological list of
+// every game (section games + tiebreak mini-match + Armageddon).
+function getCageMatchHistory(id) {
+  const t = assertTournament(id);
+  assertCageMatchTournament(t);
+  const nameOf = (side) => t.cageMatch.competitors[side]?.name || "???";
+  return cageMatch.getGameHistory(t.cageMatch).map((g) => ({
+    ...g,
+    whiteName: nameOf(g.whiteId),
+    blackName: nameOf(g.blackId),
+  }));
+}
+
+// Read-only — Section Performance tab.
+function getCageMatchSectionPerformance(id) {
+  const t = assertTournament(id);
+  assertCageMatchTournament(t);
+  return cageMatch.getSectionPerformance(t.cageMatch);
+}
+
+// Sets or replaces a competitor's picture. `pictureUrl` is whatever
+// POST /api/uploads/image returned — this function doesn't touch the
+// filesystem itself (see imageUpload.js), it just records the URL. If a
+// picture already existed, the old file is cleaned up.
+async function setCageMatchCompetitorPicture(id, side, pictureUrl) {
+  const t = assertTournament(id);
+  assertCageMatchTournament(t);
+  if (side !== "A" && side !== "B") {
+    const e = new Error('side must be "A" or "B"');
+    e.status = 400;
+    throw e;
+  }
+  if (!pictureUrl || typeof pictureUrl !== "string") {
+    const e = new Error("pictureUrl is required");
+    e.status = 400;
+    throw e;
+  }
+  const previousUrl = t.cageMatch.competitors[side].pictureUrl;
+  t.cageMatch.competitors[side].pictureUrl = pictureUrl;
+  if (previousUrl && previousUrl !== pictureUrl) {
+    imageUpload.deleteByUrl(previousUrl);
+  }
+  t.updatedAt = new Date().toISOString();
+  await persist();
+  return serializeTournament(t);
+}
+
 // ─── Round generation ───────────────────────────────────────────────────────
 async function generateNextRound(id, updates = {}) {
   const t = assertTournament(id);
+  assertNotCageMatch(t);
   if (isEliminationSystem(t)) {
     const e = new Error(
       "This is a bracket tournament — results are submitted match-by-match via the bracket, not round-by-round.",
@@ -833,6 +1067,7 @@ function resolveManualColors(a, b, colorChoice) {
 
 async function generateManualRound(id, payload = {}) {
   const t = assertTournament(id);
+  assertNotCageMatch(t);
   if (isEliminationSystem(t)) {
     const e = new Error(
       "This is a bracket tournament — results are submitted match-by-match via the bracket. Manual round pairing isn't available here.",
@@ -1047,6 +1282,7 @@ function applyGame(playersById, whiteId, blackId, result) {
 
 async function submitResults(id, resultsInput) {
   const t = assertTournament(id);
+  assertNotCageMatch(t);
   if (isEliminationSystem(t)) {
     const e = new Error(
       "This is a bracket tournament — use submitBracketMatchResult for a specific match instead.",
@@ -1422,6 +1658,7 @@ function recomputeStandingsFromRounds(t) {
 //   team:       { pairIndex, boardNum, result }
 async function editResult(id, roundNumber, edit = {}) {
   const t = assertTournament(id);
+  assertNotCageMatch(t);
   if (isEliminationSystem(t)) {
     const e = new Error(
       "This is a bracket tournament — there's no round to edit. Bracket match results are corrected by resubmitting that match.",
@@ -1489,6 +1726,7 @@ async function editResult(id, roundNumber, edit = {}) {
 // generateNextRound() again to draw fresh pairings for that round.
 async function deleteRound(id, roundNumber) {
   const t = assertTournament(id);
+  assertNotCageMatch(t);
   if (isEliminationSystem(t)) {
     const e = new Error(
       "This is a bracket tournament — it doesn't have rounds to delete.",
@@ -2147,6 +2385,7 @@ function validateBughouseTeams(id) {
 // a fixed field and there's no round-based cutoff that would make it safe.
 async function addLatePlayer(id, { name, title, rating, teamId, fideId }) {
   const t = assertTournament(id);
+  assertNotCageMatch(t);
   if (isRoundRobinSystem(t)) {
     const e = new Error(
       "Late registration isn't supported for round-robin — the schedule is fixed for the full field before Round 1.",
@@ -2311,6 +2550,7 @@ async function deletePlayer(id, playerId) {
 // ─── Extend tournament (add an extra round after it finished) ─────────────
 async function addExtraRound(id) {
   const t = assertTournament(id);
+  assertNotCageMatch(t);
   if (isEliminationSystem(t)) {
     const e = new Error(
       "Elimination brackets can't be extended with an extra round — the champion is decided by the bracket.",
@@ -2636,9 +2876,16 @@ function listPublicTournaments() {
           status: full.status,
           currentRound: full.currentRound,
           totalRounds: full.totalRounds,
-          bracketProgress: isEliminationSystem(t) ? bracketProgress(t) : null,
+          bracketProgress:
+            full.format !== "match" && isEliminationSystem(t)
+              ? bracketProgress(t)
+              : null,
           competitorCount:
-            full.format === "team" ? full.teams.length : full.players.length,
+            full.format === "match"
+              ? 2
+              : full.format === "team"
+              ? full.teams.length
+              : full.players.length,
           winner: full.winner,
           // Fallback to the tournament ID if a public token wasn't explicitly generated
           publicViewToken: full.publicViewToken || full.id,
@@ -3108,9 +3355,16 @@ function listTournaments() {
         status: t.status,
         currentRound: t.currentRound,
         totalRounds: t.totalRounds,
-        bracketProgress: isEliminationSystem(t) ? bracketProgress(t) : null,
+        bracketProgress:
+          t.format !== "match" && isEliminationSystem(t)
+            ? bracketProgress(t)
+            : null,
         competitorCount:
-          t.format === "team" ? t.teams.length : t.players.length,
+          t.format === "match"
+            ? 2
+            : t.format === "team"
+            ? t.teams.length
+            : t.players.length,
         createdAt: t.createdAt,
         finishedAt: t.finishedAt,
         winner,
@@ -3119,6 +3373,12 @@ function listTournaments() {
 }
 
 function computeWinner(t) {
+  if (t.format === "match") {
+    if (t.matchType !== "cage") return null; // 'tournament' matchType: not implemented yet
+    return t.cageMatch.status === "finished"
+      ? t.cageMatch.competitors[t.cageMatch.winnerId]?.name || null
+      : null;
+  }
   if (isEliminationSystem(t)) {
     if (!t.bracket || !t.bracket.champion) return null;
     return t.format === "team"
@@ -3272,6 +3532,7 @@ function makeRoundRobinLeg(participants) {
 
 async function startDecider(id, options = {}) {
   const t = assertTournament(id);
+  assertNotCageMatch(t);
   assertNoDecider(t);
 
   const tie = detectTopTie(t);
@@ -3983,7 +4244,49 @@ function standingsAtRoundForTournament(t, roundNumber) {
   };
 }
 
+// Lean serialization for format === 'match'. Deliberately skips
+// standings/pairings/bracket/decider — none of that applies to a 1v1 match,
+// and running it against empty players/teams arrays would be wasted work at
+// best and misleading (empty-but-present standings tables) at worst.
+function serializeMatchTournament(t) {
+  return {
+    id: t.id,
+    name: t.name,
+    description: t.description,
+    category: t.category,
+    venue: t.venue,
+    federation: t.federation,
+    format: t.format,
+    matchType: t.matchType,
+    variant: t.variant,
+    timeControl: t.timeControl,
+    organizerName: t.organizerName,
+    organizerContact: t.organizerContact,
+    chiefArbiter: t.chiefArbiter,
+    deputyChiefArbiter: t.deputyChiefArbiter,
+    dateFrom: t.dateFrom,
+    dateTo: t.dateTo,
+    fideRated: t.fideRated,
+    isTest: t.isTest,
+    status: t.status,
+    createdAt: t.createdAt,
+    updatedAt: t.updatedAt,
+    finishedAt: t.finishedAt,
+    registrationOpen: t.registrationOpen,
+    registrationToken: t.registrationToken,
+    publicViewOpen: t.publicViewOpen,
+    publicViewToken: t.publicViewToken,
+    cageMatch: t.matchType === "cage" ? cageMatch.serialize(t.cageMatch) : null,
+    winner:
+      t.matchType === "cage" && t.cageMatch.status === "finished"
+        ? cageMatch.serialize(t.cageMatch).winnerName
+        : null,
+  };
+}
+
 function serializeTournament(t) {
+  if (t.format === "match") return serializeMatchTournament(t);
+
   const playersOut = t.players.map((p) => ({
     id: p.id,
     name: p.name,
@@ -4338,4 +4641,16 @@ module.exports = {
   resolveDeciderManually,
   buildIndividualRoster,
   buildTeamRoster,
+  // Cage Match
+  recordCageMatchMove,
+  undoCageMatchMove,
+  setCageMatchGameResult,
+  clearCageMatchGameResult,
+  startCageMatchTiebreak,
+  recordCageMatchTiebreakResult,
+  recordCageMatchArmageddonBids,
+  recordCageMatchArmageddonResult,
+  getCageMatchHistory,
+  getCageMatchSectionPerformance,
+  setCageMatchCompetitorPicture,
 };

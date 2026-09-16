@@ -25,6 +25,9 @@ import PublicTeamProfile from "./pages/PublicTeamProfile.jsx";
 import TeamProfile from "./pages/tournament/TeamProfile.jsx";
 import PastTournaments from "./pages/PastTournaments.jsx";
 import Login from "./pages/Login.jsx";
+import CageMatch from "./pages/tournament/Cagematch.jsx";
+import GameHistory from "./pages/tournament/GameHistory.jsx";
+import SectionPerformance from "./pages/tournament/SectionPerformance.jsx";
 
 export default function App() {
   return (
@@ -58,6 +61,9 @@ export default function App() {
           <Route path="standings" element={<Standings />} />
           <Route path="module" element={<Module />} />
           <Route path="chess960" element={<Chess960 />} />
+          <Route path="cage-match" element={<CageMatch />} />
+          <Route path="history" element={<GameHistory />} />
+          <Route path="performance" element={<SectionPerformance />} />
         </Route>
       </Routes>
       <ToastContainer />

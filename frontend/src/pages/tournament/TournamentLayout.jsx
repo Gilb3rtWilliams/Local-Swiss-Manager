@@ -15,7 +15,24 @@ function isElimination(t) {
   return t.system === "single_elimination" || t.system === "double_elimination";
 }
 
+function isCageMatch(t) {
+  return t.format === "match" && t.matchType === "cage";
+}
+
 function tabsFor(t) {
+  if (isCageMatch(t)) {
+    const tabs = [{ to: "cage-match", label: "Cage Match" }];
+    // Only shown if at least one section actually uses Chess960 — matches
+    // the individual/team tabsFor()'s existing "only show what's relevant"
+    // pattern below.
+    if (t.cageMatch.sections.some((s) => s.variant === "chess960")) {
+      tabs.push({ to: "chess960", label: "Chess960" });
+    }
+    tabs.push({ to: "history", label: "Game History" });
+    tabs.push({ to: "performance", label: "Section Performance" });
+    return tabs;
+  }
+
   const tabs = [
     { to: "starting-rank", label: "Starting Rank" },
     { to: "overview", label: "Tournament" },
@@ -35,7 +52,9 @@ function tabsFor(t) {
 
 export function TournamentIndex() {
   const { t } = useOutletContext();
-  const target = isElimination(t)
+  const target = isCageMatch(t)
+    ? "cage-match"
+    : isElimination(t)
     ? "module"
     : t.currentPairings
     ? "pairings"
@@ -167,9 +186,18 @@ export default function TournamentLayout() {
             }}
           >
             {t.federation && `${t.federation} · `}
-            {t.timeControl && `${t.timeControl} · `}
-            {t.format === "team" ? "Team" : "Individual"} · Round{" "}
-            {t.currentRound}/{t.totalRounds} · {t.status}
+            {isCageMatch(t) ? (
+              <>
+                Cage Match · {t.cageMatch.competitors.A.name} vs{" "}
+                {t.cageMatch.competitors.B.name} · {t.status}
+              </>
+            ) : (
+              <>
+                {t.timeControl && `${t.timeControl} · `}
+                {t.format === "team" ? "Team" : "Individual"} · Round{" "}
+                {t.currentRound}/{t.totalRounds} · {t.status}
+              </>
+            )}
           </div>
           <h1
             style={{

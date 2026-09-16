@@ -15,6 +15,10 @@ function scoreOf(c) {
   return c.score ?? c.points ?? c.pts ?? 0;
 }
 
+function isCageMatch(t) {
+  return t.format === "match" && t.matchType === "cage";
+}
+
 // Dedicated component to handle the specific interaction flow safely
 const RevealPrompt = ({ closeToast, onAccept, onDecline }) => {
   const [accepted, setAccepted] = useState(false);
@@ -190,11 +194,24 @@ export default function WinnerReveal({ t }) {
     return null;
 
   const isTeam = t.format === "team";
+  const isCage = isCageMatch(t);
   const standingsList = isTeam ? t.teamStandings : t.standings;
   const top3 = (standingsList || []).slice(0, 3);
   const boardMVPs = isTeam ? t.boardMVPs || [] : [];
   const winnerName = t.winner || top3[0]?.name || "Champion";
   const showEffects = stage === "reveal" || stage === "podium";
+
+  // Cage Match has no standings table — the "podium" is just the two
+  // competitors, so build that comparison directly off t.cageMatch rather
+  // than off top3/boardMVPs (which stay empty for this format).
+  let cageWinner = null;
+  let cageRunnerUp = null;
+  if (isCage && t.cageMatch) {
+    const { competitors, winnerId, score } = t.cageMatch;
+    const runnerUpId = winnerId === "A" ? "B" : "A";
+    cageWinner = { ...competitors[winnerId], score: score[winnerId] };
+    cageRunnerUp = { ...competitors[runnerUpId], score: score[runnerUpId] };
+  }
 
   return (
     <>
@@ -222,11 +239,64 @@ export default function WinnerReveal({ t }) {
 
           {showEffects && (
             <div className="wr-reveal">
-              <div className="wr-trophy">🏆</div>
+              {isCage && cageWinner?.pictureUrl ? (
+                <img
+                  className="wr-cage-winner-photo"
+                  src={cageWinner.pictureUrl}
+                  alt=""
+                />
+              ) : (
+                <div className="wr-trophy">🏆</div>
+              )}
               <h1 className="wr-winner-name">{winnerName}</h1>
               <p className="wr-winner-sub">
-                {isTeam ? "Team Champions" : "Tournament Champion"}
+                {isCage
+                  ? "Cage Match Champion"
+                  : isTeam
+                  ? "Team Champions"
+                  : "Tournament Champion"}
               </p>
+              {isCage && cageWinner && (
+                <p className="wr-cage-score-line">
+                  Final Score: {cageWinner.score} – {cageRunnerUp.score}
+                </p>
+              )}
+            </div>
+          )}
+
+          {stage === "podium" && isCage && cageWinner && (
+            <div className="wr-cage-scorecard">
+              <div className="wr-cage-competitor wr-cage-winner">
+                {cageWinner.pictureUrl ? (
+                  <img
+                    className="wr-cage-avatar-sm"
+                    src={cageWinner.pictureUrl}
+                    alt=""
+                  />
+                ) : (
+                  <div className="wr-cage-avatar-sm wr-cage-avatar-placeholder">
+                    🎓
+                  </div>
+                )}
+                <div className="wr-medal">🥇</div>
+                <div className="wr-podium-name">{cageWinner.name}</div>
+                <div className="wr-podium-score">{cageWinner.score} pts</div>
+              </div>
+              <div className="wr-cage-competitor">
+                {cageRunnerUp.pictureUrl ? (
+                  <img
+                    className="wr-cage-avatar-sm"
+                    src={cageRunnerUp.pictureUrl}
+                    alt=""
+                  />
+                ) : (
+                  <div className="wr-cage-avatar-sm wr-cage-avatar-placeholder">
+                    🎓
+                  </div>
+                )}
+                <div className="wr-podium-name">{cageRunnerUp.name}</div>
+                <div className="wr-podium-score">{cageRunnerUp.score} pts</div>
+              </div>
             </div>
           )}
 
@@ -296,7 +366,7 @@ export default function WinnerReveal({ t }) {
 
           {stage === "podium" && (
             <button className="wr-dismiss" onClick={() => setDismissed(true)}>
-              View Full Standings ↓
+              {isCage ? "Back to Match ↓" : "View Full Standings ↓"}
             </button>
           )}
         </div>

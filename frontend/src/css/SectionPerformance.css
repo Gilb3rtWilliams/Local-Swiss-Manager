@@ -1,0 +1,93 @@
+.sp-root {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  color: #e8e8e8;
+  font-family: "SF Mono", Monaco, "Cascadia Code", monospace;
+}
+
+.sp-loading,
+.sp-error {
+  color: #8a8a9a;
+  text-align: center;
+  padding: 30px 0;
+}
+
+.sp-error {
+  color: #ff6b6b;
+}
+
+.sp-card {
+  background: rgba(19, 19, 26, 0.6);
+  border: 1px solid #252532;
+  border-radius: 14px;
+  padding: 18px 20px;
+}
+
+.sp-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.sp-card-head h3 {
+  margin: 0;
+  font-size: 1.02rem;
+}
+
+.sp-meta {
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #d4a853;
+}
+
+.sp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.sp-table th {
+  text-align: left;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8a8a9a;
+  padding: 6px 8px;
+  border-bottom: 1px solid #252532;
+}
+
+.sp-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #1c1c26;
+}
+
+.sp-table tr:last-child td {
+  border-bottom: none;
+}
+
+.sp-name-cell {
+  font-weight: 700;
+}
+
+.sp-win {
+  color: #4caf50;
+}
+
+.sp-draw {
+  color: #8a8a9a;
+}
+
+.sp-loss {
+  color: #f44336;
+}
+
+.sp-points {
+  font-weight: 800;
+  color: #d4a853;
+}
