@@ -16,6 +16,11 @@ import "../../css/CageMatch.css";
 const THEME_STORAGE_KEY = "c960-board-theme";
 const PIECE_THEME_STORAGE_KEY = "c960-piece-theme";
 
+// Same list NewTournament.jsx offers when a player/competitor is created —
+// kept in sync manually since the two pages don't currently share a
+// constants module.
+const CHESS_TITLES = ["", "GM", "IM", "FM", "CM", "WGM", "WIM", "WFM", "WCM"];
+
 const RESULT_OPTIONS = [
   { value: "", label: "—" },
   { value: "1-0", label: "1–0 (White wins)" },
@@ -84,6 +89,136 @@ function ResultPicker({ value, onSet, onClear = () => {}, disabled, busy }) {
       >
         Submit
       </button>
+    </div>
+  );
+}
+
+// FIDE's public ratings-card page — the standard place to link a player's
+// FIDE ID to. Opens in a new tab since it navigates away from the match.
+function fideProfileUrl(fideId) {
+  return `https://ratings.fide.com/profile/${fideId}`;
+}
+
+// Rating + FIDE ID line under a competitor's name. Renders nothing if
+// neither is set, rather than an empty row. `stopPropagation` on the link
+// isn't strictly needed today (nothing above it currently handles clicks),
+// but it's a One vs. One name/avatar block that may grow a "view profile"
+// click target later, so it's cheap insurance against a future regression.
+function CompetitorMeta({ competitor }) {
+  const hasRating =
+    competitor.rating !== null && competitor.rating !== undefined;
+  const hasFideId = Boolean(competitor.fideId);
+  if (!hasRating && !hasFideId) return null;
+
+  return (
+    <div className="cm-competitor-meta">
+      {hasRating && (
+        <span className="cm-competitor-rating">{competitor.rating}</span>
+      )}
+      {hasRating && hasFideId && (
+        <span className="cm-competitor-meta-sep">·</span>
+      )}
+      {hasFideId && (
+        <a
+          href={fideProfileUrl(competitor.fideId)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="cm-competitor-fideid-link"
+          onClick={(e) => e.stopPropagation()}
+        >
+          FIDE {competitor.fideId}
+        </a>
+      )}
+    </div>
+  );
+}
+
+// Inline edit form for a competitor's name/title/rating/fideId — swapped in
+// for the normal name+meta display when that side is being edited. Picture
+// stays out of this form; it's still handled by the Avatar's own
+// upload-on-hover affordance, since replacing it has its own upload/cleanup
+// flow distinct from this plain-field PATCH.
+function CompetitorEditForm({ competitor, busy, onSave, onCancel }) {
+  const [name, setName] = useState(competitor.name);
+  const [title, setTitle] = useState(competitor.title || "");
+  const [rating, setRating] = useState(
+    competitor.rating === null || competitor.rating === undefined
+      ? ""
+      : String(competitor.rating),
+  );
+  const [fideId, setFideId] = useState(competitor.fideId || "");
+
+  const canSave = name.trim().length > 0;
+
+  function handleSave() {
+    if (!canSave) return;
+    onSave({
+      name: name.trim(),
+      title: title || null,
+      rating: rating === "" ? null : rating,
+      fideId: fideId ? fideId.trim() : null,
+    });
+  }
+
+  return (
+    <div className="cm-competitor-edit">
+      <div className="cm-competitor-edit-row">
+        <select
+          className={`cm-competitor-edit-title ${title ? "has-title" : ""}`}
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        >
+          {CHESS_TITLES.map((t) => (
+            <option key={t} value={t}>
+              {t || "—"}
+            </option>
+          ))}
+        </select>
+        <input
+          type="text"
+          className="cm-competitor-edit-name"
+          placeholder="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+      </div>
+      <div className="cm-competitor-edit-row">
+        <input
+          type="text"
+          className="cm-competitor-edit-fideid"
+          placeholder="FIDE ID"
+          inputMode="numeric"
+          value={fideId}
+          onChange={(e) => setFideId(e.target.value)}
+        />
+        <input
+          type="number"
+          className="cm-competitor-edit-rating"
+          placeholder="Rating"
+          min="0"
+          max="3500"
+          value={rating}
+          onChange={(e) => setRating(e.target.value)}
+        />
+      </div>
+      <div className="cm-competitor-edit-actions">
+        <button
+          type="button"
+          className="btn-secondary btn-sm"
+          disabled={busy}
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="btn-primary btn-sm"
+          disabled={busy || !canSave}
+          onClick={handleSave}
+        >
+          Save
+        </button>
+      </div>
     </div>
   );
 }
@@ -288,6 +423,7 @@ export default function CageMatch() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [uploadingSide, setUploadingSide] = useState(null);
+  const [editingSide, setEditingSide] = useState(null);
 
   const [theme, setTheme] = useState(() => {
     try {
@@ -350,6 +486,20 @@ export default function CageMatch() {
     }
   }
 
+  async function handleSaveCompetitorDetails(side, payload) {
+    setBusy(true);
+    setError("");
+    try {
+      await api.updateCageMatchCompetitorDetails(id, side, payload);
+      await refresh();
+      setEditingSide(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function toggleBoard(key) {
     setOpenGameKey((prev) => (prev === key ? null : key));
   }
@@ -409,7 +559,39 @@ export default function CageMatch() {
             uploading={uploadingSide === "A"}
             onFileSelected={(f) => handleAvatarChange("A", f)}
           />
-          <span className="cm-competitor-name">{cm.competitors.A.name}</span>
+          <div className="cm-competitor-info">
+            {editingSide === "A" ? (
+              <CompetitorEditForm
+                competitor={cm.competitors.A}
+                busy={busy}
+                onSave={(payload) => handleSaveCompetitorDetails("A", payload)}
+                onCancel={() => setEditingSide(null)}
+              />
+            ) : (
+              <>
+                <div className="cm-competitor-name-row">
+                  <span className="cm-competitor-name">
+                    {cm.competitors.A.title && (
+                      <span className="cm-competitor-title-badge">
+                        {cm.competitors.A.title}
+                      </span>
+                    )}
+                    {cm.competitors.A.name}
+                  </span>
+                  <button
+                    type="button"
+                    className="cm-competitor-edit-btn"
+                    onClick={() => setEditingSide("A")}
+                    aria-label="Edit Competitor A details"
+                    title="Edit details"
+                  >
+                    ✎
+                  </button>
+                </div>
+                <CompetitorMeta competitor={cm.competitors.A} />
+              </>
+            )}
+          </div>
         </div>
         <div className="cm-score">
           <span className="cm-score-num">{cm.score.A}</span>
@@ -422,7 +604,39 @@ export default function CageMatch() {
             uploading={uploadingSide === "B"}
             onFileSelected={(f) => handleAvatarChange("B", f)}
           />
-          <span className="cm-competitor-name">{cm.competitors.B.name}</span>
+          <div className="cm-competitor-info">
+            {editingSide === "B" ? (
+              <CompetitorEditForm
+                competitor={cm.competitors.B}
+                busy={busy}
+                onSave={(payload) => handleSaveCompetitorDetails("B", payload)}
+                onCancel={() => setEditingSide(null)}
+              />
+            ) : (
+              <>
+                <div className="cm-competitor-name-row">
+                  <span className="cm-competitor-name">
+                    {cm.competitors.B.title && (
+                      <span className="cm-competitor-title-badge">
+                        {cm.competitors.B.title}
+                      </span>
+                    )}
+                    {cm.competitors.B.name}
+                  </span>
+                  <button
+                    type="button"
+                    className="cm-competitor-edit-btn"
+                    onClick={() => setEditingSide("B")}
+                    aria-label="Edit Competitor B details"
+                    title="Edit details"
+                  >
+                    ✎
+                  </button>
+                </div>
+                <CompetitorMeta competitor={cm.competitors.B} />
+              </>
+            )}
+          </div>
         </div>
       </div>
 

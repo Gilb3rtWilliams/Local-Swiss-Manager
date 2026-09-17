@@ -281,6 +281,23 @@ router.post(
   ),
 );
 
+// Edits a competitor's name/title/rating/fideId. `side` is "A" or "B".
+// Body is any subset of { name, title, rating, fideId } — only the keys
+// present are changed, so a client can PATCH just one field (e.g. rating
+// after a live update) without resending the rest. Picture is handled by
+// the POST route above instead, not this one.
+router.patch(
+  "/:id/cagematch/competitors/:side",
+  requireAdmin,
+  wrap((req) =>
+    svc.updateCageMatchCompetitorDetails(
+      req.params.id,
+      req.params.side,
+      req.body,
+    ),
+  ),
+);
+
 // ─── Tiebreak Decider (playoff) system ──────────────────────────────────
 // See tournamentService.js's Decider section for the full data model.
 // GET /:id already returns tieAlert/decider on every fetch, so there's no
@@ -370,6 +387,20 @@ router.get(
 router.get(
   "/public-view/:token/teams/:teamId/profile",
   wrap((req) => svc.getPublicTeamProfile(req.params.token, req.params.teamId)),
+);
+
+// Public cage match Game History / Section Performance — same token-based,
+// no-admin-required posture as the public player/team profile routes above.
+// The scoreboard/sections/tiebreak state itself already rides along inside
+// GET /public-view/:token's own cageMatch field; these two cover the two
+// tabs that aren't part of that single payload.
+router.get(
+  "/public-view/:token/cagematch/history",
+  wrap((req) => svc.getPublicCageMatchHistory(req.params.token)),
+);
+router.get(
+  "/public-view/:token/cagematch/performance",
+  wrap((req) => svc.getPublicCageMatchSectionPerformance(req.params.token)),
 );
 
 // ─── Historical public standings ────────────────────────────────────────

@@ -482,9 +482,13 @@ async function createTournament(input) {
     // branch below.
     matchType = "cage",
     // Only read when format === 'match' && matchType === 'cage'. Each is
-    // { name, pictureUrl? } — pictureUrl comes from POST /api/uploads/image,
-    // called separately by the client before tournament creation (or after,
-    // via updateTournamentDetails-style patch — see setCageMatchCompetitorPicture).
+    // { name, pictureUrl?, title?, rating?, fideId? } — pictureUrl comes from
+    // POST /api/uploads/image, called separately by the client before
+    // tournament creation (or after, via updateTournamentDetails-style patch
+    // — see setCageMatchCompetitorPicture). title/rating/fideId are the same
+    // optional fields carried on individual/team players elsewhere in this
+    // file, normalized the same way by cageMatch.createCageMatch() — see its
+    // comment for details.
     competitorA,
     competitorB,
     // Only read when format === 'match' && matchType === 'cage'. Each entry:
@@ -905,6 +909,37 @@ function getCageMatchSectionPerformance(id) {
   return cageMatch.getSectionPerformance(t.cageMatch);
 }
 
+// Public equivalents of the two functions above — same token-based
+// resolution and publicViewOpen gate as getPublicPlayerProfile/
+// getPublicTeamProfile use elsewhere in this file, rather than trusting an
+// admin tournament id.
+function getPublicCageMatchHistory(token) {
+  const t = findByPublicViewToken(token);
+  if (!t.publicViewOpen) {
+    const e = new Error("Results aren't public for this tournament right now");
+    e.status = 403;
+    throw e;
+  }
+  assertCageMatchTournament(t);
+  const nameOf = (side) => t.cageMatch.competitors[side]?.name || "???";
+  return cageMatch.getGameHistory(t.cageMatch).map((g) => ({
+    ...g,
+    whiteName: nameOf(g.whiteId),
+    blackName: nameOf(g.blackId),
+  }));
+}
+
+function getPublicCageMatchSectionPerformance(token) {
+  const t = findByPublicViewToken(token);
+  if (!t.publicViewOpen) {
+    const e = new Error("Results aren't public for this tournament right now");
+    e.status = 403;
+    throw e;
+  }
+  assertCageMatchTournament(t);
+  return cageMatch.getSectionPerformance(t.cageMatch);
+}
+
 // Sets or replaces a competitor's picture. `pictureUrl` is whatever
 // POST /api/uploads/image returned — this function doesn't touch the
 // filesystem itself (see imageUpload.js), it just records the URL. If a
@@ -927,6 +962,19 @@ async function setCageMatchCompetitorPicture(id, side, pictureUrl) {
   if (previousUrl && previousUrl !== pictureUrl) {
     imageUpload.deleteByUrl(previousUrl);
   }
+  t.updatedAt = new Date().toISOString();
+  await persist();
+  return serializeTournament(t);
+}
+
+// Updates a competitor's name/title/rating/fideId. Partial — only fields
+// present in `payload` are changed (see cageMatch.updateCompetitorDetails
+// for the exact merge rules and validation). Picture goes through
+// setCageMatchCompetitorPicture above instead, not this function.
+async function updateCageMatchCompetitorDetails(id, side, payload = {}) {
+  const t = assertTournament(id);
+  assertCageMatchTournament(t);
+  cageMatch.updateCompetitorDetails(t.cageMatch, side, payload);
   t.updatedAt = new Date().toISOString();
   await persist();
   return serializeTournament(t);
@@ -2855,6 +2903,7 @@ function getPublicResults(token) {
     winner: full.winner,
     currentChess960: full.currentChess960,
     chess960: full.chess960,
+    cageMatch: full.format === "match" ? full.cageMatch : null,
   };
 }
 
@@ -4652,5 +4701,8 @@ module.exports = {
   recordCageMatchArmageddonResult,
   getCageMatchHistory,
   getCageMatchSectionPerformance,
+  getPublicCageMatchHistory,
+  getPublicCageMatchSectionPerformance,
   setCageMatchCompetitorPicture,
+  updateCageMatchCompetitorDetails,
 };

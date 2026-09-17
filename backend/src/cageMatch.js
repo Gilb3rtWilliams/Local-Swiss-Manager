@@ -15,8 +15,8 @@
 // {
 //   id,
 //   competitors: {
-//     A: { id, name, pictureUrl },
-//     B: { id, name, pictureUrl },
+//     A: { id, name, pictureUrl, title, rating, fideId },
+//     B: { id, name, pictureUrl, title, rating, fideId },
 //   },
 //   sections: [
 //     {
@@ -188,7 +188,17 @@ function makeSection(input) {
   };
 }
 
-// `input`: { competitorA: {name, pictureUrl?}, competitorB: {name, pictureUrl?}, sections: [...] }
+// `input`: {
+//   competitorA: { name, pictureUrl?, title?, rating?, fideId? },
+//   competitorB: { name, pictureUrl?, title?, rating?, fideId? },
+//   sections: [...],
+// }
+// title/rating/fideId are optional, same normalization convention as the
+// equivalent fields on individual/team players elsewhere in the app —
+// title and fideId are stored as trimmed strings (or null), rating as a
+// number (or null). None of the three are validated against FIDE's actual
+// title list or rating ranges; that mirrors how player.title/fideId/rating
+// are handled for regular tournaments too.
 // Competitor ids are fixed as "A"/"B" throughout the match (simpler than
 // UUIDs for a 2-party structure, and every game/leg already refers to sides
 // this way) — serialize() below is what maps "A"/"B" to real display data.
@@ -218,11 +228,23 @@ function createCageMatch(input = {}) {
         id: "A",
         name: competitorA.name.trim(),
         pictureUrl: competitorA.pictureUrl || null,
+        title: competitorA.title ? String(competitorA.title).trim() : null,
+        rating:
+          competitorA.rating != null && competitorA.rating !== ""
+            ? Number(competitorA.rating)
+            : null,
+        fideId: competitorA.fideId ? String(competitorA.fideId).trim() : null,
       },
       B: {
         id: "B",
         name: competitorB.name.trim(),
         pictureUrl: competitorB.pictureUrl || null,
+        title: competitorB.title ? String(competitorB.title).trim() : null,
+        rating:
+          competitorB.rating != null && competitorB.rating !== ""
+            ? Number(competitorB.rating)
+            : null,
+        fideId: competitorB.fideId ? String(competitorB.fideId).trim() : null,
       },
     },
     sections: sections.map(makeSection),
@@ -231,6 +253,44 @@ function createCageMatch(input = {}) {
     winnerId: null,
     finishedAt: null,
   };
+}
+
+// ─── Editing competitor details post-creation ──────────────────────────────
+// Updates a competitor's identity/display metadata — name, title, rating,
+// fideId. Partial by design: only keys present in `updates` are touched, so
+// a caller can PATCH just one field (e.g. rating) without clobbering the
+// others. Picture is deliberately NOT handled here — it has its own
+// function (tournamentService.js's setCageMatchCompetitorPicture) because
+// replacing it also means cleaning up the old uploaded file, a concern this
+// module has no business knowing about.
+function updateCompetitorDetails(state, side, updates = {}) {
+  if (side !== "A" && side !== "B") {
+    const e = new Error('side must be "A" or "B"');
+    e.status = 400;
+    throw e;
+  }
+  const comp = state.competitors[side];
+  const { name, title, rating, fideId } = updates;
+
+  if (name !== undefined) {
+    const trimmed = String(name ?? "").trim();
+    if (!trimmed) {
+      const e = new Error("Name can't be empty.");
+      e.status = 400;
+      throw e;
+    }
+    comp.name = trimmed;
+  }
+  if (title !== undefined) {
+    comp.title = title ? String(title).trim() : null;
+  }
+  if (rating !== undefined) {
+    comp.rating = rating != null && rating !== "" ? Number(rating) : null;
+  }
+  if (fideId !== undefined) {
+    comp.fideId = fideId ? String(fideId).trim() : null;
+  }
+  return comp;
 }
 
 // ─── Lookup helpers ──────────────────────────────────────────────────────
@@ -743,6 +803,7 @@ function serialize(state) {
 
 module.exports = {
   createCageMatch,
+  updateCompetitorDetails,
   recordMove,
   undoMove,
   setGameResult,

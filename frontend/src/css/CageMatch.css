@@ -39,6 +39,171 @@
   font-weight: 700;
 }
 
+/* ── Competitor info: name + title badge + rating/FIDE line ─────────────── */
+.cm-competitor-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cm-competitor-title-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: #c25555;
+  background: rgba(194, 85, 85, 0.12);
+  border: 1px solid rgba(194, 85, 85, 0.4);
+  border-radius: 5px;
+  padding: 1px 6px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.cm-competitor-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #8a8a9a;
+}
+
+.cm-competitor:last-child .cm-competitor-meta {
+  justify-content: flex-end;
+}
+
+.cm-competitor-rating {
+  font-weight: 600;
+  color: #b7b7c4;
+}
+
+.cm-competitor-meta-sep {
+  color: #454555;
+}
+
+.cm-competitor-fideid-link {
+  color: #8a8a9a;
+  text-decoration: none;
+  border-bottom: 1px dotted #454555;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.cm-competitor-fideid-link:hover,
+.cm-competitor-fideid-link:focus-visible {
+  color: #d4a853;
+  border-bottom-color: #d4a853;
+}
+
+/* ── Name row (name + edit trigger) ──────────────────────────────────── */
+.cm-competitor-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cm-competitor:last-child .cm-competitor-name-row {
+  justify-content: flex-end;
+}
+
+.cm-competitor-edit-btn {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid #353545;
+  color: #8a8a9a;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cm-competitor-edit-btn:hover {
+  border-color: #d4a853;
+  color: #d4a853;
+}
+
+/* ── Inline competitor edit form ─────────────────────────────────────── */
+.cm-competitor-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(19, 19, 26, 0.85);
+  border: 1px solid #353545;
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-width: 230px;
+  text-align: left;
+}
+
+.cm-competitor:last-child .cm-competitor-edit {
+  margin-left: auto;
+}
+
+.cm-competitor-edit-row {
+  display: flex;
+  gap: 8px;
+}
+
+.cm-competitor-edit input,
+.cm-competitor-edit select {
+  background: rgba(19, 19, 26, 0.85);
+  border: 1px solid #252532;
+  color: #e8e8e8;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-family: inherit;
+  font-size: 0.82rem;
+  min-width: 0;
+  text-align: left;
+}
+
+.cm-competitor-edit-title {
+  flex: 0 0 64px;
+  text-align: center;
+  text-align-last: center;
+  cursor: pointer;
+  color: #8a8a9a;
+  font-weight: 600;
+}
+
+.cm-competitor-edit-title.has-title {
+  color: #c25555;
+  border-color: rgba(194, 85, 85, 0.5);
+  background: rgba(194, 85, 85, 0.12);
+  font-weight: 700;
+}
+
+.cm-competitor-edit-name {
+  flex: 1 1 auto;
+}
+
+.cm-competitor-edit-fideid {
+  flex: 1 1 auto;
+}
+
+.cm-competitor-edit-rating {
+  flex: 0 0 78px;
+  text-align: center;
+}
+
+.cm-competitor-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .cm-competitor-edit {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
 .cm-avatar-wrap {
   position: relative;
   width: 64px;

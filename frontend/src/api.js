@@ -140,6 +140,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ pictureUrl }),
     }),
+  updateCageMatchCompetitorDetails: (id, side, payload) =>
+    request(`/tournaments/${id}/cagematch/competitors/${side}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
 
   startDecider: (id, payload) =>
     request(`/tournaments/${id}/decider/start`, {
@@ -176,6 +181,10 @@ export const api = {
     request(`/tournaments/public-view/${token}/players/${playerId}/profile`),
   getPublicTeamProfile: (token, teamId) =>
     request(`/tournaments/public-view/${token}/teams/${teamId}/profile`),
+  getPublicCageMatchHistory: (token) =>
+    request(`/tournaments/public-view/${token}/cagematch/history`),
+  getPublicCageMatchSectionPerformance: (token) =>
+    request(`/tournaments/public-view/${token}/cagematch/performance`),
   enablePublicView: (id) =>
     request(`/tournaments/${id}/public-view/enable`, { method: "POST" }),
   disablePublicView: (id) =>

@@ -373,6 +373,35 @@ export default function PublicResults() {
 
   const standingsTablesReady = !isViewingPastRound || standingsMatchSelection;
 
+  const [cageHistory, setCageHistory] = useState(null);
+  const [cagePerformance, setCagePerformance] = useState(null);
+  const [cageExtrasError, setCageExtrasError] = useState("");
+
+  // Game History / Section Performance aren't part of the main
+  // getPublicResults payload (same split as the admin side, where they're
+  // separate tabs backed by separate routes) — fetch them once we know
+  // this is actually a cage match.
+  useEffect(() => {
+    if (!data || data.format !== "match") return;
+    let cancelled = false;
+    setCageExtrasError("");
+    Promise.all([
+      api.getPublicCageMatchHistory(token),
+      api.getPublicCageMatchSectionPerformance(token),
+    ])
+      .then(([history, performance]) => {
+        if (cancelled) return;
+        setCageHistory(history);
+        setCagePerformance(performance);
+      })
+      .catch((e) => {
+        if (!cancelled) setCageExtrasError(e.message);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [data, token]);
+
   useEffect(() => {
     api
       .getPublicResults(token)

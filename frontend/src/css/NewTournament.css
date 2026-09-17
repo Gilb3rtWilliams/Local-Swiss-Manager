@@ -801,6 +801,69 @@ input.nt-roster-name {
   font-size: 0.95rem;
 }
 
+/* ── Competitor Title / FIDE ID / Rating row ──────────────────────────── */
+.nt-competitor-meta-row {
+  display: flex;
+  gap: 8px;
+}
+
+select.nt-competitor-title-select {
+  flex: 0 0 72px;
+  padding: 6px;
+  background: rgba(19, 19, 26, 0.6);
+  border: 1px solid var(--nt-border);
+  border-radius: 6px;
+  color: var(--nt-muted);
+  font-weight: 600;
+  font-size: 0.82rem;
+  text-align: center;
+  text-align-last: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+select.nt-competitor-title-select:focus {
+  outline: none;
+  border-color: var(--nt-title-red);
+  box-shadow: 0 0 0 3px rgba(194, 85, 85, 0.18);
+}
+
+select.nt-competitor-title-select.has-title {
+  font-weight: 700;
+  color: var(--nt-title-red);
+  border-color: rgba(194, 85, 85, 0.5);
+  background: rgba(194, 85, 85, 0.12);
+}
+
+select.nt-competitor-title-select option {
+  background: var(--nt-card-solid);
+  color: var(--nt-text);
+  font-weight: 500;
+  text-align: left;
+}
+
+.nt-competitor-fideid-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.82rem;
+}
+
+.nt-competitor-rating-input {
+  flex: 0 0 78px;
+  text-align: center;
+  font-size: 0.82rem;
+}
+
+@media (max-width: 640px) {
+  .nt-competitor-meta-row {
+    flex-wrap: wrap;
+  }
+
+  .nt-competitor-fideid-input {
+    flex: 1 1 100px;
+  }
+}
+
 .nt-cage-vs {
   text-align: center;
   font-size: 0.76rem;

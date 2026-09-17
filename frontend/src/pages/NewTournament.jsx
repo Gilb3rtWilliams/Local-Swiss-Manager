@@ -145,9 +145,15 @@ export default function NewTournament() {
   // planned follow-up — the option is shown but disabled below.
   const [matchType, setMatchType] = useState("cage");
   const [competitorAName, setCompetitorAName] = useState("");
+  const [competitorATitle, setCompetitorATitle] = useState("");
+  const [competitorARating, setCompetitorARating] = useState("");
+  const [competitorAFideId, setCompetitorAFideId] = useState("");
   const [competitorAPictureUrl, setCompetitorAPictureUrl] = useState("");
   const [competitorAUploading, setCompetitorAUploading] = useState(false);
   const [competitorBName, setCompetitorBName] = useState("");
+  const [competitorBTitle, setCompetitorBTitle] = useState("");
+  const [competitorBRating, setCompetitorBRating] = useState("");
+  const [competitorBFideId, setCompetitorBFideId] = useState("");
   const [competitorBPictureUrl, setCompetitorBPictureUrl] = useState("");
   const [competitorBUploading, setCompetitorBUploading] = useState(false);
   // Freeform sections (time formats) — label is a name or a number, exactly
@@ -336,10 +342,16 @@ export default function NewTournament() {
         matchType: "cage",
         competitorA: {
           name: competitorAName.trim(),
+          title: competitorATitle || null,
+          fideId: competitorAFideId ? competitorAFideId.trim() : null,
+          rating: competitorARating,
           pictureUrl: competitorAPictureUrl || null,
         },
         competitorB: {
           name: competitorBName.trim(),
+          title: competitorBTitle || null,
+          fideId: competitorBFideId ? competitorBFideId.trim() : null,
+          rating: competitorBRating,
           pictureUrl: competitorBPictureUrl || null,
         },
         sections: cleanSections,
@@ -923,6 +935,38 @@ export default function NewTournament() {
                       value={competitorAName}
                       onChange={(e) => setCompetitorAName(e.target.value)}
                     />
+                    <div className="nt-competitor-meta-row">
+                      <select
+                        className={`nt-competitor-title-select ${
+                          competitorATitle ? "has-title" : ""
+                        }`}
+                        value={competitorATitle}
+                        onChange={(e) => setCompetitorATitle(e.target.value)}
+                      >
+                        {CHESS_TITLES.map((t) => (
+                          <option key={t} value={t}>
+                            {t || "—"}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="text"
+                        className="nt-competitor-fideid-input"
+                        placeholder="FIDE ID"
+                        inputMode="numeric"
+                        value={competitorAFideId}
+                        onChange={(e) => setCompetitorAFideId(e.target.value)}
+                      />
+                      <input
+                        type="number"
+                        className="nt-competitor-rating-input"
+                        placeholder="Rating"
+                        min="0"
+                        max="3500"
+                        value={competitorARating}
+                        onChange={(e) => setCompetitorARating(e.target.value)}
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -968,6 +1012,38 @@ export default function NewTournament() {
                       value={competitorBName}
                       onChange={(e) => setCompetitorBName(e.target.value)}
                     />
+                    <div className="nt-competitor-meta-row">
+                      <select
+                        className={`nt-competitor-title-select ${
+                          competitorBTitle ? "has-title" : ""
+                        }`}
+                        value={competitorBTitle}
+                        onChange={(e) => setCompetitorBTitle(e.target.value)}
+                      >
+                        {CHESS_TITLES.map((t) => (
+                          <option key={t} value={t}>
+                            {t || "—"}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="text"
+                        className="nt-competitor-fideid-input"
+                        placeholder="FIDE ID"
+                        inputMode="numeric"
+                        value={competitorBFideId}
+                        onChange={(e) => setCompetitorBFideId(e.target.value)}
+                      />
+                      <input
+                        type="number"
+                        className="nt-competitor-rating-input"
+                        placeholder="Rating"
+                        min="0"
+                        max="3500"
+                        value={competitorBRating}
+                        onChange={(e) => setCompetitorBRating(e.target.value)}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
