@@ -361,9 +361,16 @@
   grid-template-columns: 40px 1fr 130px 190px;
 }
 
+/* Public/read-only game row — no ResultPicker column, just a board toggle
+   in its place. */
+.cm-game-row.cm-public-row {
+  grid-template-columns: 40px 1fr 130px 110px;
+}
+
 @media (max-width: 760px) {
   .cm-game-row,
-  .cm-tiebreak-card .cm-game-row {
+  .cm-tiebreak-card .cm-game-row,
+  .cm-game-row.cm-public-row {
     grid-template-columns: 1fr;
     gap: 6px;
     padding: 12px 4px;
