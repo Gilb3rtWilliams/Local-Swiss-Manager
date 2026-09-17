@@ -424,6 +424,17 @@ export default function CageMatch() {
   const [busy, setBusy] = useState(false);
   const [uploadingSide, setUploadingSide] = useState(null);
   const [editingSide, setEditingSide] = useState(null);
+  const [pubBusy, setPubBusy] = useState(false);
+  const [pubError, setPubError] = useState("");
+  const [pubCopied, setPubCopied] = useState(false);
+
+  // Same route shape Overview.jsx builds for every other tournament type —
+  // the public results page already reads cageMatch off the payload
+  // GET /public-view/:token returns, so no separate cage-match-specific
+  // public route is needed here.
+  const publicResultsLink = t.publicViewToken
+    ? `${window.location.origin}/results/${t.publicViewToken}`
+    : null;
 
   const [theme, setTheme] = useState(() => {
     try {
@@ -498,6 +509,31 @@ export default function CageMatch() {
     } finally {
       setBusy(false);
     }
+  }
+
+  async function handleTogglePublicView() {
+    setPubBusy(true);
+    setPubError("");
+    try {
+      if (t.publicViewOpen) {
+        await api.disablePublicView(id);
+      } else {
+        await api.enablePublicView(id);
+      }
+      await refresh();
+    } catch (e) {
+      setPubError(e.message);
+    } finally {
+      setPubBusy(false);
+    }
+  }
+
+  function handleCopyPublicLink() {
+    if (!publicResultsLink) return;
+    navigator.clipboard.writeText(publicResultsLink).then(() => {
+      setPubCopied(true);
+      setTimeout(() => setPubCopied(false), 1800);
+    });
   }
 
   function toggleBoard(key) {
@@ -664,6 +700,68 @@ export default function CageMatch() {
           </button>
         </div>
       )}
+
+      <div className="cm-section-card">
+        <div className="cm-section-head">
+          <h3>Public Link</h3>
+          <button
+            type="button"
+            className={
+              t.publicViewOpen ? "btn-secondary btn-sm" : "btn-primary btn-sm"
+            }
+            disabled={pubBusy}
+            onClick={handleTogglePublicView}
+          >
+            {pubBusy
+              ? "Working…"
+              : t.publicViewOpen
+              ? "Turn Off Public Link"
+              : "Enable Public Link"}
+          </button>
+        </div>
+        <p
+          className="cm-hint"
+          style={{
+            marginBottom: t.publicViewOpen && publicResultsLink ? 10 : 0,
+          }}
+        >
+          {t.publicViewOpen
+            ? "Anyone with this link can follow the match live — score, games, and the tiebreak if it gets there — read-only, no sign-in needed."
+            : "Turn this on to share a read-only link where players and spectators can follow the match live, any time during the event."}
+        </p>
+        {t.publicViewOpen && publicResultsLink && (
+          <div style={{ display: "flex", gap: 8 }}>
+            <input
+              type="text"
+              readOnly
+              value={publicResultsLink}
+              onClick={(e) => e.target.select()}
+              style={{
+                flex: 1,
+                padding: "7px 10px",
+                borderRadius: 8,
+                border: "1px solid #252532",
+                background: "rgba(19, 19, 26, 0.85)",
+                color: "#e8e8e8",
+                fontFamily: "inherit",
+                fontSize: "0.82rem",
+              }}
+            />
+            <button
+              type="button"
+              className="btn-secondary btn-sm"
+              onClick={handleCopyPublicLink}
+            >
+              {pubCopied ? "Copied ✓" : "Copy Link"}
+            </button>
+          </div>
+        )}
+        {pubError && (
+          <p className="cm-error" style={{ marginTop: 8 }}>
+            {pubError}
+          </p>
+        )}
+      </div>
 
       {cm.sections.map((section) => (
         <div className="cm-section-card" key={section.id}>
