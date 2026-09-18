@@ -308,6 +308,7 @@
 /* Segmented toggle */
 .nt-toggle {
   display: flex;
+  flex-wrap: wrap;
   border: 1px solid var(--nt-border);
   border-radius: 8px;
   overflow: hidden;

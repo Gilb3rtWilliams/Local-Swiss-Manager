@@ -111,7 +111,17 @@ export default function NewTournament() {
   const [byeCutoffRound, setByeCutoffRound] = useState("");
 
   // Format, System & Rules
+  // topFormat drives the 4-way UI choice (Individual / Team / Cage Match /
+  // Match Tournament). `format` stays "individual" | "team" | "match" —
+  // exactly what the backend expects — and is kept in sync by
+  // handleTopFormatChange below; Match Tournament just means "individual or
+  // team, plus matchPlay on", so `format` is set via the nested Roster Type
+  // toggle shown only in that mode instead of getting a format value of its
+  // own.
+  const [topFormat, setTopFormat] = useState("individual");
   const [format, setFormat] = useState("individual");
+  const [matchPlayEnabled, setMatchPlayEnabled] = useState(false);
+  const [matchPlayNumberOfGames, setMatchPlayNumberOfGames] = useState(2);
   const [variant, setVariant] = useState("standard");
   const [system, setSystem] = useState("swiss");
   const [scoringSystem, setScoringSystem] = useState("standard");
@@ -141,9 +151,11 @@ export default function NewTournament() {
   ]);
   const [teams, setTeams] = useState([emptyTeam(), emptyTeam()]);
 
-  // Cage Match (format === "match"). "tournament" (multiple opponents) is a
-  // planned follow-up — the option is shown but disabled below.
-  const [matchType, setMatchType] = useState("cage");
+  // Cage Match (format === "match"). matchType only ever has one real value
+  // today — the old "multiple opponents" idea never shipped and is retired
+  // now that Match Tournament (matchPlay) is the real "more than a single
+  // 1v1" answer — so it's just a fixed literal in the payload below rather
+  // than a piece of state with a dropdown.
   const [competitorAName, setCompetitorAName] = useState("");
   const [competitorATitle, setCompetitorATitle] = useState("");
   const [competitorARating, setCompetitorARating] = useState("");
@@ -191,6 +203,32 @@ export default function NewTournament() {
     setTiebreaks((prev) =>
       prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id],
     );
+  }
+
+  // Drives the 4-way Format toggle, keeping the backend-facing `format` and
+  // `matchPlayEnabled` in sync with whichever of the 4 buttons is active.
+  function handleTopFormatChange(tf) {
+    setTopFormat(tf);
+    if (tf === "individual") {
+      setFormat("individual");
+      setMatchPlayEnabled(false);
+    } else if (tf === "team") {
+      setFormat("team");
+      setMatchPlayEnabled(false);
+    } else if (tf === "cage") {
+      setFormat("match");
+      setMatchPlayEnabled(false);
+    } else if (tf === "matchplay") {
+      setMatchPlayEnabled(true);
+      // Coming from Cage Match, "match" isn't a valid roster type — default
+      // to Individual. Coming from Individual/Team, leave the roster choice
+      // as-is.
+      setFormat((f) => (f === "match" ? "individual" : f));
+      // Bughouse isn't supported with Match Play yet (see
+      // tournamentService.js's createTournament() validation) — steer away
+      // from it rather than let the person hit a submit-time error.
+      setVariant((v) => (v === "bughouse" ? "standard" : v));
+    }
   }
 
   function updatePlayer(idx, field, value) {
@@ -293,12 +331,6 @@ export default function NewTournament() {
     }
 
     if (format === "match") {
-      if (matchType !== "cage") {
-        setError(
-          "Match Tournament (multiple opponents) isn't available yet — choose Cage Match.",
-        );
-        return;
-      }
       if (!competitorAName.trim() || !competitorBName.trim()) {
         setError("Both competitors need a name.");
         return;
@@ -369,6 +401,14 @@ export default function NewTournament() {
       return;
     }
 
+    if (matchPlayEnabled) {
+      const n = Number(matchPlayNumberOfGames);
+      if (!Number.isInteger(n) || n < 1) {
+        setError("Games per pairing must be a positive whole number.");
+        return;
+      }
+    }
+
     const payload = {
       name,
       category,
@@ -397,6 +437,10 @@ export default function NewTournament() {
       timeControl,
       totalRounds:
         isFixedRounds || autoRounds ? undefined : Number(totalRounds),
+      matchPlay: matchPlayEnabled,
+      matchPlayNumberOfGames: matchPlayEnabled
+        ? Number(matchPlayNumberOfGames)
+        : undefined,
     };
 
     if (format === "team") {
@@ -631,29 +675,43 @@ export default function NewTournament() {
                 <div className="form-grid">
                   <label className="field">
                     <span>Format</span>
-                    <select
-                      value={format}
-                      onChange={(e) => setFormat(e.target.value)}
-                    >
-                      <option value="individual">Individual</option>
-                      <option value="team">
-                        Team (league, bughouse, etc.)
-                      </option>
-                      <option value="match">Match (1 vs 1, etc.)</option>
-                    </select>
+                    <SegmentedToggle
+                      name="topFormat"
+                      value={topFormat}
+                      onChange={handleTopFormatChange}
+                      options={[
+                        { value: "individual", label: "Individual" },
+                        { value: "team", label: "Team" },
+                        { value: "cage", label: "Cage Match" },
+                        { value: "matchplay", label: "Match Tournament" },
+                      ]}
+                    />
                   </label>
-                  {format === "match" && (
+                  {topFormat === "matchplay" && (
                     <label className="field">
-                      <span>Match Type</span>
-                      <select
-                        value={matchType}
-                        onChange={(e) => setMatchType(e.target.value)}
-                      >
-                        <option value="cage">Cage Match (1 vs 1)</option>
-                        <option value="tournament" disabled>
-                          Match Tournament (multiple opponents) — coming soon
-                        </option>
-                      </select>
+                      <span>Roster Type</span>
+                      <SegmentedToggle
+                        name="matchPlayRoster"
+                        value={format}
+                        onChange={setFormat}
+                        options={[
+                          { value: "individual", label: "Individual" },
+                          { value: "team", label: "Team" },
+                        ]}
+                      />
+                    </label>
+                  )}
+                  {matchPlayEnabled && (
+                    <label className="field">
+                      <span>Games per Pairing (Best of N)</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={matchPlayNumberOfGames}
+                        onChange={(e) =>
+                          setMatchPlayNumberOfGames(e.target.value)
+                        }
+                      />
                     </label>
                   )}
                   {format === "team" && (
@@ -666,7 +724,9 @@ export default function NewTournament() {
                         <option value="league">
                           League (Team A vs Team B)
                         </option>
-                        <option value="bughouse">Bughouse</option>
+                        {!matchPlayEnabled && (
+                          <option value="bughouse">Bughouse</option>
+                        )}
                         <option value="standard">Standard team match</option>
                       </select>
                     </label>
@@ -757,6 +817,14 @@ export default function NewTournament() {
                   )}
                 </div>
                 <p className="hint" style={{ marginTop: 10 }}>
+                  {matchPlayEnabled &&
+                    `Each pairing${
+                      format === "team" ? "/board" : ""
+                    } plays a best-of-${
+                      Number(matchPlayNumberOfGames) || "N"
+                    } mini-match instead of a single game — the winner (by match points) feeds into the same ${
+                      isElimination ? "bracket advancement" : "standings"
+                    } and tiebreaks as usual. A level mini-match can either stand as a draw or go to a tiebreak decider, your call once it happens. `}
                   {format === "match" &&
                     "Time control, game count, and Chess960 are all set per section below — a Cage Match can mix Classical, Rapid, and Blitz sections, each with its own rules."}
                   {isRoundRobin &&
