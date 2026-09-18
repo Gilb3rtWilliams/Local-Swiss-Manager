@@ -655,6 +655,45 @@ function serialize(mm, nameOf) {
   };
 }
 
+// ─── Game History ───────────────────────────────────────────────────────
+// Flat list of every game this ONE mini-match has played — main games, then
+// the tiebreak mini-match's games, then the Armageddon game if it happened.
+// Mirrors cageMatch.js's getGameHistory() row shape exactly (source,
+// gameNum, whiteId, blackId, moves, fen, pgn, result, status, ...) so a
+// caller aggregating across many mini-matches (tournamentService.js's
+// getMatchPlayHistory, one per round/pairing or bracket match/board) can
+// tag each row with its own context and reuse the same
+// display/rendering as Cage Match's Game History tab.
+function getGameHistory(mm) {
+  const rows = [];
+  mm.games.forEach((g) => {
+    rows.push({ source: "main", ...g });
+  });
+  if (mm.tiebreak) {
+    mm.tiebreak.miniMatch.games.forEach((g) => {
+      rows.push({ source: "tiebreak_miniMatch", ...g });
+    });
+    if (mm.tiebreak.armageddon && mm.tiebreak.armageddon.result) {
+      const a = mm.tiebreak.armageddon;
+      rows.push({
+        source: "armageddon",
+        id: `${mm.id}-armageddon`,
+        gameNum: 1,
+        whiteId: a.whiteId,
+        blackId: a.blackId,
+        startFen: null,
+        moves: [],
+        fen: null,
+        pgn: null,
+        boardStatus: { kind: "in_progress" },
+        result: a.result,
+        status: "complete",
+      });
+    }
+  }
+  return rows;
+}
+
 module.exports = {
   makeMiniMatch,
   recordMove,
@@ -671,6 +710,7 @@ module.exports = {
   recordArmageddonBids,
   recordArmageddonResult,
   serialize,
+  getGameHistory,
   // exported for tests / potential reuse
   finalizeIfPossible,
 };

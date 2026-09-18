@@ -574,6 +574,16 @@ router.post(
   ),
 );
 
+// Game History tab — flat, chronological list of every game across every
+// round's pairing/board (Swiss/RR/DRR) or every bracket match/board, plus
+// each mini-match's own tiebreak/Armageddon — same idea as Cage Match's
+// history tab above, just spanning many mini-matches instead of one.
+router.get(
+  "/:id/matchplay/history",
+  requireAdmin,
+  wrap((req) => svc.getMatchPlayHistory(req.params.id)),
+);
+
 // ─── Tiebreak Decider (playoff) system ──────────────────────────────────
 // See tournamentService.js's Decider section for the full data model.
 // GET /:id already returns tieAlert/decider on every fetch, so there's no
@@ -677,6 +687,16 @@ router.get(
 router.get(
   "/public-view/:token/cagematch/performance",
   wrap((req) => svc.getPublicCageMatchSectionPerformance(req.params.token)),
+);
+
+// Public Match Play Game History — same token-based, no-admin-required
+// posture as the two above. The open round's/ready bracket matches' own
+// mini-match state already rides along inside GET /public-view/:token
+// itself (currentPairings/bracket); this covers the flat cross-event
+// history tab, same split as Cage Match's two routes above.
+router.get(
+  "/public-view/:token/matchplay/history",
+  wrap((req) => svc.getPublicMatchPlayHistory(req.params.token)),
 );
 
 // ─── Historical public standings ────────────────────────────────────────

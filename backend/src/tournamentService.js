@@ -1056,6 +1056,97 @@ function getCageMatchSectionPerformance(id) {
   return cageMatch.getSectionPerformance(t.cageMatch);
 }
 
+// ─── Match Play: flat cross-event Game History ─────────────────────────────
+// Mirrors getCageMatchHistory() above, but a Match Play tournament has many
+// mini-matches (one per round's pairing/board, or one per bracket
+// match/board) instead of Cage Match's single fixed one — so this walks all
+// of them and tags each resulting row with enough context (round or bracket
+// match, plus board number for team format) to group/label them in the UI.
+// Shared by both the admin and public versions below.
+function matchPlayHistoryRows(t) {
+  const nameOf = (id) => t.players.find((p) => p.id === id)?.name || "???";
+  const rows = [];
+
+  function pushFrom(mm, context) {
+    matchPlay.getGameHistory(mm).forEach((g) => {
+      rows.push({
+        ...context,
+        ...g,
+        whiteName: nameOf(g.whiteId),
+        blackName: nameOf(g.blackId),
+      });
+    });
+  }
+
+  if (isEliminationSystem(t)) {
+    t.bracket.matches.forEach((m) => {
+      if (t.format === "team") {
+        (m.boards || []).forEach((b) => {
+          if (b.miniMatch) {
+            pushFrom(b.miniMatch, {
+              source: "bracket",
+              matchId: m.id,
+              bracket: m.bracket,
+              round: m.round,
+              boardNum: b.boardNum,
+            });
+          }
+        });
+      } else if (m.miniMatch) {
+        pushFrom(m.miniMatch, {
+          source: "bracket",
+          matchId: m.id,
+          bracket: m.bracket,
+          round: m.round,
+          boardNum: null,
+        });
+      }
+    });
+    return rows;
+  }
+
+  // Swiss/round-robin: closed rounds (oldest first, per the "keep full
+  // mini-match data forever" design), then the currently open one.
+  function pushRound(pairings, round) {
+    pairings.forEach((p) => {
+      if (t.format === "team") {
+        (p.boards || []).forEach((b) => {
+          if (b.miniMatch) {
+            pushFrom(b.miniMatch, {
+              source: "round",
+              round,
+              boardNum: b.boardNum,
+            });
+          }
+        });
+      } else if (p.miniMatch) {
+        pushFrom(p.miniMatch, { source: "round", round, boardNum: null });
+      }
+    });
+  }
+  t.rounds.forEach((rr) => pushRound(rr.pairings, rr.round));
+  if (t.currentPairings) pushRound(t.currentPairings, t.currentRound);
+
+  return rows;
+}
+
+function getMatchPlayHistory(id) {
+  const t = assertTournament(id);
+  assertMatchPlayTournament(t);
+  return matchPlayHistoryRows(t);
+}
+
+function getPublicMatchPlayHistory(token) {
+  const t = findByPublicViewToken(token);
+  if (!t.publicViewOpen) {
+    const e = new Error("Results aren't public for this tournament right now");
+    e.status = 403;
+    throw e;
+  }
+  assertMatchPlayTournament(t);
+  return matchPlayHistoryRows(t);
+}
+
 // Public equivalents of the two functions above — same token-based
 // resolution and publicViewOpen gate as getPublicPlayerProfile/
 // getPublicTeamProfile use elsewhere in this file, rather than trusting an
@@ -5309,4 +5400,6 @@ module.exports = {
   recordMatchPlayArmageddonBids,
   recordMatchPlayArmageddonResult,
   setMatchPlayBracketTierGames,
+  getMatchPlayHistory,
+  getPublicMatchPlayHistory,
 };
