@@ -7,6 +7,7 @@ const bughouse = require("./bughouse");
 const chess960 = require("./chess960");
 const excelExport = require("./excelExport");
 const cageMatch = require("./cageMatch");
+const matchPlay = require("./matchPlay");
 const imageUpload = require("./imageUpload");
 const { title } = require("process");
 
@@ -172,7 +173,7 @@ function assertNotCageMatch(t) {
 // result to cascade winners/losers/byes forward through the graph until it
 // reaches a fixed point.
 
-function buildBracketState(t) {
+function buildBracketState(t, initialTierGames = {}) {
   const seeds = seedList(t);
   const n = seeds.length;
   const topology =
@@ -193,6 +194,8 @@ function buildBracketState(t) {
     status: "pending", // pending -> ready -> complete | bye | skipped
     boards: null,
     result: null,
+    miniMatch: null, // Match Play, individual format only — see activateMatch()
+    boardsScored: false, // Match Play, team format — see finalizeBracketTeamMatch()
   }));
 
   t.bracket = {
@@ -207,6 +210,13 @@ function buildBracketState(t) {
     champion: null,
     thirdPlace: null,
     roundChess960: {}, // keyed "<bracket><round>" e.g. "W1", "L2", "GF1" — see activateMatch
+    // Match Play: games-per-match for each tier, same keying as
+    // roundChess960 above. Pre-seeded from createTournament()'s
+    // matchPlayBracketNumberOfGames input when given; activateMatch() fills
+    // in the tournament-wide default for any tier that reaches "ready"
+    // without one, and setMatchPlayBracketTierGames() lets the organizer
+    // override a tier before it starts.
+    roundNumberOfGames: t.matchPlay ? { ...initialTierGames } : {},
   };
 
   resolveBracket(t);
@@ -258,7 +268,46 @@ function resolveBracketSlot(t, slot) {
 // Swiss/round-robin round-generation path. Dispatches to bughouse's
 // cross-color pairing for that variant; otherwise uses the generic
 // even/odd board-alternation split that works for any team size.
-function buildTeamBoards(t, teamWhite, teamBlack) {
+// Builds one mini-match. Swiss/round-robin call sites pass the round's
+// shared t.currentChess960 and t.matchPlayNumberOfGames, with allowDraw:
+// true (a level mini-match can stand as a genuine draw — see matchPlay.js).
+// Bracket call sites (activateMatch, below) pass that tier's own position
+// and games-per-match instead, with allowDraw: false (someone has to
+// advance). Kept as an explicit options object rather than reading off `t`
+// internally so this one function works for both contexts without needing
+// to know which one it's in.
+function makeMatchPlayMiniMatch(
+  whiteId,
+  blackId,
+  { numberOfGames, chess960Position, allowDraw },
+) {
+  return matchPlay.makeMiniMatch({
+    idA: whiteId,
+    idB: blackId,
+    numberOfGames,
+    variant: chess960Position ? "chess960" : "standard",
+    chess960Position,
+    allowDraw,
+  });
+}
+
+// Swiss/round-robin context's mini-match options — one shared position per
+// round (t.currentChess960) applied to every game in the mini-match, not a
+// fresh draw per game the way Cage Match does it; allowDraw: true since a
+// level mini-match can stand as a genuine draw there (see matchPlay.js).
+// undefined when Match Play is off, so callers can pass this straight
+// through to buildTeamBoards()/makeMatchPlayMiniMatch() and skip attaching
+// anything.
+function swissMatchPlayOptions(t) {
+  if (!t.matchPlay) return undefined;
+  return {
+    numberOfGames: t.matchPlayNumberOfGames,
+    chess960Position: t.chess960 ? t.currentChess960 : undefined,
+    allowDraw: true,
+  };
+}
+
+function buildTeamBoards(t, teamWhite, teamBlack, mpOptions) {
   const whitePlayers = t.players
     .filter((p) => p.teamId === teamWhite.id)
     .sort((a, b) => b.rating - a.rating);
@@ -267,6 +316,8 @@ function buildTeamBoards(t, teamWhite, teamBlack) {
     .sort((a, b) => b.rating - a.rating);
 
   if (t.variant === "bughouse") {
+    // Match Play + bughouse isn't supported yet — createTournament() rejects
+    // that combination up front, so t.matchPlay is never true here.
     return bughouse.assignBughouseBoards(whitePlayers, blackPlayers);
   }
 
@@ -286,13 +337,30 @@ function buildTeamBoards(t, teamWhite, teamBlack) {
       });
       continue;
     }
-    boards.push(
-      evenBoard
-        ? { boardNum: bIdx + 1, white: wp, black: bp, result: undefined }
-        : { boardNum: bIdx + 1, white: bp, black: wp, result: undefined },
-    );
+    const board = evenBoard
+      ? { boardNum: bIdx + 1, white: wp, black: bp, result: undefined }
+      : { boardNum: bIdx + 1, white: bp, black: wp, result: undefined };
+    if (t.matchPlay && mpOptions) {
+      board.miniMatch = makeMatchPlayMiniMatch(
+        board.white.id,
+        board.black.id,
+        mpOptions,
+      );
+    }
+    boards.push(board);
   }
   return boards;
+}
+
+// Shared by chess960's roundChess960 tiering and Match Play's
+// roundNumberOfGames tiering below — the Grand Final and the third-place
+// playoff are effectively the event's final round, decided together, so
+// they share one tier key ("FINALS") even though they carry different
+// internal bracket/round tags.
+function bracketTierKey(t, m) {
+  const isFinalsPairing =
+    m.id === t.bracket.grandFinalId || m.id === t.bracket.thirdPlaceMatchId;
+  return isFinalsPairing ? "FINALS" : `${m.bracket}${m.round}`;
 }
 
 // Wires up a team match's boards the moment both sides are known, reusing
@@ -305,29 +373,45 @@ function buildTeamBoards(t, teamWhite, teamBlack) {
 // position, every Losers-bracket Round 2 match gets its own shared one, the
 // Grand Final gets its own, etc. The position for a tier is rolled the
 // first time any match in it activates, then reused for every other match
-// in that same tier as it activates later.
+// in that same tier as it activates later. Match Play's games-per-match
+// follows the identical tiering convention — see roundNumberOfGames above.
 function activateMatch(t, m) {
   m.status = "ready";
   if (t.chess960) {
     if (!t.bracket.roundChess960) t.bracket.roundChess960 = {};
-    // The Grand Final and the third-place playoff are both effectively the
-    // event's final round, decided at the same time — they should share one
-    // position rather than each rolling its own, even though they carry
-    // different internal bracket/round tags (the third-place match isn't
-    // part of the "W" bracket's own round numbering, so it would otherwise
-    // land in a different tier than the final it's paired with).
-    const isFinalsPairing =
-      m.id === t.bracket.grandFinalId || m.id === t.bracket.thirdPlaceMatchId;
-    const tierKey = isFinalsPairing ? "FINALS" : `${m.bracket}${m.round}`;
+    const tierKey = bracketTierKey(t, m);
     if (!t.bracket.roundChess960[tierKey]) {
       t.bracket.roundChess960[tierKey] = chess960.randomChess960Position();
     }
     m.chess960 = t.bracket.roundChess960[tierKey];
   }
-  if (t.format !== "team") return;
+
+  let mpOptions;
+  if (t.matchPlay) {
+    const tierKey = bracketTierKey(t, m);
+    if (t.bracket.roundNumberOfGames[tierKey] === undefined) {
+      t.bracket.roundNumberOfGames[tierKey] = t.matchPlayNumberOfGames;
+    }
+    mpOptions = {
+      numberOfGames: t.bracket.roundNumberOfGames[tierKey],
+      chess960Position: t.chess960 ? m.chess960 : undefined,
+      allowDraw: false, // someone has to advance
+    };
+  }
+
+  if (t.format !== "team") {
+    if (mpOptions) {
+      m.miniMatch = makeMatchPlayMiniMatch(
+        m.competitorA,
+        m.competitorB,
+        mpOptions,
+      );
+    }
+    return;
+  }
   const teamA = t.teams.find((x) => x.id === m.competitorA);
   const teamB = t.teams.find((x) => x.id === m.competitorB);
-  m.boards = buildTeamBoards(t, teamA, teamB);
+  m.boards = buildTeamBoards(t, teamA, teamB, mpOptions);
 }
 
 function resolveBracket(t) {
@@ -539,6 +623,15 @@ async function createTournament(input) {
     fideRated = false,
     isTest = false,
     chess960: chess960Enabled = false,
+    // "Match Play": every Swiss/round-robin pairing (or team board) is a
+    // best-of-N mini-match instead of a single game — see matchPlay.js.
+    // Not yet supported for elimination systems or bughouse — both are
+    // rejected below rather than silently half-working. matchPlayNumberOfGames
+    // is just the default; generateNextRound()/generateManualRound() accept
+    // a per-round override (see their own updates.matchPlayNumberOfGames).
+    matchPlay: matchPlayEnabled = false,
+    matchPlayNumberOfGames = 2,
+    matchPlayBracketNumberOfGames = null,
     // Only meaningful for system === "single_elimination" — see
     // buildBracketState()/bracket.js for why double elimination doesn't
     // get one. Harmless (just unused) to pass for any other system.
@@ -570,6 +663,51 @@ async function createTournament(input) {
     const e = new Error("End date can't be before start date");
     e.status = 400;
     throw e;
+  }
+  if (matchPlayEnabled) {
+    if (format === "match") {
+      const e = new Error(
+        "Match Play doesn't apply to Cage Match tournaments — they already play games directly, see the /cagematch endpoints.",
+      );
+      e.status = 400;
+      throw e;
+    }
+    if (variant === "bughouse") {
+      const e = new Error(
+        "Match Play for Bughouse isn't supported yet — coming in a follow-up.",
+      );
+      e.status = 400;
+      throw e;
+    }
+    const n = Number(matchPlayNumberOfGames);
+    if (!Number.isInteger(n) || n < 1) {
+      const e = new Error("matchPlayNumberOfGames must be a positive integer.");
+      e.status = 400;
+      throw e;
+    }
+    // Bracket-only: optional per-tier overrides of the default above (e.g.
+    // best-of-2 early rounds, best-of-4 finals) — same tier keys
+    // activateMatch()/setMatchPlayBracketTierGames() use ("W1", "L2",
+    // "FINALS", etc). Validated here but only actually applied below, once
+    // t.bracket exists, since createTournament() builds the tournament
+    // object before drawing the bracket.
+    if (
+      matchPlayBracketNumberOfGames &&
+      (system === "single_elimination" || system === "double_elimination")
+    ) {
+      for (const [tierKey, tierN] of Object.entries(
+        matchPlayBracketNumberOfGames,
+      )) {
+        const tn = Number(tierN);
+        if (!Number.isInteger(tn) || tn < 1) {
+          const e = new Error(
+            `matchPlayBracketNumberOfGames["${tierKey}"] must be a positive integer.`,
+          );
+          e.status = 400;
+          throw e;
+        }
+      }
+    }
   }
 
   // 2. Tournament Object Initialization
@@ -605,6 +743,15 @@ async function createTournament(input) {
     isTest: Boolean(isTest),
     chess960: Boolean(chess960Enabled),
     currentChess960: null, // set by generateNextRound when chess960 is on
+    matchPlay: Boolean(matchPlayEnabled),
+    // Default N for the next round generated; generateNextRound()/
+    // generateManualRound() can override it per round (and, when they do,
+    // update this field so it becomes the new default going forward — same
+    // "sticky until changed" convention as most other per-round settings
+    // here). null when matchPlay is off.
+    matchPlayNumberOfGames: matchPlayEnabled
+      ? Number(matchPlayNumberOfGames)
+      : null,
     thirdPlaceMatch: Boolean(thirdPlaceMatch), // read by buildBracketState() at creation time, below
 
     registrationOpen: false,
@@ -753,7 +900,7 @@ async function createTournament(input) {
     // The full bracket is known the moment seeding is set — draw it now
     // rather than waiting for a "generate round" click, and resolve any
     // immediate byes so Round 1 is ready to view/play right away.
-    buildBracketState(t);
+    buildBracketState(t, matchPlayBracketNumberOfGames || {});
     t.totalRounds = t.bracket.wbRounds + t.bracket.lbRounds + 1; // +1 for the Grand Final (reset match isn't guaranteed)
     t.currentRound = 1;
     t.status = "active";
@@ -1009,6 +1156,19 @@ async function generateNextRound(id, updates = {}) {
   // regenerated each round, not carried over from the last one.
   t.currentChess960 = t.chess960 ? chess960.randomChess960Position() : null;
 
+  // Match Play: the organizer can change games-per-round each time a new
+  // round is generated — updating t.matchPlayNumberOfGames here makes that
+  // the new default too (same convention nameEdits below already follows).
+  if (t.matchPlay && updates.matchPlayNumberOfGames !== undefined) {
+    const n = Number(updates.matchPlayNumberOfGames);
+    if (!Number.isInteger(n) || n < 1) {
+      const e = new Error("matchPlayNumberOfGames must be a positive integer.");
+      e.status = 400;
+      throw e;
+    }
+    t.matchPlayNumberOfGames = n;
+  }
+
   if (t.format === "team") {
     const teamPairings =
       (isRoundRobinSystem(t) && roundRobinPairsForRound(t)) ||
@@ -1034,7 +1194,12 @@ async function generateNextRound(id, updates = {}) {
         return { type: "bye", team: teamWhite.id, boards: [] };
       }
 
-      const boards = buildTeamBoards(t, teamWhite, teamBlack);
+      const boards = buildTeamBoards(
+        t,
+        teamWhite,
+        teamBlack,
+        swissMatchPlayOptions(t),
+      );
       return {
         type: "match",
         teamWhite: teamWhite.id,
@@ -1046,12 +1211,23 @@ async function generateNextRound(id, updates = {}) {
     const pairings =
       (isRoundRobinSystem(t) && roundRobinPairsForRound(t)) ||
       engine.generatePairings(t.players.map(playerToCompetitor));
-    t.currentPairings = pairings.map((pair) => ({
-      type: pair.black === null ? "bye" : "individual",
-      white: pair.white.id,
-      black: pair.black ? pair.black.id : null,
-      result: undefined,
-    }));
+    t.currentPairings = pairings.map((pair) => {
+      const isBye = pair.black === null;
+      const pairing = {
+        type: isBye ? "bye" : "individual",
+        white: pair.white.id,
+        black: pair.black ? pair.black.id : null,
+        result: undefined,
+      };
+      if (!isBye && t.matchPlay) {
+        pairing.miniMatch = makeMatchPlayMiniMatch(
+          pairing.white,
+          pairing.black,
+          swissMatchPlayOptions(t),
+        );
+      }
+      return pairing;
+    });
 
     // Apply Targeted Name Changes (Permitted at any time)
     // Expects frontend to send: updates.nameEdits = [{ id: "player-123", newName: "John Doe" }]
@@ -1220,6 +1396,16 @@ async function generateManualRound(id, payload = {}) {
   t.status = "active";
   t.currentChess960 = t.chess960 ? chess960.randomChess960Position() : null;
 
+  if (t.matchPlay && payload.matchPlayNumberOfGames !== undefined) {
+    const n = Number(payload.matchPlayNumberOfGames);
+    if (!Number.isInteger(n) || n < 1) {
+      const e = new Error("matchPlayNumberOfGames must be a positive integer.");
+      e.status = 400;
+      throw e;
+    }
+    t.matchPlayNumberOfGames = n;
+  }
+
   if (isTeam) {
     t.currentPairings = pairs.map((pr) => {
       const a = byId.get(pr.aId);
@@ -1229,7 +1415,12 @@ async function generateManualRound(id, payload = {}) {
         b,
         pr.color,
       );
-      const boards = buildTeamBoards(t, teamWhite, teamBlack);
+      const boards = buildTeamBoards(
+        t,
+        teamWhite,
+        teamBlack,
+        swissMatchPlayOptions(t),
+      );
       return {
         type: "match",
         teamWhite: teamWhite.id,
@@ -1245,12 +1436,20 @@ async function generateManualRound(id, payload = {}) {
       const a = byId.get(pr.aId);
       const b = byId.get(pr.bId);
       const { white, black } = resolveManualColors(a, b, pr.color);
-      return {
+      const pairing = {
         type: "individual",
         white: white.id,
         black: black.id,
         result: undefined,
       };
+      if (t.matchPlay) {
+        pairing.miniMatch = makeMatchPlayMiniMatch(
+          pairing.white,
+          pairing.black,
+          swissMatchPlayOptions(t),
+        );
+      }
+      return pairing;
     });
     if (byeId) {
       t.currentPairings.push({
@@ -1262,6 +1461,301 @@ async function generateManualRound(id, payload = {}) {
     }
   }
 
+  t.updatedAt = new Date().toISOString();
+  await persist();
+  return serializeTournament(t);
+}
+
+// ─── Match Play (best-of-N per pairing/board) ──────────────────────────────
+// Mutators for the mini-match matchPlay.js attaches to each Swiss/round-robin
+// pairing (or team board), or bracket match (or its boards), when t.matchPlay
+// is on — same move/result/tiebreak/Armageddon vocabulary as the Cage Match
+// endpoints, just addressed by (open-round pairing index, board number) OR
+// (bracket matchId, board number) instead of a fixed two-competitor A/B.
+//
+// Every mutator funnels its result-affecting work through target.sync(),
+// which does whatever collapsing the caller's context needs:
+//   - Swiss/RR pairing or team board: writes pairing.result/board.result —
+//     the single field submitResults()'s completeness check and applyGame()
+//     already read — with zero changes needed to that machinery.
+//   - Bracket individual match: calls finalizeBracketIndividualMatch() and
+//     cascades resolveBracket(), the instant the mini-match decides — a
+//     bracket match has no round-batch "submit" step the way Swiss/RR does,
+//     so there's nothing else to wait for.
+//   - Bracket team board: calls finalizeBracketTeamMatch() once every board
+//     is decided. If that ties on aggregate, the match is left pending —
+//     see finalizeBracketTeamMatch()'s own comment for how the organizer
+//     resolves that (same winnerOverride mechanism submitBracketMatchResult
+//     already has).
+//
+// Deliberately scoped to currently-open/currently-ready targets only:
+// Swiss/RR pairings in t.currentPairings, and bracket matches with
+// status === "ready". Once a Swiss/RR round closes via submitResults() or a
+// bracket match completes, correcting its mini-match after the fact isn't
+// supported by these functions yet — that needs the same recompute-safe
+// treatment editResult()/deleteRound() already give a classical result, left
+// for a follow-up.
+function assertMatchPlayTournament(t) {
+  if (!t.matchPlay) {
+    const e = new Error("Match Play isn't enabled for this tournament.");
+    e.status = 400;
+    throw e;
+  }
+}
+
+function findMatchPlayTarget(t, { pairIndex, boardNum, matchId }) {
+  assertMatchPlayTournament(t);
+
+  if (matchId !== undefined) {
+    if (!isEliminationSystem(t)) {
+      const e = new Error("This tournament doesn't use a bracket.");
+      e.status = 400;
+      throw e;
+    }
+    const m = bracketMatchById(t, matchId);
+    if (!m) {
+      const e = new Error("Match not found");
+      e.status = 404;
+      throw e;
+    }
+    if (m.status !== "ready") {
+      const e = new Error(
+        `This match isn't ready for a result (status: ${m.status})`,
+      );
+      e.status = 409;
+      throw e;
+    }
+
+    if (t.format === "team") {
+      if (boardNum === undefined || boardNum === null) {
+        const e = new Error("boardNum is required for a team tournament.");
+        e.status = 400;
+        throw e;
+      }
+      const board = (m.boards || []).find(
+        (b) => b.boardNum === Number(boardNum),
+      );
+      if (!board) {
+        const e = new Error(`No board ${boardNum} in this match.`);
+        e.status = 404;
+        throw e;
+      }
+      if (board.sitOut) {
+        const e = new Error(
+          "This board is sitting out — there's no mini-match.",
+        );
+        e.status = 400;
+        throw e;
+      }
+      if (!board.miniMatch) {
+        const e = new Error("This board doesn't have a Match Play mini-match.");
+        e.status = 400;
+        throw e;
+      }
+      return {
+        miniMatch: board.miniMatch,
+        sync: () => syncBracketBoard(t, m, board),
+      };
+    }
+
+    if (!m.miniMatch) {
+      const e = new Error("This match doesn't have a Match Play mini-match.");
+      e.status = 400;
+      throw e;
+    }
+    return {
+      miniMatch: m.miniMatch,
+      sync: () => syncBracketIndividualMatch(t, m),
+    };
+  }
+
+  if (!t.currentPairings) {
+    const e = new Error("There's no open round right now.");
+    e.status = 409;
+    throw e;
+  }
+  const pairing = t.currentPairings[pairIndex];
+  if (!pairing) {
+    const e = new Error(`No pairing at index ${pairIndex} in the open round.`);
+    e.status = 404;
+    throw e;
+  }
+  if (pairing.type === "bye") {
+    const e = new Error("A bye has no mini-match.");
+    e.status = 400;
+    throw e;
+  }
+
+  if (t.format === "team") {
+    if (boardNum === undefined || boardNum === null) {
+      const e = new Error("boardNum is required for a team tournament.");
+      e.status = 400;
+      throw e;
+    }
+    const board = (pairing.boards || []).find(
+      (b) => b.boardNum === Number(boardNum),
+    );
+    if (!board) {
+      const e = new Error(`No board ${boardNum} in this pairing.`);
+      e.status = 404;
+      throw e;
+    }
+    if (board.sitOut) {
+      const e = new Error(
+        "This board is sitting out this round — there's no mini-match.",
+      );
+      e.status = 400;
+      throw e;
+    }
+    if (!board.miniMatch) {
+      const e = new Error("This board doesn't have a Match Play mini-match.");
+      e.status = 400;
+      throw e;
+    }
+    return {
+      miniMatch: board.miniMatch,
+      sync: () => syncMiniMatchResult(board),
+    };
+  }
+
+  if (!pairing.miniMatch) {
+    const e = new Error("This pairing doesn't have a Match Play mini-match.");
+    e.status = 400;
+    throw e;
+  }
+  return {
+    miniMatch: pairing.miniMatch,
+    sync: () => syncMiniMatchResult(pairing),
+  };
+}
+
+function syncMiniMatchResult(target) {
+  target.result = target.miniMatch.result ?? undefined;
+}
+
+// Bracket individual match: the instant the mini-match decides, finalize
+// the bracket match right away — there's no round-batch step to wait for
+// the way Swiss/RR has. allowDraw:false on the mini-match guarantees
+// winnerId is never null here.
+function syncBracketIndividualMatch(t, m) {
+  if (m.miniMatch.status !== "decided") return;
+  finalizeBracketIndividualMatch(t, m, m.miniMatch.winnerId);
+}
+
+// Bracket team board: records this board's result, and once every
+// non-sitOut board on the match has one, finalizes the whole match — unless
+// it ties on aggregate, in which case finalizeBracketTeamMatch() leaves it
+// pending for the organizer's winnerOverride (see that function's comment).
+function syncBracketBoard(t, m, board) {
+  if (board.miniMatch.status !== "decided") return;
+  board.result = board.miniMatch.result;
+  const allBoardsDecided = m.boards.every((b) => b.sitOut || b.result);
+  if (!allBoardsDecided) return;
+  finalizeBracketTeamMatch(t, m);
+}
+
+async function recordMatchPlayMove(
+  id,
+  { pairIndex, boardNum, matchId, gameId, move },
+) {
+  const t = assertTournament(id);
+  const target = findMatchPlayTarget(t, { pairIndex, boardNum, matchId });
+  matchPlay.recordMove(target.miniMatch, { gameId, move });
+  t.updatedAt = new Date().toISOString();
+  await persist();
+  return serializeTournament(t);
+}
+
+async function undoMatchPlayMove(id, { pairIndex, boardNum, matchId, gameId }) {
+  const t = assertTournament(id);
+  const target = findMatchPlayTarget(t, { pairIndex, boardNum, matchId });
+  matchPlay.undoMove(target.miniMatch, { gameId });
+  t.updatedAt = new Date().toISOString();
+  await persist();
+  return serializeTournament(t);
+}
+
+async function setMatchPlayGameResult(
+  id,
+  { pairIndex, boardNum, matchId, gameId, result },
+) {
+  const t = assertTournament(id);
+  const target = findMatchPlayTarget(t, { pairIndex, boardNum, matchId });
+  matchPlay.setGameResult(target.miniMatch, { gameId, result });
+  target.sync();
+  t.updatedAt = new Date().toISOString();
+  await persist();
+  return serializeTournament(t);
+}
+
+async function clearMatchPlayGameResult(
+  id,
+  { pairIndex, boardNum, matchId, gameId },
+) {
+  const t = assertTournament(id);
+  const target = findMatchPlayTarget(t, { pairIndex, boardNum, matchId });
+  matchPlay.clearGameResult(target.miniMatch, { gameId });
+  target.sync();
+  t.updatedAt = new Date().toISOString();
+  await persist();
+  return serializeTournament(t);
+}
+
+async function startMatchPlayTiebreak(id, { pairIndex, boardNum, matchId }) {
+  const t = assertTournament(id);
+  const target = findMatchPlayTarget(t, { pairIndex, boardNum, matchId });
+  matchPlay.startTiebreak(target.miniMatch);
+  t.updatedAt = new Date().toISOString();
+  await persist();
+  return serializeTournament(t);
+}
+
+// The organizer's other option once a mini-match is level — accept it as a
+// genuine draw instead of forcing a tiebreak. Refused by matchPlay.js for a
+// bracket match (allowDraw: false there) — someone has to advance.
+async function acceptMatchPlayDraw(id, { pairIndex, boardNum, matchId }) {
+  const t = assertTournament(id);
+  const target = findMatchPlayTarget(t, { pairIndex, boardNum, matchId });
+  matchPlay.acceptDraw(target.miniMatch);
+  target.sync();
+  t.updatedAt = new Date().toISOString();
+  await persist();
+  return serializeTournament(t);
+}
+
+async function recordMatchPlayTiebreakResult(
+  id,
+  { pairIndex, boardNum, matchId, gameId, result },
+) {
+  const t = assertTournament(id);
+  const target = findMatchPlayTarget(t, { pairIndex, boardNum, matchId });
+  matchPlay.recordTiebreakGameResult(target.miniMatch, { gameId, result });
+  target.sync();
+  t.updatedAt = new Date().toISOString();
+  await persist();
+  return serializeTournament(t);
+}
+
+async function recordMatchPlayArmageddonBids(
+  id,
+  { pairIndex, boardNum, matchId, bidA, bidB },
+) {
+  const t = assertTournament(id);
+  const target = findMatchPlayTarget(t, { pairIndex, boardNum, matchId });
+  matchPlay.recordArmageddonBids(target.miniMatch, { bidA, bidB });
+  t.updatedAt = new Date().toISOString();
+  await persist();
+  return serializeTournament(t);
+}
+
+async function recordMatchPlayArmageddonResult(
+  id,
+  { pairIndex, boardNum, matchId, result },
+) {
+  const t = assertTournament(id);
+  const target = findMatchPlayTarget(t, { pairIndex, boardNum, matchId });
+  matchPlay.recordArmageddonResult(target.miniMatch, { result });
+  target.sync();
   t.updatedAt = new Date().toISOString();
   await persist();
   return serializeTournament(t);
@@ -1453,6 +1947,7 @@ async function submitResults(id, resultsInput) {
           black: board.black.id,
           result: board.result,
           derivedFromBoard: board.derivedFromBoard || null,
+          miniMatch: board.miniMatch || undefined,
         });
       });
 
@@ -1542,6 +2037,7 @@ async function submitResults(id, resultsInput) {
           white: pairing.white,
           black: pairing.black,
           result: pairing.result,
+          miniMatch: pairing.miniMatch || undefined,
         });
       }
     });
@@ -1831,11 +2327,179 @@ async function deleteRound(id, roundNumber) {
   return serializeTournament(t);
 }
 
+async function setMatchPlayBracketTierGames(id, tierKey, numberOfGames) {
+  const t = assertTournament(id);
+  assertMatchPlayTournament(t);
+  if (!isEliminationSystem(t)) {
+    const e = new Error("This tournament doesn't use a bracket.");
+    e.status = 400;
+    throw e;
+  }
+  const n = Number(numberOfGames);
+  if (!Number.isInteger(n) || n < 1) {
+    const e = new Error("numberOfGames must be a positive integer.");
+    e.status = 400;
+    throw e;
+  }
+  // Locked the same way a tier's Chess960 position is locked once rolled —
+  // once any match in this tier has activated, its games-per-match can't
+  // change out from under a mini-match that's already built.
+  const alreadyStarted = t.bracket.matches.some(
+    (m) => bracketTierKey(t, m) === tierKey && m.status !== "pending",
+  );
+  if (alreadyStarted) {
+    const e = new Error(
+      `Tier "${tierKey}" has already started — its games-per-match is locked in.`,
+    );
+    e.status = 409;
+    throw e;
+  }
+  t.bracket.roundNumberOfGames[tierKey] = n;
+  t.updatedAt = new Date().toISOString();
+  await persist();
+  return serializeTournament(t);
+}
+
+// ─── Bracket result finalization (shared by manual submission and Match
+// Play's automatic mini-match resolution) ──────────────────────────────────
+// Individual: sets winner/loser, scores it 1-0 for individual Standings,
+// marks the match complete, and cascades resolveBracket(). winnerId must
+// already be decided by the caller — this function doesn't ask who won.
+function finalizeBracketIndividualMatch(t, m, winnerId) {
+  m.winnerId = winnerId;
+  m.loserId = winnerId === m.competitorA ? m.competitorB : m.competitorA;
+  m.result = winnerId === m.competitorA ? "A" : "B";
+
+  const pById = byId(t.players);
+  const winner = pById.get(m.winnerId);
+  const loser = pById.get(m.loserId);
+  if (winner && loser) {
+    winner.opponents.add(loser.id);
+    loser.opponents.add(winner.id);
+    winner.score += 1;
+    winner.results[loser.id] = 1;
+    loser.results[winner.id] = 0;
+  }
+  m.status = "complete";
+  resolveBracket(t);
+}
+
+// Team: scores every board (once — see m.boardsScored below), then decides
+// the match if aPoints !== bPoints. On an aggregate tie, returns
+// { decided: false } instead of finishing the match UNLESS winnerOverride
+// is given — the caller decides whether an undecided tie is an error
+// (submitBracketMatchResult(), a genuine "final submit" action) or fine to
+// leave pending (Match Play's per-board auto-sync, where the organizer can
+// supply the override afterward via that same submitBracketMatchResult()
+// call, since by then every board already has a result and this function's
+// re-entry just recomputes aPoints/bPoints from m.result instead of
+// re-running applyGame — running it twice would double-count every
+// player's score).
+function finalizeBracketTeamMatch(t, m, { winnerOverride } = {}) {
+  let aPoints, bPoints;
+  if (!m.boardsScored) {
+    const pById = byId(t.players);
+    aPoints = 0;
+    bPoints = 0;
+
+    // Same rule as the Swiss/round-robin team path: a win for one teammate
+    // is a win for both. Back-fill before scoring so the ordinary per-board
+    // loop below credits both players uniformly.
+    if (t.variant === "bughouse") {
+      const decided = m.boards.find(
+        (bd) => !bd.sitOut && isDecisiveResult(bd.result),
+      );
+      const other =
+        decided && m.boards.find((bd) => bd !== decided && !bd.sitOut);
+      if (decided && other && !other.result) {
+        other.result = WHITE_WIN_RESULTS.has(decided.result) ? "0-1" : "1-0";
+        other.derivedFromBoard = decided.boardNum;
+      }
+    }
+
+    m.boards.forEach((board) => {
+      if (board.sitOut || !board.result) return; // Skip abandoned games
+      const { wScore, bScore } = applyGame(
+        pById,
+        board.white.id,
+        board.black.id,
+        board.result,
+      );
+      if (board.white.teamId === m.competitorA) {
+        aPoints += wScore;
+        bPoints += bScore;
+      } else {
+        aPoints += bScore;
+        bPoints += wScore;
+      }
+    });
+
+    // OVERRIDE: Bughouse match points for brackets
+    if (t.variant === "bughouse") {
+      const b1 = m.boards[0];
+      const b2 = m.boards[1];
+      const teamAWon =
+        (b1 && WHITE_WIN_RESULTS.has(b1.result)) ||
+        (b2 && BLACK_WIN_RESULTS.has(b2.result));
+      const teamBWon =
+        (b1 && BLACK_WIN_RESULTS.has(b1.result)) ||
+        (b2 && WHITE_WIN_RESULTS.has(b2.result));
+      aPoints = teamAWon ? 1 : teamBWon ? 0 : 0.5;
+      bPoints = teamBWon ? 1 : teamAWon ? 0 : 0.5;
+    }
+
+    m.result = { aPoints, bPoints };
+    m.boardsScored = true;
+  } else {
+    ({ aPoints, bPoints } = m.result);
+  }
+
+  if (aPoints !== bPoints) {
+    m.winnerId = aPoints > bPoints ? m.competitorA : m.competitorB;
+  } else if (winnerOverride === "A" || winnerOverride === "B") {
+    m.winnerId = winnerOverride === "A" ? m.competitorA : m.competitorB;
+  } else {
+    return { decided: false };
+  }
+  m.loserId = m.winnerId === m.competitorA ? m.competitorB : m.competitorA;
+
+  // Board-level player scores were already applied above via applyGame().
+  // Record the match outcome at team level too, the same way the
+  // Swiss/round-robin team path does, so team Standings reflects bracket
+  // play instead of staying frozen at zero.
+  const teamA = t.teams.find((x) => x.id === m.competitorA);
+  const teamB = t.teams.find((x) => x.id === m.competitorB);
+  if (teamA && teamB) {
+    teamA.opponents.add(teamB.id);
+    teamB.opponents.add(teamA.id);
+    teamA.colorHistory.push("W");
+    teamB.colorHistory.push("B");
+    teamA.lastColor = "W";
+    teamB.lastColor = "B";
+    teamA.score += aPoints;
+    teamB.score += bPoints;
+    teamA.results[teamB.id] = aPoints;
+    teamB.results[teamA.id] = bPoints;
+  }
+
+  m.status = "complete";
+  resolveBracket(t);
+  return { decided: true };
+}
+
 // ─── Bracket result submission ──────────────────────────────────────────────
 // One match at a time, unlike the round-batch submitResults() above. Accepts:
 //   individual: { winner: "A" | "B" }
 //   team:       { boards: [{ boardNum, result }], winnerOverride?: "A" | "B" }
 //               (winnerOverride is required only if the boards tie)
+//
+// For a Match Play match, boards/individual results normally arrive via the
+// mini-match mutators (recordMatchPlayMove et al, called with matchId
+// instead of pairIndex) instead of this payload shape — but if a team
+// match's boards tie on aggregate even though every board's own mini-match
+// was individually decisive, the organizer resolves that exactly the same
+// way a classical bracket team match would: calling this with just
+// { winnerOverride }, no boards needed since they're already set.
 async function submitBracketMatchResult(id, matchId, payload = {}) {
   const t = assertTournament(id);
   if (!isEliminationSystem(t)) {
@@ -1888,94 +2552,15 @@ async function submitBracketMatchResult(id, matchId, payload = {}) {
       throw e;
     }
 
-    const pById = byId(t.players);
-    let aPoints = 0,
-      bPoints = 0;
-
-    // Same rule as the Swiss/round-robin team path: a win for one teammate
-    // is a win for both. Back-fill before scoring so the ordinary per-board
-    // loop below credits both players uniformly.
-    if (t.variant === "bughouse") {
-      const decided = m.boards.find(
-        (bd) => !bd.sitOut && isDecisiveResult(bd.result),
-      );
-      const other =
-        decided && m.boards.find((bd) => bd !== decided && !bd.sitOut);
-      if (decided && other && !other.result) {
-        other.result = WHITE_WIN_RESULTS.has(decided.result) ? "0-1" : "1-0";
-        other.derivedFromBoard = decided.boardNum;
-      }
-    }
-
-    m.boards.forEach((board) => {
-      if (board.sitOut || !board.result) return; // Skip abandoned games
-
-      const { wScore, bScore } = applyGame(
-        pById,
-        board.white.id,
-        board.black.id,
-        board.result,
-      );
-      if (board.white.teamId === m.competitorA) {
-        aPoints += wScore;
-        bPoints += bScore;
-      } else {
-        aPoints += bScore;
-        bPoints += wScore;
-      }
+    const result = finalizeBracketTeamMatch(t, m, {
+      winnerOverride: payload.winnerOverride,
     });
-
-    // OVERRIDE: Bughouse match points for brackets
-    if (t.variant === "bughouse") {
-      const b1 = m.boards[0];
-      const b2 = m.boards[1];
-
-      // CompetitorA is "teamWhite" (plays White on board 1)
-      const teamAWon =
-        (b1 && WHITE_WIN_RESULTS.has(b1.result)) ||
-        (b2 && BLACK_WIN_RESULTS.has(b2.result));
-      const teamBWon =
-        (b1 && BLACK_WIN_RESULTS.has(b1.result)) ||
-        (b2 && WHITE_WIN_RESULTS.has(b2.result));
-
-      aPoints = teamAWon ? 1 : teamBWon ? 0 : 0.5;
-      bPoints = teamBWon ? 1 : teamAWon ? 0 : 0.5;
-    }
-
-    m.result = { aPoints, bPoints };
-
-    if (aPoints !== bPoints) {
-      m.winnerId = aPoints > bPoints ? m.competitorA : m.competitorB;
-    } else {
-      if (payload.winnerOverride !== "A" && payload.winnerOverride !== "B") {
-        const e = new Error(
-          "Boards are tied — submit winnerOverride ('A' or 'B') to decide who advances",
-        );
-        e.status = 400;
-        throw e;
-      }
-      m.winnerId =
-        payload.winnerOverride === "A" ? m.competitorA : m.competitorB;
-    }
-    m.loserId = m.winnerId === m.competitorA ? m.competitorB : m.competitorA;
-
-    // Board-level player scores were already applied above via applyGame().
-    // Record the match outcome at team level too, the same way the
-    // Swiss/round-robin team path does, so team Standings reflects bracket
-    // play instead of staying frozen at zero.
-    const teamA = t.teams.find((x) => x.id === m.competitorA);
-    const teamB = t.teams.find((x) => x.id === m.competitorB);
-    if (teamA && teamB) {
-      teamA.opponents.add(teamB.id);
-      teamB.opponents.add(teamA.id);
-      teamA.colorHistory.push("W");
-      teamB.colorHistory.push("B");
-      teamA.lastColor = "W";
-      teamB.lastColor = "B";
-      teamA.score += aPoints;
-      teamB.score += bPoints;
-      teamA.results[teamB.id] = aPoints;
-      teamB.results[teamA.id] = bPoints;
+    if (!result.decided) {
+      const e = new Error(
+        "Boards are tied — submit winnerOverride ('A' or 'B') to decide who advances",
+      );
+      e.status = 400;
+      throw e;
     }
   } else {
     if (payload.winner !== "A" && payload.winner !== "B") {
@@ -1983,28 +2568,9 @@ async function submitBracketMatchResult(id, matchId, payload = {}) {
       e.status = 400;
       throw e;
     }
-    m.winnerId = payload.winner === "A" ? m.competitorA : m.competitorB;
-    m.loserId = payload.winner === "A" ? m.competitorB : m.competitorA;
-    m.result = payload.winner;
-
-    // Record the result on the competitors themselves too, so individual
-    // Standings reflects bracket play (win = 1 point, loss = 0) instead of
-    // staying frozen at zero — the bracket topology alone only tracks who
-    // advances, not a score.
-    const pById = byId(t.players);
-    const winner = pById.get(m.winnerId);
-    const loser = pById.get(m.loserId);
-    if (winner && loser) {
-      winner.opponents.add(loser.id);
-      loser.opponents.add(winner.id);
-      winner.score += 1;
-      winner.results[loser.id] = 1;
-      loser.results[winner.id] = 0;
-    }
+    const winnerId = payload.winner === "A" ? m.competitorA : m.competitorB;
+    finalizeBracketIndividualMatch(t, m, winnerId);
   }
-
-  m.status = "complete";
-  resolveBracket(t);
 
   t.updatedAt = new Date().toISOString();
   await persist();
@@ -2903,6 +3469,8 @@ function getPublicResults(token) {
     winner: full.winner,
     currentChess960: full.currentChess960,
     chess960: full.chess960,
+    matchPlay: full.matchPlay,
+    matchPlayNumberOfGames: full.matchPlayNumberOfGames,
     cageMatch: full.format === "match" ? full.cageMatch : null,
   };
 }
@@ -3922,6 +4490,11 @@ function serializeBracket(t) {
       ? t.teams.find((x) => x.id === id)?.name || "???"
       : t.players.find((p) => p.id === id)?.name || "???";
   };
+  // A mini-match's two ids are always PLAYER ids, even for a team-format
+  // board (each board is between two players) — separate from nameOf()
+  // above, which resolves TEAM ids for a team-format match itself.
+  const playerNameOf = (id) =>
+    t.players.find((p) => p.id === id)?.name || "???";
   return {
     size: t.bracket.size,
     wbRounds: t.bracket.wbRounds,
@@ -3961,6 +4534,10 @@ function serializeBracket(t) {
       loserTo: m.loserTo || null,
       result: m.result,
       chess960: m.chess960 || null,
+      miniMatch:
+        t.format !== "team" && m.miniMatch
+          ? matchPlay.serialize(m.miniMatch, playerNameOf)
+          : undefined,
       boards:
         t.format === "team" && m.boards
           ? m.boards.map((b) => ({
@@ -3974,6 +4551,9 @@ function serializeBracket(t) {
                 : null,
               result: b.result,
               derivedFromBoard: b.derivedFromBoard || null,
+              miniMatch: b.miniMatch
+                ? matchPlay.serialize(b.miniMatch, playerNameOf)
+                : undefined,
             }))
           : null,
     })),
@@ -4378,6 +4958,9 @@ function serializeTournament(t) {
                 ? { id: b.black.id, name: b.black.name, rating: b.black.rating }
                 : null,
               result: b.result,
+              miniMatch: b.miniMatch
+                ? matchPlay.serialize(b.miniMatch, nameOf)
+                : undefined,
             })),
           };
         }
@@ -4396,6 +4979,9 @@ function serializeTournament(t) {
           blackId: p.black,
           blackName: nameOf(p.black),
           result: p.result,
+          miniMatch: p.miniMatch
+            ? matchPlay.serialize(p.miniMatch, nameOf)
+            : undefined,
         };
       })
     : null;
@@ -4460,6 +5046,9 @@ function serializeTournament(t) {
                   blackName: nameOf(b.black),
                   result: b.result,
                   derivedFromBoard: b.derivedFromBoard || null,
+                  miniMatch: b.miniMatch
+                    ? matchPlay.serialize(b.miniMatch, nameOf)
+                    : undefined,
                 },
           ),
         };
@@ -4473,6 +5062,9 @@ function serializeTournament(t) {
         blackId: p.black,
         blackName: nameOf(p.black),
         result: p.result,
+        miniMatch: p.miniMatch
+          ? matchPlay.serialize(p.miniMatch, nameOf)
+          : undefined,
       };
     }),
   }));
@@ -4572,6 +5164,8 @@ function serializeTournament(t) {
     tieAlert: t.decider ? null : detectTopTie(t),
     chess960: t.chess960,
     currentChess960: t.currentChess960,
+    matchPlay: t.matchPlay,
+    matchPlayNumberOfGames: t.matchPlayNumberOfGames,
     thirdPlaceMatch: t.thirdPlaceMatch,
     registrationOpen: t.registrationOpen,
     registrationToken: t.registrationToken,
@@ -4705,4 +5299,14 @@ module.exports = {
   getPublicCageMatchSectionPerformance,
   setCageMatchCompetitorPicture,
   updateCageMatchCompetitorDetails,
+  recordMatchPlayMove,
+  undoMatchPlayMove,
+  setMatchPlayGameResult,
+  clearMatchPlayGameResult,
+  startMatchPlayTiebreak,
+  acceptMatchPlayDraw,
+  recordMatchPlayTiebreakResult,
+  recordMatchPlayArmageddonBids,
+  recordMatchPlayArmageddonResult,
+  setMatchPlayBracketTierGames,
 };

@@ -60,7 +60,7 @@ router.patch(
 router.post(
   "/:id/round",
   requireAdmin,
-  wrap((req) => svc.generateNextRound(req.params.id)),
+  wrap((req) => svc.generateNextRound(req.params.id, req.body)),
 );
 
 // Manual round: organizer specifies who plays whom (and optionally who's
@@ -294,6 +294,282 @@ router.patch(
       req.params.id,
       req.params.side,
       req.body,
+    ),
+  ),
+);
+
+// ─── Match Play (best-of-N per pairing/board, Swiss/RR/DRR + team) ───────
+// See tournamentService.js's Match Play section / matchPlay.js for the full
+// data model. GET /:id already returns each open pairing's (or team board's)
+// `miniMatch` sub-object on every fetch — same "instantly visible" pattern
+// as Cage Match above — these routes just mutate.
+//
+// :pairIndex is the index into the tournament's currently OPEN round
+// (t.currentPairings) — these routes only ever act on the open round; once
+// it's closed via POST /:id/results, its pairings become read-only history.
+// boardNum is only meaningful for a team tournament (which board of that
+// round's match) — for an individual tournament, omit it from the body.
+
+router.post(
+  "/:id/matchplay/pairings/:pairIndex/move",
+  requireAdmin,
+  wrap((req) =>
+    svc.recordMatchPlayMove(req.params.id, {
+      pairIndex: parseInt(req.params.pairIndex, 10),
+      boardNum: req.body.boardNum,
+      gameId: req.body.gameId,
+      move: req.body.move,
+    }),
+  ),
+);
+
+// Corrects a mis-entered move — removes only the most recent one.
+router.delete(
+  "/:id/matchplay/pairings/:pairIndex/move",
+  requireAdmin,
+  wrap((req) =>
+    svc.undoMatchPlayMove(req.params.id, {
+      pairIndex: parseInt(req.params.pairIndex, 10),
+      boardNum: req.body.boardNum,
+      gameId: req.body.gameId,
+    }),
+  ),
+);
+
+// Records the final result for one game within the mini-match. Body:
+// { boardNum?, gameId, result: "1-0" | "0-1" | "1/2-1/2" | "1F-0F" | "0F-1F" | "0F-0F" }.
+router.post(
+  "/:id/matchplay/pairings/:pairIndex/result",
+  requireAdmin,
+  wrap((req) =>
+    svc.setMatchPlayGameResult(req.params.id, {
+      pairIndex: parseInt(req.params.pairIndex, 10),
+      boardNum: req.body.boardNum,
+      gameId: req.body.gameId,
+      result: req.body.result,
+    }),
+  ),
+);
+
+// Escape hatch for a mis-recorded result — works even after the mini-match
+// has already decided, on any game (including a game that itself caused
+// the decision), since correcting it can un-decide the whole thing. Also
+// drops any in-progress or completed tiebreak attached on the back of a
+// tie that (once corrected) might not even be tied anymore.
+router.delete(
+  "/:id/matchplay/pairings/:pairIndex/result",
+  requireAdmin,
+  wrap((req) =>
+    svc.clearMatchPlayGameResult(req.params.id, {
+      pairIndex: parseInt(req.params.pairIndex, 10),
+      boardNum: req.body.boardNum,
+      gameId: req.body.gameId,
+    }),
+  ),
+);
+
+// The organizer's two options once a mini-match is level (GET /:id's
+// miniMatch.tieAlert signals this): accept it as a genuine draw, or start
+// the 4-game tiebreak mini-match. Draw is refused for a bracket match
+// (unsupported for Match Play yet — see createTournament()'s validation)
+// since someone always has to advance there.
+router.post(
+  "/:id/matchplay/pairings/:pairIndex/draw",
+  requireAdmin,
+  wrap((req) =>
+    svc.acceptMatchPlayDraw(req.params.id, {
+      pairIndex: parseInt(req.params.pairIndex, 10),
+      boardNum: req.body.boardNum,
+    }),
+  ),
+);
+
+router.post(
+  "/:id/matchplay/pairings/:pairIndex/tiebreak/start",
+  requireAdmin,
+  wrap((req) =>
+    svc.startMatchPlayTiebreak(req.params.id, {
+      pairIndex: parseInt(req.params.pairIndex, 10),
+      boardNum: req.body.boardNum,
+    }),
+  ),
+);
+
+// Records a result for the current tiebreak mini-match game. Stops
+// automatically once a side clinches more than half the available points;
+// if both games are played still level, this flips into Armageddon
+// automatically — see the two routes below.
+router.post(
+  "/:id/matchplay/pairings/:pairIndex/tiebreak/result",
+  requireAdmin,
+  wrap((req) =>
+    svc.recordMatchPlayTiebreakResult(req.params.id, {
+      pairIndex: parseInt(req.params.pairIndex, 10),
+      boardNum: req.body.boardNum,
+      gameId: req.body.gameId,
+      result: req.body.result,
+    }),
+  ),
+);
+
+// Arbiter enters both players' privately-collected bids (seconds) at once.
+// Lower bid gets Black with draw odds. Equal bids come back with
+// tiebreak.armageddon.status === "bid_tie" (not an error) — call again with
+// a fresh pair once the arbiter has collected a re-bid.
+router.post(
+  "/:id/matchplay/pairings/:pairIndex/tiebreak/armageddon/bids",
+  requireAdmin,
+  wrap((req) =>
+    svc.recordMatchPlayArmageddonBids(req.params.id, {
+      pairIndex: parseInt(req.params.pairIndex, 10),
+      boardNum: req.body.boardNum,
+      bidA: req.body.bidA,
+      bidB: req.body.bidB,
+    }),
+  ),
+);
+
+// Records the Armageddon result. Anything other than a clean White win
+// (including a draw or double forfeit) goes to Black by draw odds — always
+// decisive, and finishes the mini-match.
+router.post(
+  "/:id/matchplay/pairings/:pairIndex/tiebreak/armageddon/result",
+  requireAdmin,
+  wrap((req) =>
+    svc.recordMatchPlayArmageddonResult(req.params.id, {
+      pairIndex: parseInt(req.params.pairIndex, 10),
+      boardNum: req.body.boardNum,
+      result: req.body.result,
+    }),
+  ),
+);
+
+// ─── Match Play — bracket matches ────────────────────────────────────────
+// Same actions as the pairing-based routes above, addressed by a bracket
+// matchId instead of an open-round pairIndex. A bracket match has no
+// round-batch "submit" step — the moment its mini-match (or every board's
+// mini-match, for a team match) decides, it resolves automatically and
+// cascades through the bracket, same as tournamentService.js's
+// syncBracketIndividualMatch()/syncBracketBoard() describe. If a team
+// match's boards tie on aggregate, resolve it exactly like a classical
+// bracket team tie: POST /:id/bracket/matches/:matchId/result with just
+// { winnerOverride } — every board already has a result by then.
+router.post(
+  "/:id/matchplay/matches/:matchId/move",
+  requireAdmin,
+  wrap((req) =>
+    svc.recordMatchPlayMove(req.params.id, {
+      matchId: req.params.matchId,
+      boardNum: req.body.boardNum,
+      gameId: req.body.gameId,
+      move: req.body.move,
+    }),
+  ),
+);
+
+router.delete(
+  "/:id/matchplay/matches/:matchId/move",
+  requireAdmin,
+  wrap((req) =>
+    svc.undoMatchPlayMove(req.params.id, {
+      matchId: req.params.matchId,
+      boardNum: req.body.boardNum,
+      gameId: req.body.gameId,
+    }),
+  ),
+);
+
+router.post(
+  "/:id/matchplay/matches/:matchId/result",
+  requireAdmin,
+  wrap((req) =>
+    svc.setMatchPlayGameResult(req.params.id, {
+      matchId: req.params.matchId,
+      boardNum: req.body.boardNum,
+      gameId: req.body.gameId,
+      result: req.body.result,
+    }),
+  ),
+);
+
+router.delete(
+  "/:id/matchplay/matches/:matchId/result",
+  requireAdmin,
+  wrap((req) =>
+    svc.clearMatchPlayGameResult(req.params.id, {
+      matchId: req.params.matchId,
+      boardNum: req.body.boardNum,
+      gameId: req.body.gameId,
+    }),
+  ),
+);
+
+// No draw-accepting route here — matchPlay.js's allowDraw: false for every
+// bracket mini-match means acceptMatchPlayDraw() always refuses; someone
+// has to advance, so this option only makes sense for the pairing-based
+// (Swiss/RR) routes above.
+
+router.post(
+  "/:id/matchplay/matches/:matchId/tiebreak/start",
+  requireAdmin,
+  wrap((req) =>
+    svc.startMatchPlayTiebreak(req.params.id, {
+      matchId: req.params.matchId,
+      boardNum: req.body.boardNum,
+    }),
+  ),
+);
+
+router.post(
+  "/:id/matchplay/matches/:matchId/tiebreak/result",
+  requireAdmin,
+  wrap((req) =>
+    svc.recordMatchPlayTiebreakResult(req.params.id, {
+      matchId: req.params.matchId,
+      boardNum: req.body.boardNum,
+      gameId: req.body.gameId,
+      result: req.body.result,
+    }),
+  ),
+);
+
+router.post(
+  "/:id/matchplay/matches/:matchId/tiebreak/armageddon/bids",
+  requireAdmin,
+  wrap((req) =>
+    svc.recordMatchPlayArmageddonBids(req.params.id, {
+      matchId: req.params.matchId,
+      boardNum: req.body.boardNum,
+      bidA: req.body.bidA,
+      bidB: req.body.bidB,
+    }),
+  ),
+);
+
+router.post(
+  "/:id/matchplay/matches/:matchId/tiebreak/armageddon/result",
+  requireAdmin,
+  wrap((req) =>
+    svc.recordMatchPlayArmageddonResult(req.params.id, {
+      matchId: req.params.matchId,
+      boardNum: req.body.boardNum,
+      result: req.body.result,
+    }),
+  ),
+);
+
+// Sets games-per-match for a whole bracket tier (e.g. "W1", "L2", "FINALS"
+// — see tournamentService.js's bracketTierKey()) ahead of it starting, for
+// a best-of-2-early-rounds/best-of-4-final style event. Locked in — and
+// this route will 409 — once any match in that tier has activated.
+router.post(
+  "/:id/matchplay/bracket/tiers/:tierKey/games",
+  requireAdmin,
+  wrap((req) =>
+    svc.setMatchPlayBracketTierGames(
+      req.params.id,
+      req.params.tierKey,
+      req.body.numberOfGames,
     ),
   ),
 );
