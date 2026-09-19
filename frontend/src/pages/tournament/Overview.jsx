@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { api } from "../../api.js";
 import TournamentDetailsCard from "../../components/TournamentDetailsCard.jsx";
@@ -65,6 +65,17 @@ export default function Overview() {
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [matchPlayRoundGames, setMatchPlayRoundGames] = useState(
+    t.matchPlayNumberOfGames || 2,
+  );
+  // t.matchPlayNumberOfGames is the "sticky" default and can change round to
+  // round (an override on one round becomes the new default going forward —
+  // see tournamentService.js's generateNextRound()) — keep this field
+  // showing that current default rather than whatever was typed for a
+  // previous round.
+  useEffect(() => {
+    setMatchPlayRoundGames(t.matchPlayNumberOfGames || 2);
+  }, [t.matchPlayNumberOfGames, t.currentRound]);
   const [regBusy, setRegBusy] = useState(false);
   const [regError, setRegError] = useState("");
   const [copied, setCopied] = useState(false);
@@ -564,7 +575,17 @@ export default function Overview() {
     setBusy(true);
     setError("");
     try {
-      await api.generateRound(t.id);
+      if (t.matchPlay) {
+        const n = Number(matchPlayRoundGames);
+        if (!Number.isInteger(n) || n < 1) {
+          setError("Games per pairing must be a positive whole number.");
+          setBusy(false);
+          return;
+        }
+        await api.generateRound(t.id, { matchPlayNumberOfGames: n });
+      } else {
+        await api.generateRound(t.id);
+      }
       refresh();
       navigate(`/tournament/${t.id}/pairings`);
     } catch (e) {
@@ -1461,6 +1482,26 @@ export default function Overview() {
                   ? "Generate Round 1 pairings to start the tournament."
                   : "Generate pairings for the next round."}
               </p>
+              {t.matchPlay && (
+                <label
+                  className="field"
+                  style={{ maxWidth: 260, marginBottom: 14 }}
+                >
+                  <span>Games per Pairing (Best of N)</span>
+                  <input
+                    type="number"
+                    min="1"
+                    value={matchPlayRoundGames}
+                    onChange={(e) => setMatchPlayRoundGames(e.target.value)}
+                  />
+                  <span className="hint">
+                    Applies to every pairing
+                    {t.format === "team" ? "/board" : ""} in this round, and
+                    becomes the default for rounds after it too, until changed
+                    again.
+                  </span>
+                </label>
+              )}
               <button
                 className="btn-primary"
                 disabled={busy}

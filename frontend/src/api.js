@@ -46,8 +46,11 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify(updates),
     }),
-  generateRound: (id) =>
-    request(`/tournaments/${id}/round`, { method: "POST" }),
+  generateRound: (id, body) =>
+    request(`/tournaments/${id}/round`, {
+      method: "POST",
+      body: JSON.stringify(body || {}),
+    }),
   submitResults: (id, results) =>
     request(`/tournaments/${id}/results`, {
       method: "POST",
@@ -60,8 +63,11 @@ export const api = {
     }),
   deleteRound: (id, round) =>
     request(`/tournaments/${id}/rounds/${round}`, { method: "DELETE" }),
-  generateNextRound: (id) =>
-    request(`/tournaments/${id}/round`, { method: "POST" }),
+  generateNextRound: (id, body) =>
+    request(`/tournaments/${id}/round`, {
+      method: "POST",
+      body: JSON.stringify(body || {}),
+    }),
   generateManualRound: (id, payload) =>
     request(`/tournaments/${id}/round/manual`, {
       method: "POST",
