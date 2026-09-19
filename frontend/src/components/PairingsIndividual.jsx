@@ -48,12 +48,14 @@ export default function PairingsIndividual({
   pairings,
   results,
   onSetResult,
+  onOpenMiniMatch,
   basePath: basePathProp,
 }) {
   const outletContext = useOutletContext();
   const t = outletContext?.t;
   const livePlayers = t?.players || [];
   const basePath = basePathProp ?? (t?.id ? `/tournament/${t.id}` : null);
+  const isMatchPlay = !!t?.matchPlay;
 
   // Same fallback shape as resolveTitle used to use on its own: prefer
   // whatever's already on the pairing's player object, fall back to a
@@ -280,21 +282,76 @@ export default function PairingsIndividual({
                 >
                   Board {i + 1}
                 </div>
-                <div
-                  style={{
-                    fontSize: 16,
-                    fontWeight: 700,
-                    color: "#4a4a5a",
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  VS
-                </div>
-                <ResultButtons
-                  results={results}
-                  matchKey={p.idx}
-                  onSetResult={onSetResult}
-                />
+                {isMatchPlay && p.miniMatch ? (
+                  <>
+                    <div
+                      style={{
+                        fontSize: 20,
+                        fontWeight: 800,
+                        color: "#d4a853",
+                        letterSpacing: "0.02em",
+                      }}
+                    >
+                      {p.miniMatch.score.A} – {p.miniMatch.score.B}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 9,
+                        fontWeight: 700,
+                        letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                        color: p.result
+                          ? "#4caf50"
+                          : p.miniMatch.tieAlert
+                          ? "#f44336"
+                          : "#8a8a9a",
+                      }}
+                    >
+                      {p.result
+                        ? "Decided"
+                        : p.miniMatch.tieAlert
+                        ? "Level — needs a call"
+                        : "In progress"}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onOpenMiniMatch(p.idx, undefined)}
+                      style={{
+                        background: "#252532",
+                        border: "1px solid #353545",
+                        color: "#e8e8e8",
+                        fontSize: 10,
+                        fontWeight: 600,
+                        letterSpacing: "0.05em",
+                        padding: "6px 12px",
+                        borderRadius: 6,
+                        cursor: "pointer",
+                        textTransform: "uppercase",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      Open Mini-Match →
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div
+                      style={{
+                        fontSize: 16,
+                        fontWeight: 700,
+                        color: "#4a4a5a",
+                        letterSpacing: "0.05em",
+                      }}
+                    >
+                      VS
+                    </div>
+                    <ResultButtons
+                      results={results}
+                      matchKey={p.idx}
+                      onSetResult={onSetResult}
+                    />
+                  </>
+                )}
               </div>
 
               {/* Black Player Side (Right) */}

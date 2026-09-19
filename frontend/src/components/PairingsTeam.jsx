@@ -510,6 +510,8 @@ function TeamMatch({
   p,
   results,
   onSetBoardResult,
+  onOpenMiniMatch,
+  isMatchPlay,
   isBughouse,
   livePlayers,
   basePath,
@@ -593,33 +595,92 @@ function TeamMatch({
                       <span className="rating-tag">({b.black.rating})</span>
                     </td>
                     <td>
-                      <div className="result-btns">
-                        {[
-                          "1-0",
-                          "1/2-1/2",
-                          "0-1",
-                          "1F-0F",
-                          "0F-0F",
-                          "0F-1F",
-                        ].map((r) => (
+                      {isMatchPlay && b.miniMatch ? (
+                        <div
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "flex-start",
+                            gap: 6,
+                          }}
+                        >
+                          <span
+                            style={{
+                              color: "#d4a853",
+                              fontWeight: 800,
+                              fontSize: 15,
+                            }}
+                          >
+                            {b.miniMatch.score.A} – {b.miniMatch.score.B}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: 9,
+                              fontWeight: 700,
+                              letterSpacing: "0.06em",
+                              textTransform: "uppercase",
+                              color: b.result
+                                ? "#4caf50"
+                                : b.miniMatch.tieAlert
+                                ? "#f44336"
+                                : "#8a8a9a",
+                            }}
+                          >
+                            {b.result
+                              ? "Decided"
+                              : b.miniMatch.tieAlert
+                              ? "Level — needs a call"
+                              : "In progress"}
+                          </span>
                           <button
                             type="button"
-                            key={r}
-                            className={`result-btn ${
-                              r === "1-0" || r === "1F-0F"
-                                ? "white-wins"
-                                : r === "0-1" || r === "0F-1F"
-                                ? "black-wins"
-                                : "draw"
-                            } ${results[key] === r ? "active" : ""}`}
-                            onClick={() =>
-                              onSetBoardResult(p.idx, b.boardNum, r)
-                            }
+                            onClick={() => onOpenMiniMatch(p.idx, b.boardNum)}
+                            style={{
+                              background: "#252532",
+                              border: "1px solid #353545",
+                              color: "#e8e8e8",
+                              fontSize: 10,
+                              fontWeight: 600,
+                              letterSpacing: "0.05em",
+                              padding: "5px 10px",
+                              borderRadius: 6,
+                              cursor: "pointer",
+                              textTransform: "uppercase",
+                              fontFamily: "inherit",
+                            }}
                           >
-                            {r}
+                            Open Mini-Match →
                           </button>
-                        ))}
-                      </div>
+                        </div>
+                      ) : (
+                        <div className="result-btns">
+                          {[
+                            "1-0",
+                            "1/2-1/2",
+                            "0-1",
+                            "1F-0F",
+                            "0F-0F",
+                            "0F-1F",
+                          ].map((r) => (
+                            <button
+                              type="button"
+                              key={r}
+                              className={`result-btn ${
+                                r === "1-0" || r === "1F-0F"
+                                  ? "white-wins"
+                                  : r === "0-1" || r === "0F-1F"
+                                  ? "black-wins"
+                                  : "draw"
+                              } ${results[key] === r ? "active" : ""}`}
+                              onClick={() =>
+                                onSetBoardResult(p.idx, b.boardNum, r)
+                              }
+                            >
+                              {r}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </td>
                   </>
                 )}
@@ -636,6 +697,7 @@ export default function PairingsTeam({
   pairings,
   results,
   onSetBoardResult,
+  onOpenMiniMatch,
   isBughouse,
   basePath: basePathProp,
 }) {
@@ -643,6 +705,7 @@ export default function PairingsTeam({
   const t = outletContext?.t;
   const livePlayers = t?.players || [];
   const basePath = basePathProp ?? (t?.id ? `/tournament/${t.id}` : null);
+  const isMatchPlay = !!t?.matchPlay;
 
   return (
     <div className="team-matches">
@@ -704,6 +767,8 @@ export default function PairingsTeam({
             p={p}
             results={results}
             onSetBoardResult={onSetBoardResult}
+            onOpenMiniMatch={onOpenMiniMatch}
+            isMatchPlay={isMatchPlay}
             isBughouse={isBughouse}
             livePlayers={livePlayers}
             basePath={basePath}

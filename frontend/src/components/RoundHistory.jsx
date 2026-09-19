@@ -20,6 +20,8 @@ export default function RoundHistory({
   isEditing = false,
   onResultChange,
   loading = false,
+  matchPlay = false,
+  onOpenMiniMatch,
 }) {
   if (!round) return <p className="muted">No completed rounds yet.</p>;
 
@@ -105,7 +107,27 @@ export default function RoundHistory({
                                   </span>
                                 </td>
                                 <td>
-                                  {isEditing ? (
+                                  {matchPlay && b.miniMatch ? (
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        alignItems: "flex-start",
+                                        gap: 4,
+                                      }}
+                                    >
+                                      <strong>{formatResult(b.result)}</strong>
+                                      <button
+                                        type="button"
+                                        className="btn-secondary btn-sm"
+                                        onClick={() =>
+                                          onOpenMiniMatch?.(i, b.boardNum)
+                                        }
+                                      >
+                                        View Mini-Match →
+                                      </button>
+                                    </div>
+                                  ) : isEditing ? (
                                     <select
                                       className="result-select"
                                       value={b.result || ""}
@@ -185,7 +207,25 @@ export default function RoundHistory({
                   <span className="player-name">{p.blackName}</span>
                 </td>
                 <td>
-                  {isEditing ? (
+                  {matchPlay && p.miniMatch ? (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "flex-start",
+                        gap: 4,
+                      }}
+                    >
+                      <strong>{formatResult(p.result)}</strong>
+                      <button
+                        type="button"
+                        className="btn-secondary btn-sm"
+                        onClick={() => onOpenMiniMatch?.(i)}
+                      >
+                        View Mini-Match →
+                      </button>
+                    </div>
+                  ) : isEditing ? (
                     <select
                       className="result-select"
                       value={p.result || ""}

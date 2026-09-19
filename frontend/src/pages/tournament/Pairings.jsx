@@ -3,12 +3,14 @@ import { useNavigate, useOutletContext } from "react-router-dom";
 import { api } from "../../api.js";
 import PairingsIndividual from "../../components/PairingsIndividual.jsx";
 import PairingsTeam from "../../components/PairingsTeam.jsx";
+import MiniMatchPanel from "../../components/MiniMatchPanel.jsx";
 
 export default function Pairings() {
   const { t, refresh } = useOutletContext();
   const navigate = useNavigate();
   const isTeam = t.format === "team";
   const isBughouse = t.variant === "bughouse";
+  const isMatchPlay = !!t.matchPlay;
 
   const DECISIVE_RESULTS = new Set(["1-0", "0-1", "1F-0F", "0F-1F"]);
   function boardsNeedingDecision(p) {
@@ -23,6 +25,10 @@ export default function Pairings() {
   const [results, setResults] = useState({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // { pairIndex, boardNum? } — identifier only, not a snapshot, so the
+  // mini-match shown always reflects the latest data after refresh()
+  // rather than going stale the moment something changes inside it.
+  const [activeMiniMatch, setActiveMiniMatch] = useState(null);
 
   const [lateOpen, setLateOpen] = useState(false);
   const [lateName, setLateName] = useState("");
@@ -75,7 +81,24 @@ export default function Pairings() {
     setResults((r) => ({ ...r, [`${pairIdx}-${boardNum}`]: result }));
   }
 
+  // Derived fresh from t on every render (not a snapshot captured at open
+  // time) so the panel reflects the latest state right after refresh().
+  const activePairing = activeMiniMatch
+    ? t.currentPairings[activeMiniMatch.pairIndex]
+    : null;
+  const activeMM = activePairing
+    ? activeMiniMatch.boardNum !== undefined
+      ? activePairing.boards?.find(
+          (b) => b.boardNum === activeMiniMatch.boardNum,
+        )?.miniMatch
+      : activePairing.miniMatch
+    : null;
+
   const activeGames = t.currentPairings.filter((p) => p.type !== "bye");
+  // For Match Play, a pairing/board's result is set incrementally by its
+  // mini-match resolving (via MiniMatchPanel), not by a pick made on this
+  // page — so "decided" means pairing.result/board.result is already set on
+  // the server, not that this page's local `results` state has an entry.
   const totalDecisions = isTeam
     ? activeGames.reduce((sum, p) => sum + boardsNeedingDecision(p).length, 0)
     : activeGames.length;
@@ -83,19 +106,28 @@ export default function Pairings() {
     ? activeGames.reduce(
         (sum, p) =>
           sum +
-          boardsNeedingDecision(p).filter(
-            (b) => results[`${p.idx}-${b.boardNum}`],
+          boardsNeedingDecision(p).filter((b) =>
+            isMatchPlay ? b.result : results[`${p.idx}-${b.boardNum}`],
           ).length,
         0,
       )
-    : activeGames.filter((p) => results[p.idx]).length;
+    : activeGames.filter((p) => (isMatchPlay ? p.result : results[p.idx]))
+        .length;
   const allSet = totalDecisions === decidedCount;
 
   async function handleSubmitResults() {
     setBusy(true);
     setError("");
     try {
-      const payload = isTeam
+      // Match Play: every active pairing/board already has its result set
+      // by its mini-match resolving — this call's only job left is closing
+      // the round now that everything's decided, same as
+      // tournamentService.js's submitResults() already expects (it reads
+      // pairing.result/board.result directly, not this payload, once
+      // they're already populated).
+      const payload = isMatchPlay
+        ? []
+        : isTeam
         ? Object.entries(results).map(([key, result]) => {
             const [pairIndex, boardNum] = key.split("-").map(Number);
             return { pairIndex, boardNum, result };
@@ -252,6 +284,9 @@ export default function Pairings() {
             pairings={t.currentPairings}
             results={results}
             onSetBoardResult={setBoardResult}
+            onOpenMiniMatch={(pairIndex, boardNum) =>
+              setActiveMiniMatch({ pairIndex, boardNum })
+            }
             isBughouse={isBughouse}
           />
         ) : (
@@ -259,6 +294,9 @@ export default function Pairings() {
             pairings={t.currentPairings}
             results={results}
             onSetResult={setIndividualResult}
+            onOpenMiniMatch={(pairIndex) =>
+              setActiveMiniMatch({ pairIndex, boardNum: undefined })
+            }
           />
         )}
 
@@ -272,8 +310,8 @@ export default function Pairings() {
             {busy
               ? "SUBMITTING…"
               : t.currentRound === t.totalRounds
-                ? "FINISH TOURNAMENT"
-                : "SUBMIT & PAIR NEXT ROUND"}
+              ? "FINISH TOURNAMENT"
+              : "SUBMIT & PAIR NEXT ROUND"}
           </button>
         </div>
       </div>
@@ -417,6 +455,19 @@ export default function Pairings() {
             </form>
           )}
         </div>
+      )}
+
+      {activeMiniMatch && (
+        <MiniMatchPanel
+          tournamentId={t.id}
+          target={{
+            pairIndex: activeMiniMatch.pairIndex,
+            boardNum: activeMiniMatch.boardNum,
+          }}
+          miniMatch={activeMM}
+          onChanged={refresh}
+          onClose={() => setActiveMiniMatch(null)}
+        />
       )}
     </div>
   );

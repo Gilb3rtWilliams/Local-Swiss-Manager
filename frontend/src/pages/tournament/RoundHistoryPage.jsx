@@ -1,16 +1,22 @@
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import RoundHistory from "../../components/RoundHistory.jsx";
+import MiniMatchPanel from "../../components/MiniMatchPanel.jsx";
 
 // Import the 'api' object directly (adjust relative path if needed)
 import { api } from "../../api";
 
 export default function RoundHistoryPage() {
   const { t, refresh: refreshTournament } = useOutletContext();
+  const isMatchPlay = !!t?.matchPlay;
   const [historyRound, setHistoryRound] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  // { pairIndex, boardNum? } into the currently selected historical round —
+  // reset whenever the round tab changes, since these indices are only
+  // meaningful within whichever round they were opened from.
+  const [activeMiniMatch, setActiveMiniMatch] = useState(null);
 
   useEffect(() => {
     if (!t?.rounds || t.rounds.length === 0) {
@@ -49,6 +55,17 @@ export default function RoundHistoryPage() {
   const selectedRoundData = t.rounds.find((r) => r.round === historyRound);
   const isLatestCompletedRound =
     historyRound === t.rounds[t.rounds.length - 1]?.round;
+
+  const activePairing = activeMiniMatch
+    ? selectedRoundData?.pairings[activeMiniMatch.pairIndex]
+    : null;
+  const activeMM = activePairing
+    ? activeMiniMatch.boardNum !== undefined
+      ? activePairing.boards?.find(
+          (b) => b.boardNum === activeMiniMatch.boardNum,
+        )?.miniMatch
+      : activePairing.miniMatch
+    : null;
 
   // ─── Handlers ─────────────────────────────────────────────────────────────
 
@@ -171,6 +188,7 @@ export default function RoundHistoryPage() {
                   onClick={() => {
                     setHistoryRound(r.round);
                     setIsEditing(false);
+                    setActiveMiniMatch(null);
                   }}
                   style={{
                     background:
@@ -191,21 +209,23 @@ export default function RoundHistoryPage() {
 
           {/* Action Buttons */}
           <div style={{ display: "flex", gap: "8px" }}>
-            <button
-              onClick={() => setIsEditing(!isEditing)}
-              style={{
-                background: isEditing ? "#e5a93c" : "#252532",
-                color: isEditing ? "#13131a" : "#e8e8e8",
-                border: "none",
-                borderRadius: "6px",
-                padding: "6px 14px",
-                fontSize: "12px",
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
-              {isEditing ? "Done Editing" : "Edit Results"}
-            </button>
+            {!isMatchPlay && (
+              <button
+                onClick={() => setIsEditing(!isEditing)}
+                style={{
+                  background: isEditing ? "#e5a93c" : "#252532",
+                  color: isEditing ? "#13131a" : "#e8e8e8",
+                  border: "none",
+                  borderRadius: "6px",
+                  padding: "6px 14px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                {isEditing ? "Done Editing" : "Edit Results"}
+              </button>
+            )}
 
             {isLatestCompletedRound && (
               <>
@@ -273,9 +293,27 @@ export default function RoundHistoryPage() {
             isEditing={isEditing}
             onResultChange={handleResultChange}
             loading={loading}
+            matchPlay={isMatchPlay}
+            onOpenMiniMatch={(pairIndex, boardNum) =>
+              setActiveMiniMatch({ pairIndex, boardNum })
+            }
           />
         )}
       </div>
+
+      {activeMiniMatch && (
+        <MiniMatchPanel
+          tournamentId={t.id}
+          target={{
+            pairIndex: activeMiniMatch.pairIndex,
+            boardNum: activeMiniMatch.boardNum,
+          }}
+          miniMatch={activeMM}
+          readOnly
+          onChanged={refreshTournament}
+          onClose={() => setActiveMiniMatch(null)}
+        />
+      )}
     </div>
   );
 }

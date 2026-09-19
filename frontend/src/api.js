@@ -152,6 +152,67 @@ export const api = {
       body: JSON.stringify(payload),
     }),
 
+  // ─── Match Play (best-of-N per pairing/board — Swiss/RR/DRR/bracket) ────
+  // `target` is either { pairIndex, boardNum? } for an open Swiss/RR/DRR
+  // round's pairing, or { matchId, boardNum? } for a bracket match —
+  // boardNum only matters for a team tournament. This picks the matching
+  // URL family tournamentService.js/tournaments.js expose for each.
+  recordMatchPlayMove: (id, target, gameId, move) =>
+    request(`${matchPlayBase(id, target)}/move`, {
+      method: "POST",
+      body: JSON.stringify({ boardNum: target.boardNum, gameId, move }),
+    }),
+  undoMatchPlayMove: (id, target, gameId) =>
+    request(`${matchPlayBase(id, target)}/move`, {
+      method: "DELETE",
+      body: JSON.stringify({ boardNum: target.boardNum, gameId }),
+    }),
+  setMatchPlayGameResult: (id, target, gameId, result) =>
+    request(`${matchPlayBase(id, target)}/result`, {
+      method: "POST",
+      body: JSON.stringify({ boardNum: target.boardNum, gameId, result }),
+    }),
+  clearMatchPlayGameResult: (id, target, gameId) =>
+    request(`${matchPlayBase(id, target)}/result`, {
+      method: "DELETE",
+      body: JSON.stringify({ boardNum: target.boardNum, gameId }),
+    }),
+  // Swiss/RR/DRR only — a bracket mini-match always has allowDraw:false and
+  // this will 400 there; someone has to advance.
+  acceptMatchPlayDraw: (id, target) =>
+    request(`${matchPlayBase(id, target)}/draw`, {
+      method: "POST",
+      body: JSON.stringify({ boardNum: target.boardNum }),
+    }),
+  startMatchPlayTiebreak: (id, target) =>
+    request(`${matchPlayBase(id, target)}/tiebreak/start`, {
+      method: "POST",
+      body: JSON.stringify({ boardNum: target.boardNum }),
+    }),
+  recordMatchPlayTiebreakResult: (id, target, gameId, result) =>
+    request(`${matchPlayBase(id, target)}/tiebreak/result`, {
+      method: "POST",
+      body: JSON.stringify({ boardNum: target.boardNum, gameId, result }),
+    }),
+  recordMatchPlayArmageddonBids: (id, target, bidA, bidB) =>
+    request(`${matchPlayBase(id, target)}/tiebreak/armageddon/bids`, {
+      method: "POST",
+      body: JSON.stringify({ boardNum: target.boardNum, bidA, bidB }),
+    }),
+  recordMatchPlayArmageddonResult: (id, target, result) =>
+    request(`${matchPlayBase(id, target)}/tiebreak/armageddon/result`, {
+      method: "POST",
+      body: JSON.stringify({ boardNum: target.boardNum, result }),
+    }),
+  getMatchPlayHistory: (id) => request(`/tournaments/${id}/matchplay/history`),
+  getPublicMatchPlayHistory: (token) =>
+    request(`/tournaments/public-view/${token}/matchplay/history`),
+  setMatchPlayBracketTierGames: (id, tierKey, numberOfGames) =>
+    request(`/tournaments/${id}/matchplay/bracket/tiers/${tierKey}/games`, {
+      method: "POST",
+      body: JSON.stringify({ numberOfGames }),
+    }),
+
   startDecider: (id, payload) =>
     request(`/tournaments/${id}/decider/start`, {
       method: "POST",
@@ -208,6 +269,13 @@ export const api = {
     request("/reviews", { method: "POST", body: JSON.stringify(payload) }),
   deleteReview: (id) => request(`/reviews/${id}`, { method: "DELETE" }),
 };
+
+function matchPlayBase(id, target) {
+  if (target.matchId !== undefined) {
+    return `/tournaments/${id}/matchplay/matches/${target.matchId}`;
+  }
+  return `/tournaments/${id}/matchplay/pairings/${target.pairIndex}`;
+}
 
 async function downloadFile(path) {
   const res = await fetch(`${BASE}${path}`, { credentials: "include" });
