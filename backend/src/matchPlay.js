@@ -123,13 +123,22 @@ function assertActive(mm) {
 }
 
 // ─── Construction ───────────────────────────────────────────────────────────
+// chessGame.chess960StartFen() is the authoritative FEN builder for a given
+// backRank — chess960Position.fen, if present at all, isn't guaranteed to
+// be a chess.js-loadable FEN with correct castling-rights notation (it's
+// only ever been relied on for display, e.g. the Chess960 tab, which reads
+// .backRank directly and never feeds it through chess.js). Same
+// normalization cageMatch.js's chess960PositionFor() does — see its own
+// comment for the fuller story.
 function makeGame(gameNum, whiteId, blackId, chess960Position) {
   return {
     id: uid(),
     gameNum,
     whiteId,
     blackId,
-    startFen: chess960Position ? chess960Position.fen : null,
+    startFen: chess960Position
+      ? chessGame.chess960StartFen(chess960Position)
+      : null,
     moves: [],
     fen: null,
     pgn: null,
