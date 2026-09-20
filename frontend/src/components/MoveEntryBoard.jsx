@@ -22,6 +22,29 @@ const PIECE_NAME = {
 
 const PROMOTION_CHOICES = ["q", "r", "b", "n"];
 
+// chess.js only accepts KQkq-style castling fields (or "-"). A Chess960
+// starting FEN built with Shredder-FEN file letters ("HAha") throws
+// "Invalid FEN: castling availability is invalid" — which is what games
+// stored before the backend fix still carry. Both sides hold every castling
+// right at the start, so KQkq is the faithful translation. Kept local (not
+// shared with the backend's chessGame.js) per this app's usual convention.
+const CASTLING_OK = /^(KQ?k?q?|Qk?q?|kq?|q|-)$/;
+function normalizeStartFen(fen) {
+  if (!fen || typeof fen !== "string") return undefined;
+  const parts = fen.trim().split(/\s+/);
+  if (parts.length === 1) return `${parts[0]} w KQkq - 0 1`;
+  if (parts.length >= 3 && !CASTLING_OK.test(parts[2])) parts[2] = "KQkq";
+  return parts.join(" ");
+}
+
+// "BBQNNRKR" for a Chess960 start FEN, or null for a standard game — shown
+// as a label so an arbiter can set up the physical board from the header.
+function backRankLabel(startFen) {
+  if (!startFen) return null;
+  const rank8 = startFen.split(" ")[0].split("/")[7];
+  return rank8 && /^[KQRBNkqrbn]{8}$/.test(rank8) ? rank8.toUpperCase() : null;
+}
+
 // PGN's Result tag only knows 1-0 / 0-1 / 1/2-1/2 / * — forfeits aren't
 // standard PGN notation, so they collapse onto whichever side the forfeit
 // awarded the point to. A double forfeit has no sensible PGN result, so it
@@ -46,7 +69,7 @@ function safeFileSegment(s) {
 // [Variant "Chess960"] header on top of the [FEN]/[SetUp] chess.js already
 // adds automatically for a non-default start.
 function buildPgn(game) {
-  const c = new Chess(game.startFen || undefined, { chess960: true });
+  const c = new Chess(normalizeStartFen(game.startFen), { chess960: true });
   if (game.whiteName) c.header("White", game.whiteName);
   if (game.blackName) c.header("Black", game.blackName);
   if (game.startFen) c.header("Variant", "Chess960");
@@ -132,6 +155,14 @@ export default function MoveEntryBoard({
   const [selected, setSelected] = useState(null);
   const [pendingPromotion, setPendingPromotion] = useState(null);
 
+  // Normalized once per startFen; every replay below uses this, never the
+  // raw game.startFen.
+  const startFen = useMemo(
+    () => normalizeStartFen(game.startFen),
+    [game.startFen],
+  );
+  const chess960Rank = backRankLabel(startFen);
+
   const liveMoves = game.moves || [];
   const [viewIndex, setViewIndex] = useState(liveMoves.length);
   // Snap to the latest move whenever the move count changes — a new move
@@ -160,7 +191,7 @@ export default function MoveEntryBoard({
   // separate from what's actually rendered (see displayChess below) so
   // browsing history never has to touch turn/legality logic.
   const { chess, lastMove } = useMemo(() => {
-    const c = new Chess(game.startFen || undefined, { chess960: true });
+    const c = new Chess(startFen, { chess960: true });
     let last = null;
     for (const san of game.moves || []) {
       const r = c.move(san, { strict: false });
@@ -168,7 +199,7 @@ export default function MoveEntryBoard({
       last = r;
     }
     return { chess: c, lastMove: last };
-  }, [game.startFen, game.moves]);
+  }, [startFen, game.moves]);
 
   // What's actually drawn on the board. Identical to the live position at
   // viewIndex === liveMoves.length; a fresh, shorter replay otherwise — this
@@ -176,7 +207,7 @@ export default function MoveEntryBoard({
   // the game is complete, since it never touches game.status at all.
   const { displayChess, displayLastMove } = useMemo(() => {
     if (isLatest) return { displayChess: chess, displayLastMove: lastMove };
-    const c = new Chess(game.startFen || undefined, { chess960: true });
+    const c = new Chess(startFen, { chess960: true });
     let last = null;
     for (let i = 0; i < viewIndex; i++) {
       const r = c.move(liveMoves[i], { strict: false });
@@ -184,7 +215,7 @@ export default function MoveEntryBoard({
       last = r;
     }
     return { displayChess: c, displayLastMove: last };
-  }, [isLatest, chess, lastMove, game.startFen, liveMoves, viewIndex]);
+  }, [isLatest, chess, lastMove, startFen, liveMoves, viewIndex]);
 
   const board = displayChess.board();
   const turn = chess.turn();
@@ -269,6 +300,21 @@ export default function MoveEntryBoard({
 
   return (
     <div className="me-root">
+      {chess960Rank && (
+        <div
+          className="me-960-label"
+          style={{
+            textAlign: "center",
+            fontSize: 11,
+            color: "#8a8a9a",
+            marginBottom: 8,
+            letterSpacing: "0.08em",
+          }}
+        >
+          CHESS960 · {chess960Rank}
+          {viewIndex === 0 ? " · starting position" : ""}
+        </div>
+      )}
       <div className="c960-board-wrap" style={{ width: size, ...themeVars }}>
         <div className="c960-board-row">
           <div className="c960-rank-labels" style={{ height: size }}>

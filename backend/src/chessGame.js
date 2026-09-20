@@ -29,72 +29,65 @@ const STANDARD_START_FEN =
   "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 // ─── Chess960 starting position ────────────────────────────────────────────
-// chess960.js (already in this codebase) generates a back-rank arrangement
-// via randomChess960Position(). We defensively accept a few possible return
-// shapes from it, since we haven't seen that file's exact output:
-//   - a plain 8-character back-rank string, e.g. "BBQNNRKR"
-//   - an object carrying that string under a common key
-//   - a full starting FEN already
-// If chess960.js's actual shape differs from all three, buildChess960Fen
-// throws a clear error rather than silently producing an illegal position —
-// flag this to whoever wires it up so the mapping can be corrected once
-// chess960.js is shared.
-function buildChess960Fen(chess960Position) {
-  let backRank = null;
-
-  if (typeof chess960Position === "string") {
-    // Already a full FEN (contains '/' and a side-to-move field) vs. just
-    // an 8-letter back rank.
-    if (chess960Position.includes("/")) return chess960Position;
-    backRank = chess960Position;
-  } else if (chess960Position && typeof chess960Position === "object") {
-    backRank =
-      chess960Position.backRank ||
-      chess960Position.startPosition ||
-      chess960Position.position ||
-      chess960Position.rank ||
-      null;
-    if (chess960Position.fen) return chess960Position.fen;
+// chess960.js's randomChess960Position()/positionFromId() return
+//   { id, backRank: ["R","N","B","Q","K","B","N","R"], fen }
+// where `fen` uses Shredder-FEN castling ("HAha" — rook file letters). That
+// notation is correct for real Chess960 tools, but chess.js's FEN validator
+// only accepts KQkq-style castling and throws "Invalid FEN: castling
+// availability is invalid" on anything else. So we NEVER trust `.fen` when a
+// back rank is available: we rebuild the FEN from the back rank ourselves,
+// with KQkq castling, which chess.js loads for all 960 arrangements.
+//
+// Accepted input shapes: the { id, backRank, fen } object above (backRank as
+// an array OR an 8-letter string), a bare 8-letter back-rank string, or a
+// full FEN string (fallback only — its castling field gets normalized).
+function backRankString(pos) {
+  if (typeof pos === "string") return pos.includes("/") ? null : pos;
+  if (Array.isArray(pos)) return pos.join("");
+  if (pos && typeof pos === "object") {
+    const br = pos.backRank ?? pos.startPosition ?? pos.position ?? pos.rank;
+    if (Array.isArray(br)) return br.join("");
+    if (typeof br === "string") return br;
   }
-
-  if (!backRank || backRank.length !== 8) {
-    const e = new Error(
-      "Unrecognized chess960 position shape returned by chess960.randomChess960Position() — " +
-        "expected an 8-character back-rank string, a full FEN, or an object exposing one of those.",
-    );
-    e.status = 500;
-    throw e;
-  }
-
-  const rank = backRank.toUpperCase(); // canonical 8-letter arrangement, e.g. "BBQNNRKR"
-
-  // Black's back rank on row 8 (uppercase per FEN convention for the piece
-  // letters is irrelevant to color — case carries color — so black pieces
-  // are lowercase, white's are uppercase), pawns on both sides, empty ranks
-  // in between, white's identical arrangement mirrored on row 1.
-  return [
-    rank.toLowerCase(),
-    "pppppppp",
-    "8",
-    "8",
-    "8",
-    "8",
-    "PPPPPPPP",
-    rank,
-  ].join("/");
+  return null;
 }
 
-// Assembles the full starting FEN, including Chess960 castling rights.
-// "KQkq" (rather than file-letter/Shredder-FEN notation) works fine as long
-// as chess.js is constructed with `{ chess960: true }`, which loadGame()
-// below does — it resolves KQkq against the actual rook starting files for
-// the given back rank.
+// chess.js only accepts KQkq-style castling fields (or "-"). Older stored
+// games — and anything built from chess960.js's Shredder-FEN — may carry
+// file letters like "HAha"; at the starting position both sides hold every
+// castling right, so KQkq is the faithful translation. A placement-only
+// string gets the remaining FEN fields filled in.
+const CASTLING_OK = /^(KQ?k?q?|Qk?q?|kq?|q|-)$/;
+function normalizeStartFen(fen) {
+  if (!fen || typeof fen !== "string") return fen;
+  const parts = fen.trim().split(/\s+/);
+  if (parts.length === 1) return `${parts[0]} w KQkq - 0 1`;
+  if (parts.length >= 3 && !CASTLING_OK.test(parts[2])) parts[2] = "KQkq";
+  return parts.join(" ");
+}
+
+// Assembles the full starting FEN for a Chess960 position.
 function chess960StartFen(chess960Position) {
-  const placement = buildChess960Fen(chess960Position);
-  // If buildChess960Fen already returned a full FEN (the "already a FEN"
-  // early-return path), use it as-is.
-  if (placement.split(" ").length >= 6) return placement;
-  return `${placement} w KQkq - 0 1`;
+  const rank = backRankString(chess960Position);
+  if (rank && /^[KQRBN]{8}$/i.test(rank)) {
+    const r = rank.toUpperCase();
+    return `${r.toLowerCase()}/pppppppp/8/8/8/8/PPPPPPPP/${r} w KQkq - 0 1`;
+  }
+
+  const fen =
+    typeof chess960Position === "string"
+      ? chess960Position
+      : chess960Position && chess960Position.fen;
+  if (typeof fen === "string" && fen.includes("/")) {
+    return normalizeStartFen(fen);
+  }
+
+  const e = new Error(
+    "Unrecognized chess960 position shape — expected { backRank } (array or " +
+      "8-letter string), a bare 8-letter back rank, or a full FEN.",
+  );
+  e.status = 500;
+  throw e;
 }
 
 // ─── Core replay/validate ───────────────────────────────────────────────────
@@ -103,7 +96,10 @@ function chess960StartFen(chess960Position) {
 // somehow doesn't replay — that would indicate corrupted data, not a user
 // mistake, since moves are validated at write-time by applyMove() below.
 function loadGame(startFen, moves = []) {
-  const chess = new Chess(startFen || STANDARD_START_FEN, { chess960: true });
+  // normalizeStartFen self-heals games stored before the castling-field fix.
+  const chess = new Chess(normalizeStartFen(startFen) || STANDARD_START_FEN, {
+    chess960: true,
+  });
   for (const san of moves) {
     const result = chess.move(san, { strict: false });
     if (!result) {
@@ -224,6 +220,7 @@ function legalMoves(game) {
 module.exports = {
   STANDARD_START_FEN,
   chess960StartFen,
+  normalizeStartFen,
   loadGame,
   applyMove,
   undoLastMove,
