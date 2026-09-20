@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { Chess } from "chess.js";
 import "../css/ChessBoard.css";
 import "../css/MoveEntryBoard.css";
 import {
@@ -8,6 +7,14 @@ import {
   PIECE_THEMES,
   DEFAULT_PIECE_THEME,
 } from "./chessThemes.js";
+import {
+  replay,
+  turnOf,
+  pieceAt,
+  boardGrid,
+  legalTargets,
+  makePgn,
+} from "./chessRules.js";
 
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
 
@@ -21,21 +28,6 @@ const PIECE_NAME = {
 };
 
 const PROMOTION_CHOICES = ["q", "r", "b", "n"];
-
-// chess.js only accepts KQkq-style castling fields (or "-"). A Chess960
-// starting FEN built with Shredder-FEN file letters ("HAha") throws
-// "Invalid FEN: castling availability is invalid" — which is what games
-// stored before the backend fix still carry. Both sides hold every castling
-// right at the start, so KQkq is the faithful translation. Kept local (not
-// shared with the backend's chessGame.js) per this app's usual convention.
-const CASTLING_OK = /^(KQ?k?q?|Qk?q?|kq?|q|-)$/;
-function normalizeStartFen(fen) {
-  if (!fen || typeof fen !== "string") return undefined;
-  const parts = fen.trim().split(/\s+/);
-  if (parts.length === 1) return `${parts[0]} w KQkq - 0 1`;
-  if (parts.length >= 3 && !CASTLING_OK.test(parts[2])) parts[2] = "KQkq";
-  return parts.join(" ");
-}
 
 // "BBQNNRKR" for a Chess960 start FEN, or null for a standard game — shown
 // as a label so an arbiter can set up the physical board from the header.
@@ -66,19 +58,18 @@ function safeFileSegment(s) {
 // board already replays for rendering — no backend round-trip needed, and
 // no risk of drifting from what's actually shown on screen. A Chess960
 // starting position (any non-default game.startFen) gets an explicit
-// [Variant "Chess960"] header on top of the [FEN]/[SetUp] chess.js already
-// adds automatically for a non-default start.
+// [Variant "Chess960"] header plus [SetUp]/[FEN] for a non-default start
+// (see makePgn in chessRules.js).
 function buildPgn(game) {
-  const c = new Chess(normalizeStartFen(game.startFen), { chess960: true });
-  if (game.whiteName) c.header("White", game.whiteName);
-  if (game.blackName) c.header("Black", game.blackName);
-  if (game.startFen) c.header("Variant", "Chess960");
-  c.header("Result", game.result ? PGN_RESULT[game.result] || "*" : "*");
-  for (const san of game.moves || []) {
-    const r = c.move(san, { strict: false });
-    if (!r) break; // shouldn't happen — server data is the source of truth
-  }
-  return c.pgn();
+  const headers = [];
+  if (game.whiteName) headers.push(["White", game.whiteName]);
+  if (game.blackName) headers.push(["Black", game.blackName]);
+  return makePgn({
+    startFen: game.startFen || undefined,
+    moves: game.moves || [],
+    headers,
+    result: game.result ? PGN_RESULT[game.result] || "*" : "*",
+  });
 }
 
 function downloadPgn(game) {
@@ -110,13 +101,15 @@ function codeFor(type, color) {
  * the live counterpart to ChessBoard.jsx's static starting-position
  * diagram. Shares that component's board/piece SVG rendering and theme
  * system (chessThemes.js) so the two look consistent; unlike ChessBoard.jsx
- * it tracks a live position (via chess.js) and turns clicks into moves.
+ * it tracks a live position (via chessRules.js / chessops) and turns clicks
+ * into moves. Chess960 castling follows the real rules: click the king, then
+ * either your rook or the square the king will land on.
  *
  * Props:
  *   game       — serialized Game shape from the backend:
  *                { startFen, moves, fen, boardStatus, suggestedResult,
  *                  result, status }. startFen carries a Chess960 starting
- *                position when relevant; chess.js replays `moves` on top
+ *                position when relevant; chessops replays `moves` on top
  *                of it purely for rendering/legality — the backend remains
  *                the source of truth once onMove's result comes back.
  *                whiteName/blackName/gameNum (when present on the same
@@ -155,12 +148,7 @@ export default function MoveEntryBoard({
   const [selected, setSelected] = useState(null);
   const [pendingPromotion, setPendingPromotion] = useState(null);
 
-  // Normalized once per startFen; every replay below uses this, never the
-  // raw game.startFen.
-  const startFen = useMemo(
-    () => normalizeStartFen(game.startFen),
-    [game.startFen],
-  );
+  const startFen = game.startFen || undefined;
   const chess960Rank = backRankLabel(startFen);
 
   const liveMoves = game.moves || [];
@@ -191,14 +179,8 @@ export default function MoveEntryBoard({
   // separate from what's actually rendered (see displayChess below) so
   // browsing history never has to touch turn/legality logic.
   const { chess, lastMove } = useMemo(() => {
-    const c = new Chess(startFen, { chess960: true });
-    let last = null;
-    for (const san of game.moves || []) {
-      const r = c.move(san, { strict: false });
-      if (!r) break; // shouldn't happen — server data is the source of truth
-      last = r;
-    }
-    return { chess: c, lastMove: last };
+    const r = replay(startFen, game.moves);
+    return { chess: r.pos, lastMove: r.lastMove }; // chess === null: bad start FEN
   }, [startFen, game.moves]);
 
   // What's actually drawn on the board. Identical to the live position at
@@ -207,32 +189,22 @@ export default function MoveEntryBoard({
   // the game is complete, since it never touches game.status at all.
   const { displayChess, displayLastMove } = useMemo(() => {
     if (isLatest) return { displayChess: chess, displayLastMove: lastMove };
-    const c = new Chess(startFen, { chess960: true });
-    let last = null;
-    for (let i = 0; i < viewIndex; i++) {
-      const r = c.move(liveMoves[i], { strict: false });
-      if (!r) break;
-      last = r;
-    }
-    return { displayChess: c, displayLastMove: last };
+    const r = replay(startFen, liveMoves, viewIndex);
+    return { displayChess: r.pos, displayLastMove: r.lastMove };
   }, [isLatest, chess, lastMove, startFen, liveMoves, viewIndex]);
 
-  const board = displayChess.board();
-  const turn = chess.turn();
+  const board = displayChess ? boardGrid(displayChess) : null;
+  const turn = chess ? turnOf(chess) : "w";
   // Interactive play requires being at the live/latest position — stepping
   // back to review an earlier move (whether the game is complete or still
   // in progress) disables making new moves until you jump back to latest.
   const interactive = !disabled && game.status !== "complete" && isLatest;
 
+  // { clickableSquare: [candidate move, ...] } — includes both squares from
+  // which a castle can be played (the rook's, and the king's landing square).
   const legalByTarget = useMemo(() => {
-    if (!selected) return {};
-    const moves = chess.moves({ square: selected, verbose: true });
-    const map = {};
-    moves.forEach((m) => {
-      if (!map[m.to]) map[m.to] = [];
-      map[m.to].push(m);
-    });
-    return map;
+    if (!selected || !chess) return {};
+    return legalTargets(chess, selected);
   }, [chess, selected]);
 
   const ranks =
@@ -249,7 +221,7 @@ export default function MoveEntryBoard({
 
   function handleSquareClick(square) {
     if (!interactive || pendingPromotion) return;
-    const piece = chess.get(square);
+    const piece = pieceAt(chess, square);
 
     if (selected === square) {
       setSelected(null);
@@ -290,6 +262,19 @@ export default function MoveEntryBoard({
     setSelected(null);
   }
 
+  // Start position couldn't be parsed (corrupt/unsupported FEN). Say so
+  // instead of letting a render error take down the whole page.
+  if (!chess) {
+    return (
+      <div className="me-root">
+        <p className="me-error">
+          This game's starting position couldn't be loaded, so the board can't
+          be shown.
+        </p>
+      </div>
+    );
+  }
+
   const themeVars = {
     "--c960-light": colors.light,
     "--c960-dark": colors.dark,
@@ -313,6 +298,12 @@ export default function MoveEntryBoard({
         >
           CHESS960 · {chess960Rank}
           {viewIndex === 0 ? " · starting position" : ""}
+          {interactive && (
+            <div style={{ marginTop: 3, letterSpacing: 0, opacity: 0.8 }}>
+              To castle: click the king, then your rook (or the king's landing
+              square).
+            </div>
+          )}
         </div>
       )}
       <div className="c960-board-wrap" style={{ width: size, ...themeVars }}>
