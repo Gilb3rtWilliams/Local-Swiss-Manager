@@ -46,6 +46,9 @@ function tabsFor(t) {
   if (t.chess960) {
     tabs.push({ to: "chess960", label: "Chess960" });
   }
+  if (t.matchPlay) {
+    tabs.push({ to: "history", label: "Game History" });
+  }
   tabs.push({ to: "standings", label: "Standings" });
   return tabs;
 }
@@ -194,8 +197,9 @@ export default function TournamentLayout() {
             ) : (
               <>
                 {t.timeControl && `${t.timeControl} · `}
-                {t.format === "team" ? "Team" : "Individual"} · Round{" "}
-                {t.currentRound}/{t.totalRounds} · {t.status}
+                {t.format === "team" ? "Team" : "Individual"}
+                {t.matchPlay && " · Match Play"} · Round {t.currentRound}/
+                {t.totalRounds} · {t.status}
               </>
             )}
           </div>

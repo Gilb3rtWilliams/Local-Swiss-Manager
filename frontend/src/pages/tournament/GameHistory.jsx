@@ -18,6 +18,30 @@ const SOURCE_LABELS = {
   armageddon: "Armageddon",
 };
 
+// Bracket branch code -> a readable label, same vocabulary Module.jsx's
+// ScoreModal subtitle already uses.
+const BRACKET_LABELS = {
+  W: "Winners",
+  L: "Losers",
+  GF: "Grand Final",
+  "3P": "3rd Place",
+};
+
+// Match Play rows carry round/matchId/bracket/boardNum context instead of a
+// fixed Cage Match section — see tournamentService.js's
+// matchPlayHistoryRows() for the exact shape. Built up as parts rather than
+// a single lookup since several of these can combine (e.g. a team round's
+// board that went to Armageddon).
+function matchPlayTag(g) {
+  const parts = [];
+  if (g.round !== undefined) parts.push(`Round ${g.round}`);
+  if (g.matchId) parts.push(BRACKET_LABELS[g.bracket] || g.bracket);
+  if (g.boardNum) parts.push(`Board ${g.boardNum}`);
+  if (g.source === "tiebreak_miniMatch") parts.push("Tiebreak");
+  if (g.source === "armageddon") parts.push("Armageddon");
+  return parts.join(" · ");
+}
+
 function movesAsPairs(moves) {
   const pairs = [];
   for (let i = 0; i < moves.length; i += 2) {
@@ -29,14 +53,17 @@ function movesAsPairs(moves) {
 export default function GameHistory() {
   const { t } = useOutletContext();
   const { id } = useParams();
+  const isMatchPlay = !!t?.matchPlay;
   const [rows, setRows] = useState(null);
   const [error, setError] = useState("");
   const [openId, setOpenId] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
-    api
-      .getCageMatchHistory(id)
+    const fetchHistory = isMatchPlay
+      ? api.getMatchPlayHistory(id)
+      : api.getCageMatchHistory(id);
+    fetchHistory
       .then((data) => {
         if (!cancelled) setRows(data);
       })
@@ -47,19 +74,21 @@ export default function GameHistory() {
       cancelled = true;
     };
     // Re-fetch whenever the tournament data changes elsewhere (a move or
-    // result recorded on the Cage Match tab) so this stays in sync without
-    // needing its own polling.
-  }, [id, t]);
+    // result recorded on the Cage Match/Pairings/Bracket tab) so this stays
+    // in sync without needing its own polling.
+  }, [id, t, isMatchPlay]);
 
   if (error) return <p className="gh-error">{error}</p>;
   if (!rows) return <p className="gh-loading">Loading…</p>;
   if (rows.length === 0) return <p className="gh-loading">No games yet.</p>;
 
   return (
-    <div className="gh-root">
+    <div className={`gh-root${isMatchPlay ? " gh-matchplay" : ""}`}>
       {rows.map((g) => {
         const isOpen = openId === g.id;
-        const label = SOURCE_LABELS[g.source] ?? g.sectionLabel;
+        const label = isMatchPlay
+          ? matchPlayTag(g)
+          : SOURCE_LABELS[g.source] ?? g.sectionLabel;
         return (
           <div className="gh-row-wrap" key={g.id}>
             <button

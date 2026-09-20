@@ -46,8 +46,15 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
+/* Match Play's combined tags ("Round 3 · Board 2 · Tiebreak") run longer
+   than Cage Match's short section names — give that column more room. */
+.gh-matchplay .gh-row {
+  grid-template-columns: 190px 40px 1fr 90px 20px;
+}
+
 @media (max-width: 640px) {
-  .gh-row {
+  .gh-row,
+  .gh-matchplay .gh-row {
     grid-template-columns: 1fr 30px 20px;
     grid-template-areas:
       "tag num chevron"

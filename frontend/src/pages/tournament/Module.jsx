@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { api } from "../../api.js";
 import BracketCanvas from "../../components/BracketCanvas.jsx";
+import MiniMatchPanel from "../../components/MiniMatchPanel.jsx";
 import "../../css/Bracket.css";
 
 const DRAW_VALUE = "1/2-1/2";
@@ -211,6 +212,126 @@ function TeamScoreForm({ match, isBughouse, onSubmit, busy, error }) {
   );
 }
 
+// Match Play, team format: one bracket match has several boards, each with
+// its own mini-match — so the card opens this list first (mirroring
+// PairingsTeam.jsx's per-row "Open Mini-Match" pattern), and picking a
+// board hands off to the full MiniMatchPanel for that board specifically.
+// Also carries the rare aggregate-tie override: every board can be
+// individually decisive yet still tie 1-1 in match points, at which point
+// tournamentService.js leaves the match pending (status "ready", result
+// set, winnerId null) for exactly this control to resolve — same
+// winnerOverride mechanism the classical TeamScoreForm above already uses,
+// just without needing to (re-)submit any board results here, since
+// they're already set.
+function MatchPlayTeamBoardList({ match, onOpenBoard, onOverrideSubmit, busy, error }) {
+  const [winnerOverride, setWinnerOverride] = useState("");
+  const tied =
+    match.status === "ready" &&
+    match.result &&
+    match.result.aPoints === match.result.bPoints;
+
+  return (
+    <div>
+      <table className="bx-board-table">
+        <thead>
+          <tr>
+            <th>Bd</th>
+            <th>White</th>
+            <th></th>
+            <th>Black</th>
+            <th>Score</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {match.boards.map((b) => (
+            <tr key={b.boardNum}>
+              <td>{b.boardNum}</td>
+              {b.sitOut ? (
+                <td colSpan={5} className="muted">
+                  {(b.white || b.black)?.name} sits out this board
+                </td>
+              ) : (
+                <>
+                  <td>{b.white.name}</td>
+                  <td className="muted">vs</td>
+                  <td>{b.black.name}</td>
+                  <td>
+                    {b.miniMatch
+                      ? `${b.miniMatch.score.A} – ${b.miniMatch.score.B}`
+                      : "—"}
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      className="btn-secondary btn-sm"
+                      onClick={() => onOpenBoard(b.boardNum)}
+                    >
+                      Open →
+                    </button>
+                  </td>
+                </>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {match.result && (
+        <p className="muted" style={{ margin: "10px 0" }}>
+          Score: {match.competitorA.name} {match.result.aPoints} –{" "}
+          {match.result.bPoints} {match.competitorB.name}
+        </p>
+      )}
+
+      {tied && (
+        <div className="bx-tiebreak">
+          <p
+            className="inline-error"
+            style={{ display: "block", marginBottom: 6 }}
+          >
+            Every board is decided but the match is tied on aggregate — pick
+            who advances.
+          </p>
+          <label className="checkbox-inline">
+            <input
+              type="radio"
+              name={`override-${match.id}`}
+              checked={winnerOverride === "A"}
+              onChange={() => setWinnerOverride("A")}
+            />
+            {match.competitorA.name}
+          </label>
+          <label className="checkbox-inline" style={{ marginLeft: 12 }}>
+            <input
+              type="radio"
+              name={`override-${match.id}`}
+              checked={winnerOverride === "B"}
+              onChange={() => setWinnerOverride("B")}
+            />
+            {match.competitorB.name}
+          </label>
+          <div style={{ marginTop: 10 }}>
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={busy || !winnerOverride}
+              onClick={() => onOverrideSubmit(winnerOverride)}
+            >
+              {busy ? "Saving…" : "Confirm Winner"}
+            </button>
+            {error && (
+              <span className="inline-error" style={{ marginLeft: 10 }}>
+                {error}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ScoreModal({
   match,
   format,
@@ -307,8 +428,13 @@ function ScoreModal({
 export default function Module() {
   const { t, refresh } = useOutletContext();
   const b = t.bracket;
+  const isMatchPlay = !!t.matchPlay;
 
   const [openMatchId, setOpenMatchId] = useState(null);
+  // Team + Match Play only: which board's full MiniMatchPanel is open, or
+  // null to show the board-list overview instead. Reset whenever a
+  // different match is opened.
+  const [activeBoardNum, setActiveBoardNum] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -328,10 +454,12 @@ export default function Module() {
 
   function openMatchModal(m) {
     setOpenMatchId(m.id);
+    setActiveBoardNum(null);
     setError("");
   }
   function closeModal() {
     setOpenMatchId(null);
+    setActiveBoardNum(null);
     setError("");
   }
 
@@ -341,6 +469,24 @@ export default function Module() {
     try {
       await api.submitBracketResult(t.id, openMatchId, payload);
       setOpenMatchId(null);
+      refresh();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Match Play team ties only — resolving via the same winnerOverride
+  // mechanism submitBracketResult already supports, with no boards to
+  // (re-)send since they're already set by each board's mini-match.
+  async function handleOverrideSubmit(winnerOverride) {
+    setBusy(true);
+    setError("");
+    try {
+      await api.submitBracketResult(t.id, openMatchId, { winnerOverride });
+      setOpenMatchId(null);
+      setActiveBoardNum(null);
       refresh();
     } catch (err) {
       setError(err.message);
@@ -381,15 +527,80 @@ export default function Module() {
         onOpenMatch={openMatchModal}
       />
 
-      <ScoreModal
-        match={openMatch}
-        format={t.format}
-        isBughouse={isBughouse}
-        onClose={closeModal}
-        onSubmit={handleSubmit}
-        busy={busy}
-        error={error}
-      />
+      {isMatchPlay ? (
+        openMatch &&
+        (t.format === "team" ? (
+          activeBoardNum != null ? (
+            <MiniMatchPanel
+              tournamentId={t.id}
+              target={{ matchId: openMatchId, boardNum: activeBoardNum }}
+              miniMatch={
+                openMatch.boards.find((bd) => bd.boardNum === activeBoardNum)
+                  ?.miniMatch
+              }
+              onChanged={refresh}
+              onClose={() => setActiveBoardNum(null)}
+            />
+          ) : (
+            <div className="bx-modal-backdrop" onClick={closeModal}>
+              <div className="bx-modal" onClick={(e) => e.stopPropagation()}>
+                <div className="bx-modal-header">
+                  <div>
+                    <div className="bx-modal-title">
+                      {openMatch.competitorA.name}{" "}
+                      <span className="muted">vs</span>{" "}
+                      {openMatch.competitorB.name}
+                    </div>
+                    <div className="bx-modal-subtitle">
+                      {openMatch.bracket === "W"
+                        ? "Winners"
+                        : openMatch.bracket === "L"
+                        ? "Losers"
+                        : openMatch.bracket === "3P"
+                        ? "3rd Place Match"
+                        : "Grand Final"}{" "}
+                      · Round {openMatch.round}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="bx-modal-close"
+                    onClick={closeModal}
+                    aria-label="Close"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <MatchPlayTeamBoardList
+                  match={openMatch}
+                  onOpenBoard={setActiveBoardNum}
+                  onOverrideSubmit={handleOverrideSubmit}
+                  busy={busy}
+                  error={error}
+                />
+              </div>
+            </div>
+          )
+        ) : (
+          <MiniMatchPanel
+            tournamentId={t.id}
+            target={{ matchId: openMatchId }}
+            miniMatch={openMatch.miniMatch}
+            onChanged={refresh}
+            onClose={closeModal}
+          />
+        ))
+      ) : (
+        <ScoreModal
+          match={openMatch}
+          format={t.format}
+          isBughouse={isBughouse}
+          onClose={closeModal}
+          onSubmit={handleSubmit}
+          busy={busy}
+          error={error}
+        />
+      )}
     </div>
   );
 }
