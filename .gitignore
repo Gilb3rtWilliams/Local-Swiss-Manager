@@ -2,3 +2,9 @@ node_modules/
 frontend/dist/
 backend/data/tournaments.json
 .DS_Store
+
+# Environment variables / secrets — never commit these
+.env
+.env.local
+backend/.env
+frontend/.env
