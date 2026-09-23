@@ -183,6 +183,54 @@ function BughouseIcon() {
   );
 }
 
+// Two competitors, several games between them — the "best of N, in one
+// continuous sitting" shape a Cage Match's sections are built from.
+function CageMatchIcon() {
+  return (
+    <svg viewBox="0 0 40 40" className="format-icon" aria-hidden="true">
+      <g fill="currentColor">
+        <circle cx="7" cy="20" r="3.4" />
+        <circle cx="33" cy="20" r="3.4" />
+      </g>
+      <g stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+        <path d="M11 13 L29 13" />
+        <path d="M11 20 L29 20" />
+        <path d="M11 27 L29 27" />
+      </g>
+    </svg>
+  );
+}
+
+// Two pairings, each a doubled ("best of N") line, feeding forward the same
+// way a Swiss round or a bracket already does — Match Play layered on top
+// of any format above, rather than a shape of its own.
+function MatchPlayIcon() {
+  return (
+    <svg viewBox="0 0 40 40" className="format-icon" aria-hidden="true">
+      <g
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      >
+        <path d="M6 8 L20 8" />
+        <path d="M6 12 L20 12" />
+        <path d="M6 28 L20 28" />
+        <path d="M6 32 L20 32" />
+        <path d="M20 10 L34 10" />
+        <path d="M20 30 L34 30" />
+        <path d="M34 10 L34 30" strokeDasharray="2.5 3" />
+      </g>
+      <g fill="currentColor">
+        <circle cx="6" cy="10" r="2" />
+        <circle cx="6" cy="30" r="2" />
+        <circle cx="34" cy="10" r="2" />
+        <circle cx="34" cy="30" r="2" />
+      </g>
+    </svg>
+  );
+}
+
 // ─── Content data ─────────────────────────────────────────────────────────────
 
 const FORMATS = [
@@ -211,15 +259,69 @@ const FORMATS = [
     title: "Double Elimination",
     body: "One loss drops you to the losers bracket, not out the door. It takes two losses to be finished, including a Grand Final reset if the losers'-bracket finalist beats the winners'-bracket champion.",
   },
+  {
+    icon: <CageMatchIcon />,
+    title: "Cage Match",
+    body: "Two competitors, one continuous event: several timed sections — Classical, Rapid, Blitz, whatever you set — each a short series of games. A tie goes to a sudden-death mini-match, and Armageddon if it's still level after that.",
+  },
+  {
+    icon: <MatchPlayIcon />,
+    title: "Match Play",
+    body: "Any format above, with a twist: every pairing plays a best-of-N mini-match instead of a single game. Match points feed the standings or bracket as usual, with a tiebreak mini-match and Armageddon on hand for whenever one comes out level.",
+  },
 ];
 
 const SPORTS = [
-  { icon: "⚽", label: "Football knockout cups" },
-  { icon: "🏀", label: "Basketball tournaments" },
-  { icon: "🏓", label: "Table tennis ladders" },
-  { icon: "🎮", label: "Esports brackets" },
-  { icon: "🏸", label: "Badminton leagues" },
-  { icon: "🎳", label: "Club league nights" },
+  {
+    icon: "⚽",
+    label: "Football knockout cups",
+    body: "Single or double elimination for a cup draw, seeded by league table or ranking, with a third-place playoff if you want one.",
+  },
+  {
+    icon: "🏀",
+    label: "Basketball tournaments",
+    body: "Round-robin pool play feeding a single-elimination bracket — the same two-stage shape most club and school tournaments already run.",
+  },
+  {
+    icon: "🏓",
+    label: "Table tennis ladders",
+    body: "Swiss pairings let a large open ladder converge on a fair final standing without every player needing to face everyone.",
+  },
+  {
+    icon: "🎮",
+    label: "Esports brackets",
+    body: "Double elimination with a Grand Final reset — the standard format for LAN and online events, where one bad game shouldn't end a run.",
+  },
+  {
+    icon: "🏸",
+    label: "Badminton leagues",
+    body: "Double round robin for a home-and-away league season, or single round robin for a one-off club night.",
+  },
+  {
+    icon: "🎳",
+    label: "Club league nights",
+    body: "Swiss or round robin for a casual weekly night, where the pairing engine works out who plays whom instead of the organizer.",
+  },
+  {
+    icon: "🏐",
+    label: "Volleyball tournaments",
+    body: "Pool-play round robin into a single-elimination knockout — the standard two-phase shape for club and school volleyball days.",
+  },
+  {
+    icon: "🎾",
+    label: "Tennis & padel ladders",
+    body: "Swiss or round robin for a club ladder, with games or sets won standing in for chess's tiebreak scores.",
+  },
+  {
+    icon: "🥊",
+    label: "Combat sports fight cards",
+    body: "Single elimination seeded by weight class or ranking — a standard fight-night bracket, with byes handled automatically on an odd-numbered field.",
+  },
+  {
+    icon: "♟️",
+    label: "Other board & card games",
+    body: "Checkers, Go, backgammon, bridge, Magic — anything decided by a single head-to-head result drops straight into any format above.",
+  },
 ];
 
 export default function Welcome() {
@@ -309,7 +411,7 @@ export default function Welcome() {
       <section className="welcome-section" id="formats">
         <Reveal className="welcome-section-head">
           <p className="welcome-eyebrow">Tournament Formats</p>
-          <h2>Five ways to run an event</h2>
+          <h2>Seven ways to run an event</h2>
           <p className="welcome-lede">
             Every format shares the same pairing engine underneath — pick the
             shape that fits your field, and switch between them tournament to
@@ -334,9 +436,9 @@ export default function Welcome() {
           <div>
             <h3>Plus team play, including Bughouse</h3>
             <p>
-              Any of the five formats above can run as a team event — standard
-              team matches, league play, or Bughouse, where partners on two
-              boards share a clock and pass captured pieces to each other
+              Any of the five pairing formats above can run as a team event —
+              standard team matches, league play, or Bughouse, where partners on
+              two boards share a clock and pass captured pieces to each other
               mid-game.
             </p>
           </div>
@@ -347,14 +449,15 @@ export default function Welcome() {
         <section className="welcome-section" id="tiebreaks">
           <Reveal className="welcome-section-head">
             <p className="welcome-eyebrow">Tie-break systems</p>
-            <h2>Buchholz and Sonneborn–Berger</h2>
+            <h2>Buchholz, Sonneborn–Berger, and more</h2>
             <p className="welcome-lede">
-              Buchholz and Sonneborn–Berger are two distinct tie-breaking
-              systems used in chess tournaments to rank players who finish with
-              identical scores. They prioritize opponents' strength rather than
-              just raw game results, with Buchholz typically serving as the
-              primary tie-breaker in Swiss events and Sonneborn–Berger often
-              used in round-robin formats or as a secondary tie-breaker.
+              When two or more players finish with the same score, these systems
+              break the tie without another game being played. Most prioritize
+              the strength of a player's opponents rather than raw results —
+              Buchholz (and its Cut 1 variant) is the usual primary tie-break in
+              Swiss events, Sonneborn–Berger is common in round-robin formats or
+              as a secondary tie-break, and Number of Wins is a simple
+              decisive-results check that's easy to explain on the spot.
             </p>
           </Reveal>
 
@@ -381,6 +484,30 @@ export default function Welcome() {
                 against stronger competition.
               </p>
             </Reveal>
+
+            <Reveal className="format-card" delay={180}>
+              <h3>Buchholz Cut 1</h3>
+              <p>
+                Buchholz Cut 1 starts from the same idea as the plain Buchholz
+                Score — sum the final scores of every opponent a player faced —
+                but drops the single lowest-scoring opponent before adding up
+                the rest. One weak pairing, whether from a bye-heavy schedule or
+                an opponent who withdrew early, no longer drags the whole total
+                down on its own, which is why it's the more common default in
+                Swiss events over the uncut version.
+              </p>
+            </Reveal>
+
+            <Reveal className="format-card" delay={240}>
+              <h3>Number of Wins</h3>
+              <p>
+                Number of Wins counts how many games a player won outright,
+                setting draws and losses aside entirely. As a tiebreaker it
+                rewards a more decisive record over a cautious one: two players
+                can finish with the same total score, but whoever won more games
+                — rather than drew their way to the same number — ranks higher.
+              </p>
+            </Reveal>
           </div>
         </section>
 
@@ -400,11 +527,14 @@ export default function Welcome() {
             </p>
           </Reveal>
 
-          <Reveal className="sport-row">
+          <Reveal className="sport-grid">
             {SPORTS.map((s) => (
-              <div className="sport-chip" key={s.label}>
-                <span className="sport-chip-icon">{s.icon}</span>
-                <span>{s.label}</span>
+              <div className="sport-card" key={s.label}>
+                <span className="sport-card-icon">{s.icon}</span>
+                <div>
+                  <h4>{s.label}</h4>
+                  <p>{s.body}</p>
+                </div>
               </div>
             ))}
           </Reveal>
