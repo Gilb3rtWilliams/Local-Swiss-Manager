@@ -10,6 +10,7 @@ require("dotenv").config();
 // to log in.
 const REQUIRED_ENV_VARS = ["JWT_SECRET", "ADMIN_PASSWORD_HASH"];
 const missingEnvVars = REQUIRED_ENV_VARS.filter((name) => !process.env[name]);
+
 if (missingEnvVars.length > 0) {
   console.error(
     `Missing required environment variable(s): ${missingEnvVars.join(", ")}. ` +
@@ -29,16 +30,25 @@ if (!process.env.FRONTEND_ORIGIN && process.env.NODE_ENV === "production") {
   );
 }
 
+const http = require("http");
 const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const path = require("path");
+
 const tournamentsRouter = require("./src/routes/tournaments");
 const uploadsRouter = require("./src/routes/uploads");
 const authRouter = require("./src/routes/routes-auth");
 const reviewsRouter = require("./src/routes/reviews");
 const tournamentService = require("./src/tournamentService");
 const store = require("./src/store");
+
+// Live publishing / public spectator system
+const { setupSocket } = require("./src/socket");
+const { createPublishRouter } = require("./src/routes/publish");
+const {
+  router: publicTournamentsRouter,
+} = require("./src/routes/tournamentsPublic");
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -63,13 +73,41 @@ app.use(
     credentials: true,
   }),
 );
+
 app.use(express.json());
 app.use(cookieParser());
 
+// Create the HTTP server explicitly so Socket.IO can share the same server
+// as Express.
+const httpServer = http.createServer(app);
+
+// Attach Socket.IO for live tournament publishing.
+const io = setupSocket(httpServer, {
+  corsOrigin: process.env.FRONTEND_ORIGIN || "http://localhost:5173",
+});
+
+// Existing application routes.
 app.use("/api/auth", authRouter);
 app.use("/api/tournaments", tournamentsRouter);
 app.use("/api/uploads", uploadsRouter);
 app.use("/api/reviews", reviewsRouter);
+
+// Live publishing API.
+// These routes are authenticated and are used by the tournament publisher.
+app.use("/api/publish", createPublishRouter(io));
+
+// Public spectator API.
+//
+// IMPORTANT:
+// Do NOT mount tournamentsPublicRouter at /api because it contains
+// GET /tournaments and GET /tournaments/:id, which would collide with the
+// existing /api/tournaments admin router.
+//
+// Mounting at /api/public gives us:
+//   GET /api/public/tournaments
+//   GET /api/public/tournaments/:id
+//   GET /api/public/tournaments/:id/events
+app.use("/api/public", publicTournamentsRouter);
 
 // Serves back whatever imageUpload.js writes to src/uploads/images (Cage
 // Match competitor pictures, today) at the /uploads/images/<file> URLs
@@ -89,9 +127,12 @@ app.get("/api/health", async (req, res) => {
 
 // Serve the built React app in production (after `npm run build` in /frontend).
 const frontendDist = path.join(__dirname, "..", "frontend", "dist");
+
 app.use(express.static(frontendDist));
+
 app.get("*", (req, res, next) => {
   if (req.path.startsWith("/api")) return next();
+
   res.sendFile(path.join(frontendDist, "index.html"), (err) => {
     if (err) next();
   });
@@ -109,7 +150,9 @@ async function start() {
     process.exit(1);
   }
 
-  app.listen(PORT, () => {
+  // Use the HTTP server rather than app.listen() so Socket.IO receives
+  // connections on the same server.
+  httpServer.listen(PORT, () => {
     console.log(
       `Local Swiss Manager backend running at http://localhost:${PORT}`,
     );

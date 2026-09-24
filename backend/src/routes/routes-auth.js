@@ -6,7 +6,7 @@ const {
   verifyPassword,
   signToken,
   verifyToken,
-} = require("../auth");
+} = require("./auth");
 
 const router = express.Router();
 

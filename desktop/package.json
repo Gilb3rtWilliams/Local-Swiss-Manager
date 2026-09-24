@@ -1,0 +1,63 @@
+{
+  "name": "swiss-manager-desktop",
+  "version": "0.1.0",
+  "description": "Swiss Manager -- local-first desktop app for running chess tournaments offline, with optional live publishing.",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "prep": "node scripts/prep.js",
+    "start": "npm run prep && electron .",
+    "dist": "npm run prep && electron-builder",
+    "dist:dir": "npm run prep && electron-builder --dir",
+    "postinstall": "electron-rebuild -f -w better-sqlite3,keytar"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "keytar": "^7.9.0"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^3.6.0",
+    "electron": "^32.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.swissmanager.desktop",
+    "productName": "Swiss Manager",
+    "directories": {
+      "output": "release",
+      "buildResources": "build-resources"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "db/**/*",
+      "publishing/**/*",
+      "vendor/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "**/node_modules/better-sqlite3/**/*",
+      "**/node_modules/keytar/**/*"
+    ],
+    "extraMetadata": {
+      "main": "main.js"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.sports"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Game"
+    }
+  }
+}

@@ -8,3 +8,5 @@ backend/data/tournaments.json
 .env.local
 backend/.env
 frontend/.env
+desktop/backend/
+desktop/frontend/
