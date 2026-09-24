@@ -445,101 +445,96 @@ export default function Welcome() {
         </Reveal>
       </section>
 
-      <div className="welcome-tiebreaks">
-        <section className="welcome-section" id="tiebreaks">
-          <Reveal className="welcome-section-head">
-            <p className="welcome-eyebrow">Tie-break systems</p>
-            <h2>Buchholz, Sonneborn–Berger, and more</h2>
-            <p className="welcome-lede">
-              When two or more players finish with the same score, these systems
-              break the tie without another game being played. Most prioritize
-              the strength of a player's opponents rather than raw results —
-              Buchholz (and its Cut 1 variant) is the usual primary tie-break in
-              Swiss events, Sonneborn–Berger is common in round-robin formats or
-              as a secondary tie-break, and Number of Wins is a simple
-              decisive-results check that's easy to explain on the spot.
+      <section className="welcome-section" id="tiebreaks">
+        <Reveal className="welcome-section-head">
+          <p className="welcome-eyebrow">Tie-break systems</p>
+          <h2>Buchholz, Sonneborn–Berger, and more</h2>
+          <p className="welcome-lede">
+            When two or more players finish with the same score, these systems
+            break the tie without another game being played. Most prioritize the
+            strength of a player's opponents rather than raw results — Buchholz
+            (and its Cut 1 variant) is the usual primary tie-break in Swiss
+            events, Sonneborn–Berger is common in round-robin formats or as a
+            secondary tie-break, and Number of Wins is a simple decisive-results
+            check that's easy to explain on the spot.
+          </p>
+        </Reveal>
+
+        <div className="welcome-tiebreak-grid">
+          <Reveal className="format-card" delay={60}>
+            <h3>Buchholz Score</h3>
+            <p>
+              Buchholz Score measures the overall strength of a player's
+              schedule. It is calculated by summing the final tournament scores
+              of all opponents a player faced. Variations like Buchholz Cut 1
+              drop the lowest-scoring opponent to mitigate the impact of an
+              exceptionally weak pairing.
             </p>
           </Reveal>
 
-          <div className="welcome-tiebreaks">
-            <Reveal className="format-card" delay={60}>
-              <h3>Buchholz Score</h3>
-              <p>
-                Buchholz Score measures the overall strength of a player's
-                schedule. It is calculated by summing the final tournament
-                scores of all opponents a player faced. Variations like Buchholz
-                Cut 1 drop the lowest-scoring opponent to mitigate the impact of
-                an exceptionally weak pairing.
-              </p>
-            </Reveal>
-
-            <Reveal className="format-card" delay={120}>
-              <h3>Sonneborn–Berger Score</h3>
-              <p>
-                Sonneborn–Berger Score (specifically the Neustadtl variant)
-                weights results by opponent strength. It is calculated by adding
-                the full final score of every opponent a player defeated and
-                half the final score of every opponent they drew with; losses
-                contribute zero. This system rewards players for scoring points
-                against stronger competition.
-              </p>
-            </Reveal>
-
-            <Reveal className="format-card" delay={180}>
-              <h3>Buchholz Cut 1</h3>
-              <p>
-                Buchholz Cut 1 starts from the same idea as the plain Buchholz
-                Score — sum the final scores of every opponent a player faced —
-                but drops the single lowest-scoring opponent before adding up
-                the rest. One weak pairing, whether from a bye-heavy schedule or
-                an opponent who withdrew early, no longer drags the whole total
-                down on its own, which is why it's the more common default in
-                Swiss events over the uncut version.
-              </p>
-            </Reveal>
-
-            <Reveal className="format-card" delay={240}>
-              <h3>Number of Wins</h3>
-              <p>
-                Number of Wins counts how many games a player won outright,
-                setting draws and losses aside entirely. As a tiebreaker it
-                rewards a more decisive record over a cautious one: two players
-                can finish with the same total score, but whoever won more games
-                — rather than drew their way to the same number — ranks higher.
-              </p>
-            </Reveal>
-          </div>
-        </section>
-
-        <section
-          className="welcome-section welcome-versatility"
-          id="versatility"
-        >
-          <Reveal className="welcome-section-head">
-            <p className="welcome-eyebrow">Beyond Chess</p>
-            <h2>Built for any head-to-head competition</h2>
-            <p className="welcome-lede">
-              The round robin and elimination engines don't know they're running
-              a chess tournament — no chess assumption is baked into the seeding
-              or bracket math. Run a five-a-side football knockout, a
-              table-tennis ladder, or a local esports cup with the same seeded
-              brackets, the same bracket-reset logic, and the same standings.
+          <Reveal className="format-card" delay={120}>
+            <h3>Sonneborn–Berger Score</h3>
+            <p>
+              Sonneborn–Berger Score (specifically the Neustadtl variant)
+              weights results by opponent strength. It is calculated by adding
+              the full final score of every opponent a player defeated and half
+              the final score of every opponent they drew with; losses
+              contribute zero. This system rewards players for scoring points
+              against stronger competition.
             </p>
           </Reveal>
 
-          <Reveal className="sport-grid">
-            {SPORTS.map((s) => (
-              <div className="sport-card" key={s.label}>
-                <span className="sport-card-icon">{s.icon}</span>
-                <div>
-                  <h4>{s.label}</h4>
-                  <p>{s.body}</p>
-                </div>
+          <Reveal className="format-card" delay={180}>
+            <h3>Buchholz Cut 1</h3>
+            <p>
+              Buchholz Cut 1 starts from the same idea as the plain Buchholz
+              Score — sum the final scores of every opponent a player faced —
+              but drops the single lowest-scoring opponent before adding up the
+              rest. One weak pairing, whether from a bye-heavy schedule or an
+              opponent who withdrew early, no longer drags the whole total down
+              on its own, which is why it's the more common default in Swiss
+              events over the uncut version.
+            </p>
+          </Reveal>
+
+          <Reveal className="format-card" delay={240}>
+            <h3>Number of Wins</h3>
+            <p>
+              Number of Wins counts how many games a player won outright,
+              setting draws and losses aside entirely. As a tiebreaker it
+              rewards a more decisive record over a cautious one: two players
+              can finish with the same total score, but whoever won more games —
+              rather than drew their way to the same number — ranks higher.
+            </p>
+          </Reveal>
+        </div>
+      </section>
+
+      <section className="welcome-section welcome-versatility" id="versatility">
+        <Reveal className="welcome-section-head">
+          <p className="welcome-eyebrow">Beyond Chess</p>
+          <h2>Built for any head-to-head competition</h2>
+          <p className="welcome-lede">
+            The round robin and elimination engines don't know they're running a
+            chess tournament — no chess assumption is baked into the seeding or
+            bracket math. Run a five-a-side football knockout, a table-tennis
+            ladder, or a local esports cup with the same seeded brackets, the
+            same bracket-reset logic, and the same standings.
+          </p>
+        </Reveal>
+
+        <Reveal className="sport-grid">
+          {SPORTS.map((s) => (
+            <div className="sport-card" key={s.label}>
+              <span className="sport-card-icon">{s.icon}</span>
+              <div>
+                <h4>{s.label}</h4>
+                <p>{s.body}</p>
               </div>
-            ))}
-          </Reveal>
-        </section>
-      </div>
+            </div>
+          ))}
+        </Reveal>
+      </section>
 
       <section className="welcome-section welcome-cta">
         <Reveal>
