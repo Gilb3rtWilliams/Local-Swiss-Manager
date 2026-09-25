@@ -176,7 +176,7 @@ app.whenReady().then(async () => {
     const body = await res.json();
 
     try {
-      await authStore.saveToken("signed-in");
+      await authStore.saveToken(body.token);
     } catch (err) {
       return {
         ok: false,

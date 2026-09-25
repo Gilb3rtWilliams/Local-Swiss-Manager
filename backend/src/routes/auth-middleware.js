@@ -47,27 +47,12 @@ function requireAuth(req, res, next) {
   }
 }
 
-// Separate from requireAuth deliberately: entitlement is checked fresh
-// against the database on every call (see routes/auth.js's /me/entitlement)
-// rather than trusted from the token, so this middleware does a DB lookup.
-// Kept here (not in publish.js) since it's genuinely an auth concern.
 function requireActiveSubscription(pool) {
-  return async (req, res, next) => {
-    try {
-      const { rows } = await pool.query(
-        `SELECT subscription_status FROM users WHERE id = $1`,
-        [req.user.id],
-      );
-      if (rows[0]?.subscription_status !== "active") {
-        return res.status(402).json({ error: "Active subscription required." });
-      }
-      next();
-    } catch (err) {
-      res
-        .status(500)
-        .json({ error: "Could not verify subscription.", detail: err.message });
-    }
-  };
+  // No real subscriptions/users table exists — single-admin app, everyone
+  // who passes requireAuth is entitled. Mirrors publishing/entitlement.js's
+  // isEntitled() bypass on the client side. Revisit if real per-customer
+  // subscriptions are ever built.
+  return (req, res, next) => next();
 }
 
 module.exports = { signToken, requireAuth, requireActiveSubscription };

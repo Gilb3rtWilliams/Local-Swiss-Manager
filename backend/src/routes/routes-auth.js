@@ -4,22 +4,19 @@ const {
   COOKIE_NAME,
   cookieOptions,
   verifyPassword,
-  signToken,
+  signToken, // existing cookie-token signer, from ./auth — keep this
   verifyToken,
 } = require("./auth");
+const { signToken: signJwt } = require("./auth-middleware"); // NEW
 
 const router = express.Router();
 
-// Single admin account, no lockout, no MFA — rate limiting is the only
-// thing standing between a public URL and someone scripting password
-// guesses. bcrypt already slows each individual comparison down, but that
-// alone doesn't stop a sustained scripted attempt once this isn't just
-// reachable from your home network anymore.
-//
-// 10 attempts per 15 minutes per IP: generous enough that you fat-fingering
-// your own password a few times never locks you out, tight enough to make
-// scripted guessing impractical. Successful logins don't count against the
-// limit, so it only ever penalizes repeated failures.
+// Single shared admin — no real users table exists (see auth-middleware.js's
+// comment about a `users` table this app never built). This synthetic
+// identity is only ever used to shape the JWT payload for requireAuth's
+// jwt.verify() to accept; it's not looked up anywhere.
+const ADMIN_USER = { id: "admin", email: null };
+
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 10,
@@ -40,7 +37,12 @@ router.post("/login", loginLimiter, async (req, res) => {
       return res.status(401).json({ error: "Incorrect password" });
     }
     res.cookie(COOKIE_NAME, signToken(), cookieOptions());
-    res.json({ ok: true });
+    // NEW: also issue a real JWT for API clients (the desktop app) that
+    // send Authorization: Bearer <token> instead of relying on a cookie —
+    // see main.js's auth:login handler, which stores whatever `token` this
+    // returns.
+    const jwtToken = signJwt(ADMIN_USER);
+    res.json({ ok: true, token: jwtToken });
   } catch (err) {
     res.status(500).json({ error: err.message || "Server error" });
   }
@@ -51,8 +53,6 @@ router.post("/logout", (req, res) => {
   res.json({ ok: true });
 });
 
-// Lets the frontend check "am I still logged in?" on page load, without
-// needing to hit an actual admin route just to find out.
 router.get("/me", (req, res) => {
   try {
     verifyToken(req.cookies?.[COOKIE_NAME]);
