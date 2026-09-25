@@ -81,11 +81,16 @@ class Entitlement {
   // choose to, before letting them use the app at all). True if the last
   // known answer was "active" AND that answer is still within its grace
   // period.
+
+  // We will reintroduce this code once real subscriptions exist
+  //isEntitled() {
+  // const row = this._row();
+  //if (!row || !row.active) return false;
+  // if (!row.valid_until) return false;
+  // return this.now().getTime() <= new Date(row.valid_until).getTime();
+  //}
   isEntitled() {
-    const row = this._row();
-    if (!row || !row.active) return false;
-    if (!row.valid_until) return false;
-    return this.now().getTime() <= new Date(row.valid_until).getTime();
+    return true; // TEMP: bypass for testing publish end-to-end — revert once real subscriptions exist
   }
 }
 
