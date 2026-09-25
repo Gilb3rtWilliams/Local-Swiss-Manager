@@ -85,13 +85,25 @@ function enqueueGameResult(
   });
 }
 
-// Turns publishing ON for a tournament. Idempotent -- calling it again on an
-// already-publishing tournament is a no-op, not an error, since an arbiter
-// might click "publish" twice by accident.
+// Turns publishing ON for a tournament. Idempotent, and safely
+// re-enables a tournament that was previously turned off — the row
+// persists forever once created (see local-schema.sql's comment on
+// publish_state), so this must UPDATE on conflict, not no-op, or a
+// publish -> unpublish -> publish cycle would get stuck off.
 function enablePublishing(db, tournamentId) {
   db.prepare(
-    `INSERT INTO publish_state (tournament_id) VALUES (?)
-     ON CONFLICT (tournament_id) DO NOTHING`,
+    `INSERT INTO publish_state (tournament_id, enabled) VALUES (?, 1)
+     ON CONFLICT (tournament_id) DO UPDATE SET enabled = 1`,
+  ).run(tournamentId);
+}
+
+// Turns publishing OFF. Also idempotent — calling it on a tournament with
+// no publish_state row yet (never published) just creates one already-off,
+// which is harmless and keeps this safe to call unconditionally.
+function disablePublishing(db, tournamentId) {
+  db.prepare(
+    `INSERT INTO publish_state (tournament_id, enabled) VALUES (?, 0)
+     ON CONFLICT (tournament_id) DO UPDATE SET enabled = 0`,
   ).run(tournamentId);
 }
 
@@ -102,4 +114,5 @@ module.exports = {
   enqueueGameMove,
   enqueueGameResult,
   enablePublishing,
+  disablePublishing,
 };

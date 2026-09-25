@@ -50,7 +50,7 @@ export default function WatchPage() {
 
     async function catchUp() {
       const res = await fetch(
-        `${API_BASE}/api/tournaments/${tournamentId}/events?since=${lastEventId.current}`,
+        `${API_BASE}/api/public/tournaments/${tournamentId}/events?since=${lastEventId.current}`,
       );
       if (!res.ok) return; // tournament vanished mid-reconnect -- the next snapshot load (if any) will catch it
       const body = await res.json();
@@ -65,7 +65,9 @@ export default function WatchPage() {
 
     async function start() {
       try {
-        const res = await fetch(`${API_BASE}/api/tournaments/${tournamentId}`);
+        const res = await fetch(
+          `${API_BASE}/api/public/tournaments/${tournamentId}`,
+        );
         if (res.status === 404) {
           if (!cancelled) setUnavailable(true);
           return;

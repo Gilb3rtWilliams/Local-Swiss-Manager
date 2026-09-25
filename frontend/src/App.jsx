@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./AuthContext.jsx";
+import { AuthProvider as PublishAuthProvider } from "./auth/AuthContext.jsx";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Navbar from "./components/Navbar.jsx";
@@ -32,41 +33,43 @@ import SectionPerformance from "./pages/tournament/SectionPerformance.jsx";
 export default function App() {
   return (
     <AuthProvider>
-      <Navbar />
-      <Routes>
-        <Route path="/" element={<Welcome />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/new" element={<NewTournament />} />
-        <Route path="/register/:token" element={<Register />} />
-        <Route path="/results/:token" element={<PublicResults />} />
-        <Route
-          path="/results/:token/player/:playerId"
-          element={<PublicPlayerProfile />}
-        />
-        <Route
-          path="/results/:token/team/:teamId"
-          element={<PublicTeamProfile />}
-        />
-        <Route path="/tournaments" element={<PastTournaments />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/tournament/:id" element={<TournamentLayout />}>
-          <Route index element={<TournamentIndex />} />
-          <Route path="player/:playerId" element={<PlayerProfile />} />
-          <Route path="team/:teamId" element={<TeamProfile />} />
-          <Route path="starting-rank" element={<StartingRank />} />
-          <Route path="overview" element={<Overview />} />
-          <Route path="pairings" element={<Pairings />} />
-          <Route path="pair-manual" element={<ManualPairing />} />
-          <Route path="rounds" element={<RoundHistoryPage />} />
-          <Route path="standings" element={<Standings />} />
-          <Route path="module" element={<Module />} />
-          <Route path="chess960" element={<Chess960 />} />
-          <Route path="cage-match" element={<CageMatch />} />
-          <Route path="history" element={<GameHistory />} />
-          <Route path="performance" element={<SectionPerformance />} />
-        </Route>
-      </Routes>
-      <ToastContainer />
+      <PublishAuthProvider>
+        <Navbar />
+        <Routes>
+          <Route path="/" element={<Welcome />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/new" element={<NewTournament />} />
+          <Route path="/register/:token" element={<Register />} />
+          <Route path="/results/:token" element={<PublicResults />} />
+          <Route
+            path="/results/:token/player/:playerId"
+            element={<PublicPlayerProfile />}
+          />
+          <Route
+            path="/results/:token/team/:teamId"
+            element={<PublicTeamProfile />}
+          />
+          <Route path="/tournaments" element={<PastTournaments />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/tournament/:id" element={<TournamentLayout />}>
+            <Route index element={<TournamentIndex />} />
+            <Route path="player/:playerId" element={<PlayerProfile />} />
+            <Route path="team/:teamId" element={<TeamProfile />} />
+            <Route path="starting-rank" element={<StartingRank />} />
+            <Route path="overview" element={<Overview />} />
+            <Route path="pairings" element={<Pairings />} />
+            <Route path="pair-manual" element={<ManualPairing />} />
+            <Route path="rounds" element={<RoundHistoryPage />} />
+            <Route path="standings" element={<Standings />} />
+            <Route path="module" element={<Module />} />
+            <Route path="chess960" element={<Chess960 />} />
+            <Route path="cage-match" element={<CageMatch />} />
+            <Route path="history" element={<GameHistory />} />
+            <Route path="performance" element={<SectionPerformance />} />
+          </Route>
+        </Routes>
+        <ToastContainer />
+      </PublishAuthProvider>
     </AuthProvider>
   );
 }

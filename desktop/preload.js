@@ -15,6 +15,10 @@ contextBridge.exposeInMainWorld("swissManagerDesktop", {
   kickOutbox: () => ipcRenderer.invoke("outbox:kick"),
   enablePublishing: (tournamentId) =>
     ipcRenderer.invoke("publish:enable", tournamentId),
+  disablePublishing: (tournamentId) =>
+    ipcRenderer.invoke("publish:disable", tournamentId),
+  publishStatus: (tournamentId) =>
+    ipcRenderer.invoke("publish:status", tournamentId),
   authStatus: () => ipcRenderer.invoke("auth:status"),
   login: (email, password) =>
     ipcRenderer.invoke("auth:login", { email, password }),

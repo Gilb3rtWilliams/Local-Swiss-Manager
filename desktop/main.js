@@ -20,7 +20,7 @@
 //     BrowserWindow just points at this local server's URL below rather
 //     than loading a file directly.
 //   - Auth: login goes through ipcMain's "auth:login" handler below, which
-//     calls POST /api/auth/login and stores the returned token via
+//     calls POST /api/account/login and stores the returned token via
 //     publishing/authStore.js (OS keychain, via keytar). The renderer
 //     (LoginScreen.jsx) only ever talks to window.swissManagerDesktop's
 //     login/logout/status methods -- it never sees the token itself.
@@ -28,16 +28,20 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
 const http = require("http");
+const PUBLIC_WEB_ORIGIN =
+  process.env.PUBLIC_WEB_ORIGIN || "https://local-swiss-manager.onrender.com/";
 
 const { openLocalDb } = require("./db/localDb");
 const { OutboxWorker } = require("./publishing/outboxWorker");
 const { Entitlement } = require("./publishing/entitlement");
-const { enablePublishing } = require("./publishing/outboxWriter");
+const {
+  enablePublishing,
+  disablePublishing,
+} = require("./publishing/outboxWriter");
 const authStore = require("./publishing/authStore");
 
 const API_BASE_URL =
-  process.env.SWISS_MANAGER_API_URL ||
-  "https://local-swiss-manager.up.railway.app/";
+  process.env.SWISS_MANAGER_API_URL || "https://api.yourdomain.com";
 const LOCAL_PORT = 4321; // the local Express server's port inside Electron
 
 let mainWindow;
@@ -112,6 +116,38 @@ app.whenReady().then(async () => {
     return { ok: true };
   });
 
+  ipcMain.handle("publish:status", (_event, tournamentId) => {
+    const row = db
+      .prepare(
+        `SELECT server_tournament_id, enabled, synced_visible
+       FROM publish_state WHERE tournament_id = ?`,
+      )
+      .get(tournamentId);
+
+    if (!row) {
+      // Never published -- toggle should render "off", not error.
+      return { enabled: false, synced: true, publicUrl: null };
+    }
+
+    const enabled = Boolean(row.enabled);
+    const synced =
+      row.synced_visible !== null && Boolean(row.synced_visible) === enabled;
+    const publicUrl = row.server_tournament_id
+      ? `${PUBLIC_WEB_ORIGIN}/watch/${row.server_tournament_id}`
+      : null;
+
+    return { enabled, synced, publicUrl };
+  });
+
+  ipcMain.handle("publish:disable", (_event, tournamentId) => {
+    // Turning OFF deliberately doesn't check entitlement -- a lapsed
+    // subscription shouldn't trap someone unable to unpublish their own
+    // tournament. Only turning on (publish:enable, above) is gated.
+    disablePublishing(db, tournamentId);
+    outboxWorker?.kick();
+    return { ok: true };
+  });
+
   ipcMain.handle("auth:status", async () => ({
     loggedIn: !!(await authStore.getToken()),
   }));
@@ -119,7 +155,7 @@ app.whenReady().then(async () => {
   ipcMain.handle("auth:login", async (_event, { email, password }) => {
     let res;
     try {
-      res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      res = await fetch(`${API_BASE_URL}/api/account/login`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ email, password }),

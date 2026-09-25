@@ -1,14 +1,20 @@
 // routes/auth.js
 // ─────────────────────────────────────────────────────────────────────────
-//   POST /api/auth/login          desktop app exchanges email+password for
-//                                 a long-lived bearer token, stored locally
-//                                 via keytar (see desktop/publishing/authStore.js)
-//   GET  /api/me/entitlement      what publishing/entitlement.js polls
+// Mount this at /api/account (NOT /api/auth -- that path is already taken
+// by your existing admin login, routes-auth.js / ADMIN_PASSWORD_HASH):
+//   POST /api/account/login          desktop app exchanges email+password
+//                                    for a long-lived bearer token, stored
+//                                    locally via desktop/publishing/authStore.js
+//   GET  /api/account/entitlement    what publishing/entitlement.js polls
 //
-// ASSUMPTION: users.password_hash holds a bcrypt hash. If your web app's
-// existing signup/login already does this, point PASSWORD_COLUMN-handling
-// below at that same column/hashing scheme instead of introducing a second
-// one -- one password hash per user, not two different auth systems.
+// This is a SEPARATE auth system from your existing admin login -- one is
+// per-customer accounts with individual subscriptions (this one), the other
+// is your own single-admin access (unchanged, untouched by any of this).
+//
+// ASSUMPTION: users.password_hash holds a bcrypt hash, and a `users` table
+// exists with (id, email, password_hash, subscription_status) columns --
+// confirm this table actually exists before running migrations/001, which
+// assumes it (see the note where that migration is discussed).
 
 const express = require("express");
 const bcrypt = require("bcryptjs");
@@ -18,7 +24,7 @@ const { signToken, requireAuth } = require("./auth-middleware");
 const router = express.Router();
 router.use(express.json());
 
-router.post("/auth/login", async (req, res) => {
+router.post("/login", async (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) {
     return res.status(400).json({ error: "email and password are required." });
@@ -51,7 +57,7 @@ router.post("/auth/login", async (req, res) => {
   }
 });
 
-router.get("/me/entitlement", requireAuth, async (req, res) => {
+router.get("/entitlement", requireAuth, async (req, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT subscription_status FROM users WHERE id = $1`,

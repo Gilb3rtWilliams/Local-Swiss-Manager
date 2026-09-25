@@ -68,9 +68,12 @@ class Entitlement {
     if (this.now().getTime() - lastCheck < RECHECK_INTERVAL_MS) return; // checked recently enough
 
     try {
-      const res = await this.fetch(`${this.apiBaseUrl}/api/me/entitlement`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await this.fetch(
+        `${this.apiBaseUrl}/api/account/entitlement`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
       if (!res.ok) return; // leave the existing cache alone; don't punish a transient 500
       const body = await res.json();
       const validUntil = new Date(

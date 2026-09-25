@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext.jsx";
+import AuthWidget from "../auth/AuthWidget.jsx";
 import "../css/Navbar.css";
 
 export default function Navbar() {
@@ -7,7 +8,6 @@ export default function Navbar() {
   const navigate = useNavigate();
   const { authenticated, logout } = useAuth();
 
-  // Hide Navbar on public-facing pages
   if (
     location.pathname === "/" ||
     location.pathname.startsWith("/register/") ||
@@ -31,7 +31,9 @@ export default function Navbar() {
             <>
               <Link
                 to="/dashboard"
-                className={`navbar-link ${location.pathname === "/dashboard" ? "active" : ""}`}
+                className={`navbar-link ${
+                  location.pathname === "/dashboard" ? "active" : ""
+                }`}
               >
                 Dashboard
               </Link>
@@ -51,6 +53,7 @@ export default function Navbar() {
               Log In
             </Link>
           )}
+          <AuthWidget />
         </nav>
       </div>
     </header>

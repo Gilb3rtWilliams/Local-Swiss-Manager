@@ -3,6 +3,7 @@ import { useNavigate, useOutletContext } from "react-router-dom";
 import { api } from "../../api.js";
 import TournamentDetailsCard from "../../components/TournamentDetailsCard.jsx";
 import "../../css/Overview.css";
+import PublishToggle from "../../auth/PublishToggle.jsx";
 
 const AVAILABLE_TIEBREAKS = [
   { id: "buchholz_cut1", label: "Buchholz Cut 1" },
@@ -1432,6 +1433,20 @@ export default function Overview() {
         )}
         {pubError && <div className="inline-error">{pubError}</div>}
       </div>
+
+      {typeof window !== "undefined" && window.swissManagerDesktop && (
+        <div className="card ov-registration-card">
+          <div className="section-header">
+            <h2>Live Publish</h2>
+          </div>
+          <p className="muted" style={{ marginBottom: 10 }}>
+            Push this tournament live to the website as you enter results —
+            separate from the read-only link above. Requires signing in and an
+            active subscription (see the top-right corner).
+          </p>
+          <PublishToggle tournamentId={t.id} />
+        </div>
+      )}
 
       {isElimination ? (
         <div className="card">
