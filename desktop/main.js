@@ -28,8 +28,9 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
 const http = require("http");
-const PUBLIC_WEB_ORIGIN =
-  process.env.PUBLIC_WEB_ORIGIN || "https://local-swiss-manager.onrender.com/";
+const PUBLIC_WEB_ORIGIN = (
+  process.env.PUBLIC_WEB_ORIGIN || "https://local-swiss-manager.onrender.com"
+).replace(/\/+$/, "");
 
 const { openLocalDb } = require("./db/localDb");
 const { OutboxWorker } = require("./publishing/outboxWorker");
@@ -40,9 +41,10 @@ const {
 } = require("./publishing/outboxWriter");
 const authStore = require("./publishing/authStore");
 
-const API_BASE_URL =
+const API_BASE_URL = (
   process.env.SWISS_MANAGER_API_URL ||
-  "https://local-swiss-manager.onrender.com/";
+  "https://local-swiss-manager.onrender.com"
+).replace(/\/+$/, "");
 const LOCAL_PORT = 4321; // the local Express server's port inside Electron
 
 let mainWindow;
@@ -156,7 +158,7 @@ app.whenReady().then(async () => {
   ipcMain.handle("auth:login", async (_event, { password }) => {
     let res;
     try {
-      res = await fetch(`${API_BASE_URL}/api/account/login`, {
+      res = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ password }),
@@ -173,15 +175,8 @@ app.whenReady().then(async () => {
     }
     const body = await res.json();
 
-    // routes-auth.js sets an httpOnly cookie and returns { ok: true } — no
-    // bearer token in the body. The cookie itself isn't usable here (fetch
-    // in the main process doesn't persist it across requests the way a
-    // browser would), so what we're actually storing is a local "signed in"
-    // flag, not a real session credential. Good enough for gating the UI
-    // until real per-customer auth exists (see Option A discussion) — not a
-    // security boundary.
     try {
-      await authStore.saveToken("signed-in"); // placeholder value; see comment above
+      await authStore.saveToken("signed-in");
     } catch (err) {
       return {
         ok: false,
@@ -194,7 +189,6 @@ app.whenReady().then(async () => {
     outboxWorker?.kick();
     return { ok: true, email: null, subscriptionActive: true };
   });
-
   ipcMain.handle("auth:logout", async () => {
     await authStore.clearToken();
     return { ok: true };

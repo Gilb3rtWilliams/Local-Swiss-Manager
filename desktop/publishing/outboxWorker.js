@@ -117,15 +117,23 @@ class OutboxWorker {
   }
 
   _unregisteredTournaments() {
-    return this.db
+    const rows = this.db
       .prepare(
-        `SELECT ps.tournament_id, t.name, t.format
+        `SELECT ps.tournament_id, t.data
          FROM publish_state ps JOIN tournaments t ON t.id = ps.tournament_id
          WHERE ps.server_tournament_id IS NULL`,
       )
       .all();
-  }
 
+    return rows.map((row) => {
+      const tournament = JSON.parse(row.data);
+      return {
+        tournament_id: row.tournament_id,
+        name: tournament.name,
+        format: tournament.format,
+      };
+    });
+  }
   _registeredTournaments() {
     return this.db
       .prepare(
