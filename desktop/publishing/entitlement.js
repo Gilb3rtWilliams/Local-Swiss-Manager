@@ -58,32 +58,20 @@ class Entitlement {
   // there's no token yet or the network call fails, since isEntitled() below
   // is what actually decides based on whatever was last cached.
   async refresh() {
-    const token = await this.getAuthToken();
-    if (!token) return;
-
-    const cached = this._row();
-    const lastCheck = cached?.checked_at
-      ? new Date(cached.checked_at).getTime()
-      : 0;
-    if (this.now().getTime() - lastCheck < RECHECK_INTERVAL_MS) return; // checked recently enough
-
     try {
-      const res = await this.fetch(
-        `${this.apiBaseUrl}/api/account/entitlement`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-      if (!res.ok) return; // leave the existing cache alone; don't punish a transient 500
-      const body = await res.json();
+      const token = await this.getAuthToken();
+      if (!token) return; // not signed in locally -- nothing to cache as entitled
+
+      // Option B: no real per-customer subscription system exists yet (see
+      // routes-auth.js -- there's no /api/account/entitlement endpoint to call).
+      // Anyone who successfully signs in with the admin password is treated as
+      // entitled, matching main.js's auth:login handler hard-coding
+      // subscriptionActive: true. Revisit this whole method once real
+      // subscriptions exist server-side.
       const validUntil = new Date(
         this.now().getTime() + GRACE_PERIOD_MS,
       ).toISOString();
-      this._save({
-        userId: body.userId,
-        active: !!body.subscriptionActive,
-        validUntil,
-      });
+      this._save({ userId: null, active: true, validUntil });
     } catch {
       // offline or unreachable -- keep using the existing cache
     }

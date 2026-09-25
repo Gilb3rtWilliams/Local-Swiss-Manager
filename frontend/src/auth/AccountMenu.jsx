@@ -21,7 +21,7 @@ import { useAuth } from "./AuthContext";
 const RECHECK_INTERVAL_MS = 60 * 1000;
 
 export default function AccountMenu() {
-  const { email, logout, checkEntitled } = useAuth();
+  const { logout, checkEntitled } = useAuth();
   const [entitled, setEntitled] = useState(true); // optimistic default; corrected below
 
   useEffect(() => {
@@ -40,7 +40,7 @@ export default function AccountMenu() {
 
   return (
     <div style={styles.wrap}>
-      <span style={styles.email}>{email}</span>
+      <span style={styles.email}>Publishing: signed in</span>
       {!entitled && (
         <span
           style={styles.badge}

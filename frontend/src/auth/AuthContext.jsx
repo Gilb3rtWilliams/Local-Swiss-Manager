@@ -24,7 +24,6 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   // status: "checking" | "loggedOut" | "loggedIn"
   const [status, setStatus] = useState("checking");
-  const [email, setEmail] = useState(null);
   const [subscriptionActive, setSubscriptionActive] = useState(false);
 
   const refreshStatus = useCallback(async () => {
@@ -36,8 +35,8 @@ export function AuthProvider({ children }) {
     refreshStatus();
   }, [refreshStatus]);
 
-  const login = useCallback(async (emailInput, password) => {
-    const result = await window.swissManagerDesktop.login(emailInput, password);
+  const login = useCallback(async (password) => {
+    const result = await window.swissManagerDesktop.login(password);
     if (result.ok) {
       setEmail(result.email);
       setSubscriptionActive(!!result.subscriptionActive);
@@ -67,7 +66,6 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider
       value={{
         status,
-        email,
         subscriptionActive,
         login,
         logout,

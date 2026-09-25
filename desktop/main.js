@@ -41,7 +41,8 @@ const {
 const authStore = require("./publishing/authStore");
 
 const API_BASE_URL =
-  process.env.SWISS_MANAGER_API_URL || "https://api.yourdomain.com";
+  process.env.SWISS_MANAGER_API_URL ||
+  "https://local-swiss-manager.onrender.com/";
 const LOCAL_PORT = 4321; // the local Express server's port inside Electron
 
 let mainWindow;
@@ -152,13 +153,13 @@ app.whenReady().then(async () => {
     loggedIn: !!(await authStore.getToken()),
   }));
 
-  ipcMain.handle("auth:login", async (_event, { email, password }) => {
+  ipcMain.handle("auth:login", async (_event, { password }) => {
     let res;
     try {
       res = await fetch(`${API_BASE_URL}/api/account/login`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ password }),
       });
     } catch (err) {
       return {
@@ -172,14 +173,16 @@ app.whenReady().then(async () => {
     }
     const body = await res.json();
 
+    // routes-auth.js sets an httpOnly cookie and returns { ok: true } — no
+    // bearer token in the body. The cookie itself isn't usable here (fetch
+    // in the main process doesn't persist it across requests the way a
+    // browser would), so what we're actually storing is a local "signed in"
+    // flag, not a real session credential. Good enough for gating the UI
+    // until real per-customer auth exists (see Option A discussion) — not a
+    // security boundary.
     try {
-      await authStore.saveToken(body.token);
+      await authStore.saveToken("signed-in"); // placeholder value; see comment above
     } catch (err) {
-      // saveToken deliberately does NOT swallow errors (see authStore.js) --
-      // this is the one place that must catch it, so a machine with no
-      // keychain backend gets a clear message instead of a crash. Login
-      // technically "worked" server-side, but can't be remembered locally,
-      // so treat it as failed rather than silently forgetting on restart.
       return {
         ok: false,
         error:
@@ -188,12 +191,8 @@ app.whenReady().then(async () => {
     }
 
     await entitlement.refresh();
-    outboxWorker?.kick(); // in case there's queued work waiting on login
-    return {
-      ok: true,
-      email: body.email,
-      subscriptionActive: body.subscriptionActive,
-    };
+    outboxWorker?.kick();
+    return { ok: true, email: null, subscriptionActive: true };
   });
 
   ipcMain.handle("auth:logout", async () => {

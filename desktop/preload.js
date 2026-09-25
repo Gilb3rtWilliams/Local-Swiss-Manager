@@ -20,7 +20,6 @@ contextBridge.exposeInMainWorld("swissManagerDesktop", {
   publishStatus: (tournamentId) =>
     ipcRenderer.invoke("publish:status", tournamentId),
   authStatus: () => ipcRenderer.invoke("auth:status"),
-  login: (email, password) =>
-    ipcRenderer.invoke("auth:login", { email, password }),
+  login: (password) => ipcRenderer.invoke("auth:login", { password }),
   logout: () => ipcRenderer.invoke("auth:logout"),
 });

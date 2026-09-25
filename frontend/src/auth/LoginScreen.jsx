@@ -1,19 +1,13 @@
-// LoginScreen.jsx  (renderer -- drop into your existing React app)
+// LoginScreen.jsx  (renderer)
 // ─────────────────────────────────────────────────────────────────────────
-// Reads/writes auth state via useAuth() (see AuthContext.jsx) rather than
-// calling window.swissManagerDesktop directly, so login logic lives in one
-// place -- any other component (a header, a settings screen) can react to
-// the same state via useAuth() too.
-//
-// USAGE: rendered automatically by <AuthGate> (see AuthGate.jsx) when
-// status is "loggedOut" -- you don't need to render this yourself.
+// Password-only, matching routes-auth.js's single shared admin password
+// (see Option B — no per-customer email/password system exists yet).
 
 import { useState } from "react";
 import { useAuth } from "./AuthContext";
 
 export default function LoginScreen() {
   const { login } = useAuth();
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -24,14 +18,12 @@ export default function LoginScreen() {
     setSubmitting(true);
     setError(null);
 
-    const result = await login(email.trim(), password);
+    const result = await login(password);
 
     setSubmitting(false);
     if (!result.ok) {
       setError(result.error || "Login failed.");
     }
-    // On success, AuthProvider's status flips to "loggedIn" and <AuthGate>
-    // swaps this screen out on its own -- nothing else to do here.
   }
 
   return (
@@ -39,22 +31,8 @@ export default function LoginScreen() {
       <form style={styles.card} onSubmit={handleSubmit}>
         <h1 style={styles.title}>Swiss Manager</h1>
         <p style={styles.subtitle}>
-          Sign in with your Swiss Manager account to continue.
+          Sign in with the admin password to enable publishing.
         </p>
-
-        <label style={styles.label} htmlFor="login-email">
-          Email
-        </label>
-        <input
-          id="login-email"
-          type="email"
-          autoComplete="username"
-          required
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          style={styles.input}
-          disabled={submitting}
-        />
 
         <label style={styles.label} htmlFor="login-password">
           Password
@@ -81,7 +59,7 @@ export default function LoginScreen() {
         </button>
 
         <p style={styles.hint}>
-          Running a tournament with no internet? Sign in once while online --
+          Running a tournament with no internet? Sign in once while online —
           you'll stay signed in offline for a couple of weeks after that.
         </p>
       </form>

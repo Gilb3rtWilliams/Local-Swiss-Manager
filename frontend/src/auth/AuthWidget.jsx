@@ -1,4 +1,3 @@
-// frontend/src/auth/AuthWidget.jsx
 import { useState } from "react";
 import { useAuth } from "./AuthContext";
 import AccountMenu from "./AccountMenu";
@@ -6,7 +5,6 @@ import AccountMenu from "./AccountMenu";
 export default function AuthWidget() {
   const { status, login } = useAuth();
   const [open, setOpen] = useState(false);
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -19,7 +17,7 @@ export default function AuthWidget() {
     if (submitting) return;
     setSubmitting(true);
     setError(null);
-    const result = await login(email.trim(), password);
+    const result = await login(password);
     setSubmitting(false);
     if (!result.ok) {
       setError(result.error || "Login failed.");
@@ -54,23 +52,8 @@ export default function AuthWidget() {
           }}
         >
           <input
-            type="email"
-            placeholder="Email"
-            required
-            autoComplete="username"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={submitting}
-            style={{
-              width: "100%",
-              padding: 8,
-              marginBottom: 8,
-              boxSizing: "border-box",
-            }}
-          />
-          <input
             type="password"
-            placeholder="Password"
+            placeholder="Admin password"
             required
             autoComplete="current-password"
             value={password}
@@ -104,8 +87,8 @@ export default function AuthWidget() {
               marginBottom: 0,
             }}
           >
-            Only needed to publish tournaments online. The app works fully
-            offline without this.
+            Same password as this app's admin login. Only needed to publish
+            tournaments online.
           </p>
         </form>
       )}
