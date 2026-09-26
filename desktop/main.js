@@ -97,7 +97,7 @@ app.whenReady().then(async () => {
       }
     },
   });
-  outboxWorker.start();
+  // outboxWorker.start();
 
   entitlement = new Entitlement(db, { apiBaseUrl: API_BASE_URL, getAuthToken });
   await entitlement.refresh();

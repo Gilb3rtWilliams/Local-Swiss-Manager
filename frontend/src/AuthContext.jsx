@@ -17,6 +17,39 @@ const AuthContext = createContext(null);
 // report authenticated immediately instead.
 const isDesktop = typeof window !== "undefined" && !!window.swissManagerDesktop;
 
+const refreshStatus = useCallback(async () => {
+  if (!isDesktop) {
+    setStatus("loggedOut");
+    return;
+  }
+  const s = await window.swissManagerDesktop.authStatus();
+  setStatus(s.loggedIn ? "loggedIn" : "loggedOut");
+}, []);
+
+const login = useCallback(async (password) => {
+  if (!isDesktop) return { ok: false, error: "Not available here." };
+  const result = await window.swissManagerDesktop.login(password);
+  if (result.ok) {
+    setSubscriptionActive(!!result.subscriptionActive);
+    setStatus("loggedIn");
+  }
+  return result;
+}, []);
+
+const logout = useCallback(async () => {
+  if (!isDesktop) return;
+  await window.swissManagerDesktop.logout();
+  setSubscriptionActive(false);
+  setStatus("loggedOut");
+}, []);
+
+const checkEntitled = useCallback(
+  () =>
+    isDesktop
+      ? window.swissManagerDesktop.isEntitled()
+      : Promise.resolve(false),
+  [],
+);
 export function AuthProvider({ children }) {
   // null = still checking on first load, true/false once we know.
   const [authenticated, setAuthenticated] = useState(isDesktop ? true : null);
