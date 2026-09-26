@@ -3573,38 +3573,50 @@ function listPublicTournaments() {
     Object.values(db.tournaments)
       // Removed the t.publicViewOpen && t.publicViewToken filter so everything goes through
       .map((t) => {
-        const full = serializeTournament(t);
-        return {
-          id: full.id, // Added internal ID for safety/flexibility
-          name: full.name,
-          federation: full.federation,
-          format: full.format,
-          variant: full.variant, // Useful if "real vs fake" is determined by a variant
-          system: full.system,
-          status: full.status,
-          currentRound: full.currentRound,
-          totalRounds: full.totalRounds,
-          bracketProgress:
-            full.format !== "match" && isEliminationSystem(t)
-              ? bracketProgress(t)
-              : null,
-          competitorCount:
-            full.format === "match"
-              ? 2
-              : full.format === "team"
-              ? full.teams.length
-              : full.players.length,
-          winner: full.winner,
-          // Fallback to the tournament ID if a public token wasn't explicitly generated
-          publicViewToken: full.publicViewToken || full.id,
-          updatedAt: t.updatedAt,
+        try {
+          const full = serializeTournament(t);
+          return {
+            id: full.id,
+            name: full.name,
+            federation: full.federation,
+            format: full.format,
+            variant: full.variant,
+            system: full.system,
+            status: full.status,
+            currentRound: full.currentRound,
+            totalRounds: full.totalRounds,
+            bracketProgress:
+              full.format !== "match" && isEliminationSystem(t)
+                ? bracketProgress(t)
+                : null,
+            competitorCount:
+              full.format === "match"
+                ? 2
+                : full.format === "team"
+                ? full.teams.length
+                : full.players.length,
+            winner: full.winner,
+            // Fallback to the tournament ID if a public token wasn't explicitly generated
+            publicViewToken: full.publicViewToken || full.id,
+            updatedAt: t.updatedAt,
 
-          // NOTE: If you have an explicit property for "real or fake" tournaments
-          // (e.g., t.isTesting or t.isFake), uncomment the line below to pass it to the frontend:
-          // isFake: t.isFake,
-        };
+            // NOTE: If you have an explicit property for "real or fake" tournaments
+            // (e.g., t.isTesting or t.isFake), uncomment the line below to pass it to the frontend:
+            // isFake: t.isFake,
+          };
+        } catch (err) {
+          console.error(
+            `listPublicTournaments: skipping corrupted tournament ${t.id}:`,
+            err,
+          );
+          return {
+            id: t.id,
+            name: t.name || "(corrupted)",
+            error: true,
+          };
+        }
       })
-      .sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""))
+      .filter(Boolean) // or keep the error stubs, your call
   );
 }
 
@@ -4051,32 +4063,44 @@ function listTournaments() {
   return Object.values(db.tournaments)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .map((t) => {
-      const winner = t.status === "finished" ? computeWinner(t) : null;
-      return {
-        id: t.id,
-        name: t.name,
-        federation: t.federation,
-        format: t.format,
-        variant: t.variant,
-        system: t.system,
-        timeControl: t.timeControl,
-        status: t.status,
-        currentRound: t.currentRound,
-        totalRounds: t.totalRounds,
-        bracketProgress:
-          t.format !== "match" && isEliminationSystem(t)
-            ? bracketProgress(t)
-            : null,
-        competitorCount:
-          t.format === "match"
-            ? 2
-            : t.format === "team"
-            ? t.teams.length
-            : t.players.length,
-        createdAt: t.createdAt,
-        finishedAt: t.finishedAt,
-        winner,
-      };
+      try {
+        const winner = t.status === "finished" ? computeWinner(t) : null;
+        return {
+          id: t.id,
+          name: t.name,
+          federation: t.federation,
+          format: t.format,
+          variant: t.variant,
+          system: t.system,
+          timeControl: t.timeControl,
+          status: t.status,
+          currentRound: t.currentRound,
+          totalRounds: t.totalRounds,
+          bracketProgress:
+            t.format !== "match" && isEliminationSystem(t)
+              ? bracketProgress(t)
+              : null,
+          competitorCount:
+            t.format === "match"
+              ? 2
+              : t.format === "team"
+              ? t.teams.length
+              : t.players.length,
+          createdAt: t.createdAt,
+          finishedAt: t.finishedAt,
+          winner,
+        };
+      } catch (err) {
+        console.error(
+          `listTournaments: skipping corrupted tournament ${t.id}:`,
+          err,
+        );
+        return {
+          id: t.id,
+          name: t.name || "(corrupted)",
+          error: true,
+        };
+      }
     });
 }
 
