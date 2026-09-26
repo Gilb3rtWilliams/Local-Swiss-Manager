@@ -6,7 +6,7 @@ const {
   verifyPassword,
   signToken, // existing cookie-token signer, from ./auth — keep this
   verifyToken,
-} = require("./auth");
+} = require("../auth");
 const { signToken: signJwt } = require("./auth-middleware"); // NEW
 
 const router = express.Router();
