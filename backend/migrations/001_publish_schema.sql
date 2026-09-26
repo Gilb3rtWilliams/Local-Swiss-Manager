@@ -14,17 +14,15 @@
 
 CREATE TABLE published_tournaments (
   id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  owner_user_id      integer NOT NULL REFERENCES users(id),
-  -- The tournament's id in the arbiter's local SQLite install. Publishing
-  -- the same local tournament twice (e.g. app restart) must upsert, not
-  -- duplicate -- that's what this unique pair is for.
+  -- No users table exists (single-admin app, Option B) -- this is always
+  -- the literal string "admin" from routes-auth.js's synthetic ADMIN_USER
+  -- identity, not a real foreign key. Kept as a column (rather than
+  -- removed) in case real per-customer accounts are ever built later.
+  owner_user_id      text NOT NULL DEFAULT 'admin',
   local_tournament_id text NOT NULL,
   name               text NOT NULL,
-  format             text NOT NULL DEFAULT 'swiss', -- 'swiss' | 'match_play' | ...
-  status             text NOT NULL DEFAULT 'in_progress', -- 'in_progress' | 'complete'
-  -- Monotonic per-tournament cursor for event ordering / catch-up, cheaper
-  -- to reason about than relying on publish_events.id directly if events
-  -- are ever partitioned or archived later.
+  format             text NOT NULL DEFAULT 'swiss',
+  status             text NOT NULL DEFAULT 'in_progress',
   last_event_seq     bigint NOT NULL DEFAULT 0,
   created_at         timestamptz NOT NULL DEFAULT now(),
   updated_at         timestamptz NOT NULL DEFAULT now(),

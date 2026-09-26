@@ -38,7 +38,6 @@ export function AuthProvider({ children }) {
   const login = useCallback(async (password) => {
     const result = await window.swissManagerDesktop.login(password);
     if (result.ok) {
-      setEmail(result.email);
       setSubscriptionActive(!!result.subscriptionActive);
       setStatus("loggedIn");
     }
@@ -47,7 +46,6 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(async () => {
     await window.swissManagerDesktop.logout();
-    setEmail(null);
     setSubscriptionActive(false);
     setStatus("loggedOut");
   }, []);
