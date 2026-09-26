@@ -133,7 +133,7 @@ app.whenReady().then(async () => {
       enabled,
       synced: true, // whole-blob push is synchronous-ish; no separate sync state needed
       publicUrl: enabled
-        ? `https://local-swiss-manager.onrender.com/tournament/${t.id}`
+        ? `https://local-swiss-manager.onrender.com/tournament/${tournamentId}`
         : null,
     };
   });
