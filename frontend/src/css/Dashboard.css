@@ -10,6 +10,17 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap");
 
 .dash-root {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  color: var(--ink);
+  font-family: "Inter", system-ui, sans-serif;
+  transition: color 0.2s ease;
+}
+
+/* Dark is the default look (no data-theme attr yet, or explicitly "dark") */
+.dash-root,
+.dash-root[data-theme="dark"] {
   --bg: #14141b;
   --surface: #23232e;
   --surface-alt: #2a2a37;
@@ -26,12 +37,31 @@
   --amber: #d4a853;
   --amber-soft: rgba(212, 168, 83, 0.14);
   --claret: #d97a72;
+  --watermark-line: rgba(232, 230, 240, 0.035);
+  --watermark-glow: rgba(0, 212, 168, 0.06);
+  --watermark-corner: rgba(35, 35, 46, 0.9);
+}
 
-  position: relative;
-  isolation: isolate;
-  min-height: 100vh;
-  color: var(--ink);
-  font-family: "Inter", system-ui, sans-serif;
+.dash-root[data-theme="light"] {
+  --bg: #f4f3ee;
+  --surface: #ffffff;
+  --surface-alt: #ebe9e1;
+  --border: rgba(20, 20, 27, 0.08);
+  --border-strong: rgba(20, 20, 27, 0.16);
+  --ink: #1c1c22;
+  --muted: #63636f;
+  --muted-soft: #8a8a94;
+  --teal: #00967a;
+  --teal-strong: #007c64;
+  --teal-soft: rgba(0, 150, 122, 0.12);
+  --indigo: #5568c9;
+  --indigo-soft: rgba(85, 104, 201, 0.12);
+  --amber: #a9781f;
+  --amber-soft: rgba(169, 120, 31, 0.14);
+  --claret: #b6473e;
+  --watermark-line: rgba(20, 20, 27, 0.05);
+  --watermark-glow: rgba(0, 150, 122, 0.05);
+  --watermark-corner: rgba(235, 233, 225, 0.9);
 }
 
 .dash-root h1,
@@ -63,12 +93,12 @@
   inset: 0;
   background: radial-gradient(
       120% 70% at 50% -10%,
-      rgba(0, 212, 168, 0.06) 0%,
+      var(--watermark-glow) 0%,
       transparent 55%
     ),
     radial-gradient(
       90% 60% at 100% 110%,
-      rgba(35, 35, 46, 0.9) 0%,
+      var(--watermark-corner) 0%,
       transparent 60%
     );
 }
@@ -79,12 +109,12 @@
   inset: -20%;
   background-image: repeating-linear-gradient(
       0deg,
-      rgba(232, 230, 240, 0.035) 0 1px,
+      var(--watermark-line) 0 1px,
       transparent 1px 64px
     ),
     repeating-linear-gradient(
       90deg,
-      rgba(232, 230, 240, 0.035) 0 1px,
+      var(--watermark-line) 0 1px,
       transparent 1px 64px
     );
   transform: rotate(-8deg);
@@ -116,6 +146,25 @@
   border-radius: 2px;
   background: var(--teal);
   vertical-align: -0.05em;
+}
+
+.dash-theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-alt);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.78rem;
+  font-family: "IBM Plex Mono", monospace;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.dash-theme-toggle:hover {
+  border-color: var(--teal);
 }
 
 /* ── Hero: title + primary action + stat strip, one card ───────────────── */

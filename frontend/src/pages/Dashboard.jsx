@@ -149,6 +149,14 @@ export default function Dashboard() {
 
   const heroTitle = useTypingEffect("Tournament Manager Dashboard", 60);
 
+  const [theme, setTheme] = useState(() => {
+    try {
+      return localStorage.getItem("dash-theme") || "dark";
+    } catch {
+      return "dark";
+    }
+  });
+
   useEffect(() => {
     refresh();
     api
@@ -158,6 +166,14 @@ export default function Dashboard() {
     // failed fetch here shouldn't block the rest of the dashboard, so this
     // degrades to "no reviews yet" rather than surfacing a page-level error.
   }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("dash-theme", theme);
+    } catch {
+      // private browsing / storage disabled — theme just won't persist
+    }
+  }, [theme]);
 
   function refresh() {
     api
@@ -231,19 +247,29 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="dash-root">
+    <div className="dash-root" data-theme={theme}>
       <div className="dash-bg" />
       <div className="dash-container">
-        {/* Hero: title, primary action, and the stat strip in one card */}
         <div className="dash-hero card">
           <div className="dash-hero-top">
             <h1 className="dash-hero-title">
               <span className="dash-accent-bar" aria-hidden="true" />
               {heroTitle}
             </h1>
-            <button className="btn-primary" onClick={() => navigate("/new")}>
-              + New Tournament
-            </button>
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <button
+                type="button"
+                className="dash-theme-toggle"
+                onClick={() =>
+                  setTheme((t) => (t === "dark" ? "light" : "dark"))
+                }
+              >
+                {theme === "dark" ? "☾ Dark" : "☀ Light"}
+              </button>
+              <button className="btn-primary" onClick={() => navigate("/new")}>
+                + New Tournament
+              </button>
+            </div>
           </div>
 
           {stats && stats.total > 0 && (
