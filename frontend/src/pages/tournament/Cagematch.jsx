@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useOutletContext, useParams } from "react-router-dom";
 import { api } from "../../api.js";
 import MoveEntryBoard from "../../components/MoveEntryBoard.jsx";
+import PublishToggle from "../../auth/PublishToggle.jsx";
 import {
   BOARD_THEMES,
   DEFAULT_BOARD_THEME,
@@ -762,6 +763,20 @@ export default function CageMatch() {
           </p>
         )}
       </div>
+
+      {typeof window !== "undefined" && window.swissManagerDesktop && (
+        <div className="cm-section-card">
+          <div className="cm-section-head">
+            <h3>Live Publish</h3>
+          </div>
+          <p className="cm-hint" style={{ marginBottom: 10 }}>
+            Push this match live to the website as you enter results — separate
+            from the read-only link above. Requires signing in and an active
+            subscription (see the top-right corner).
+          </p>
+          <PublishToggle tournamentId={t.id} />
+        </div>
+      )}
 
       {cm.sections.map((section) => (
         <div className="cm-section-card" key={section.id}>
