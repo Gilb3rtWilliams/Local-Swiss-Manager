@@ -97,14 +97,18 @@ function enablePublishing(db, tournamentId) {
   ).run(tournamentId);
 }
 
-async function pushTournamentSnapshot(tournamentId) {
+async function pushTournamentSnapshot(
+  db,
+  tournamentId,
+  { apiBaseUrl, getAuthToken, fetchImpl = fetch },
+) {
   const row = db
     .prepare(`SELECT data FROM tournaments WHERE id = ?`)
     .get(tournamentId);
   if (!row) return;
   const token = await getAuthToken();
   if (!token) return;
-  await fetch(`${API_BASE_URL}/api/publish/tournaments/${tournamentId}`, {
+  await fetchImpl(`${apiBaseUrl}/api/publish/tournaments/${tournamentId}`, {
     method: "PUT",
     headers: {
       "content-type": "application/json",

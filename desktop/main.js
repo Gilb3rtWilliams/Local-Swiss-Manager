@@ -111,17 +111,16 @@ app.whenReady().then(async () => {
     outboxWorker?.kick();
     return true;
   });
-  ipcMain.handle("publish:enable", (_event, tournamentId) => {
+  ipcMain.handle("publish:enable", async (_event, tournamentId) => {
     if (!entitlement?.isEntitled()) {
       return { ok: false, error: "Subscription required to publish." };
     }
     enablePublishing(db, tournamentId);
-    outboxWorker?.kick();
+    await pushTournamentSnapshot(db, tournamentId, {
+      apiBaseUrl: API_BASE_URL,
+      getAuthToken,
+    });
     return { ok: true };
-  });
-
-  ipcMain.handle("publish:pushSnapshot", (_event, tournamentId) => {
-    return pushTournamentSnapshot(tournamentId);
   });
 
   ipcMain.handle("publish:status", (_event, tournamentId) => {
