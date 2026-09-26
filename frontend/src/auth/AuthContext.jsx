@@ -1,16 +1,3 @@
-// AuthContext.jsx  (renderer -- drop into your existing React app)
-// ─────────────────────────────────────────────────────────────────────────
-// Makes login state available to any component via useAuth(), not just
-// whatever sits directly under <AuthGate>. Header/account menus, a "you
-// must be signed in to publish" banner deep in some other screen, etc. can
-// all just call useAuth() instead of having the info threaded down as
-// props from App.jsx.
-//
-// This context holds UI-relevant auth state (email, logged in, entitled)
-// derived from main-process IPC calls -- it never touches the token itself,
-// which stays in the OS keychain (see authStore.js) and is never sent to
-// the renderer.
-
 import {
   createContext,
   useContext,
@@ -21,12 +8,17 @@ import {
 
 const AuthContext = createContext(null);
 
+const isDesktop = typeof window !== "undefined" && !!window.swissManagerDesktop;
+
 export function AuthProvider({ children }) {
-  // status: "checking" | "loggedOut" | "loggedIn"
   const [status, setStatus] = useState("checking");
   const [subscriptionActive, setSubscriptionActive] = useState(false);
 
   const refreshStatus = useCallback(async () => {
+    if (!isDesktop) {
+      setStatus("loggedOut");
+      return;
+    }
     const s = await window.swissManagerDesktop.authStatus();
     setStatus(s.loggedIn ? "loggedIn" : "loggedOut");
   }, []);
@@ -36,6 +28,7 @@ export function AuthProvider({ children }) {
   }, [refreshStatus]);
 
   const login = useCallback(async (password) => {
+    if (!isDesktop) return { ok: false, error: "Not available here." };
     const result = await window.swissManagerDesktop.login(password);
     if (result.ok) {
       setSubscriptionActive(!!result.subscriptionActive);
@@ -45,18 +38,17 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(async () => {
+    if (!isDesktop) return;
     await window.swissManagerDesktop.logout();
     setSubscriptionActive(false);
     setStatus("loggedOut");
   }, []);
 
-  // isEntitled() reflects the cached subscription check (see
-  // publishing/entitlement.js) -- separate from `status` above, since
-  // someone can be logged IN with a LAPSED subscription (still allowed to
-  // run tournaments locally, just not to publish). Re-checked whenever
-  // something cares, rather than polled continuously.
   const checkEntitled = useCallback(
-    () => window.swissManagerDesktop.isEntitled(),
+    () =>
+      isDesktop
+        ? window.swissManagerDesktop.isEntitled()
+        : Promise.resolve(false),
     [],
   );
 
