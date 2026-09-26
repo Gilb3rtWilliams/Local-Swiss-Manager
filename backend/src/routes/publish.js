@@ -58,7 +58,7 @@ function createPublishRouter() {
 
       let parsed;
       try {
-        parsed = JSON.parse(data);
+        parsed = JSON.parse(data, reviver);
       } catch (err) {
         return res
           .status(400)
