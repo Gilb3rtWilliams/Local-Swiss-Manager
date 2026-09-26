@@ -1,4 +1,4 @@
-const { COOKIE_NAME, verifyToken } = require("../auth");
+const { COOKIE_NAME, verifyToken } = require("../routes/auth");
 
 // Protects a route by requiring a valid admin session cookie. Put this as
 // the second argument on any route that shouldn't be reachable without
