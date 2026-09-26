@@ -24,6 +24,17 @@ function isUuid(s) {
   return typeof s === "string" && /^[0-9a-f-]{36}$/i.test(s);
 }
 
+// Same convention as store.js/storeSqlite.js: competitor.opponents is
+// serialized as { __set: true, values: [...] } and must come back as a
+// real Set, or every pairing/standings routine that calls .forEach/.has
+// on it breaks immediately.
+function reviver(key, value) {
+  if (value && typeof value === "object" && value.__set) {
+    return new Set(value.values);
+  }
+  return value;
+}
+
 function createPublishRouter() {
   const router = express.Router();
   router.use(express.json({ limit: "10mb" }));
@@ -58,12 +69,10 @@ function createPublishRouter() {
         await svc.adoptPublishedTournament(id, parsed, "desktop");
         res.json({ tournamentId: id });
       } catch (err) {
-        res
-          .status(500)
-          .json({
-            error: "Could not publish tournament.",
-            detail: err.message,
-          });
+        res.status(500).json({
+          error: "Could not publish tournament.",
+          detail: err.message,
+        });
       }
     },
   );
