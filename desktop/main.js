@@ -37,6 +37,7 @@ const { OutboxWorker } = require("./publishing/outboxWorker");
 const { Entitlement } = require("./publishing/entitlement");
 const {
   enablePublishing,
+  pushTournamentSnapshot,
   disablePublishing,
 } = require("./publishing/outboxWriter");
 const authStore = require("./publishing/authStore");
@@ -119,27 +120,23 @@ app.whenReady().then(async () => {
     return { ok: true };
   });
 
+  ipcMain.handle("publish:pushSnapshot", (_event, tournamentId) => {
+    return pushTournamentSnapshot(tournamentId);
+  });
+
   ipcMain.handle("publish:status", (_event, tournamentId) => {
     const row = db
-      .prepare(
-        `SELECT server_tournament_id, enabled, synced_visible
-       FROM publish_state WHERE tournament_id = ?`,
-      )
+      .prepare(`SELECT enabled FROM publish_state WHERE tournament_id = ?`)
       .get(tournamentId);
-
-    if (!row) {
-      // Never published -- toggle should render "off", not error.
-      return { enabled: false, synced: true, publicUrl: null };
-    }
-
+    if (!row) return { enabled: false, synced: true, publicUrl: null };
     const enabled = Boolean(row.enabled);
-    const synced =
-      row.synced_visible !== null && Boolean(row.synced_visible) === enabled;
-    const publicUrl = row.server_tournament_id
-      ? `${PUBLIC_WEB_ORIGIN}/watch/${row.server_tournament_id}`
-      : null;
-
-    return { enabled, synced, publicUrl };
+    return {
+      enabled,
+      synced: true, // whole-blob push is synchronous-ish; no separate sync state needed
+      publicUrl: enabled
+        ? `https://local-swiss-manager.onrender.com/tournament/${tournamentId}`
+        : null,
+    };
   });
 
   ipcMain.handle("publish:disable", (_event, tournamentId) => {

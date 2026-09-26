@@ -163,11 +163,11 @@ export default function PublishToggle({ tournamentId }) {
         </p>
       )}
 
-      {status.enabled && status.publicUrl && (
+      {status.enabled && status.cloudTournamentId && (
         <div style={styles.linkRow}>
           <input
             readOnly
-            value={status.publicUrl}
+            value={`https://local-swiss-manager.onrender.com/tournament/${status.cloudTournamentId}`}
             style={styles.linkInput}
             onFocus={(e) => e.target.select()}
           />

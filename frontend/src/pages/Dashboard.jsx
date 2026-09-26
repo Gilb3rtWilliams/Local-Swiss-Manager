@@ -389,6 +389,14 @@ export default function Dashboard() {
                     </div>
 
                     <h3 className="tourney-title">{t.name}</h3>
+                    {t.source === "desktop" && (
+                      <span
+                        className="tourney-chip tourney-chip-variant"
+                        style={{ marginBottom: 6 }}
+                      >
+                        Published from Desktop
+                      </span>
+                    )}
 
                     <div className="tourney-meta">
                       <div className="tourney-tags">

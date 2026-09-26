@@ -97,6 +97,23 @@ function enablePublishing(db, tournamentId) {
   ).run(tournamentId);
 }
 
+async function pushTournamentSnapshot(tournamentId) {
+  const row = db
+    .prepare(`SELECT data FROM tournaments WHERE id = ?`)
+    .get(tournamentId);
+  if (!row) return;
+  const token = await getAuthToken();
+  if (!token) return;
+  await fetch(`${API_BASE_URL}/api/publish/tournaments/${tournamentId}`, {
+    method: "PUT",
+    headers: {
+      "content-type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ data: row.data }),
+  });
+}
+
 // Turns publishing OFF. Also idempotent — calling it on a tournament with
 // no publish_state row yet (never published) just creates one already-off,
 // which is harmless and keeps this safe to call unconditionally.
@@ -114,5 +131,6 @@ module.exports = {
   enqueueGameMove,
   enqueueGameResult,
   enablePublishing,
+  pushTournamentSnapshot,
   disablePublishing,
 };
