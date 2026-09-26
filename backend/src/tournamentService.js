@@ -3578,6 +3578,7 @@ function listPublicTournaments() {
           return {
             id: full.id,
             name: full.name,
+            source: t.source,
             federation: full.federation,
             format: full.format,
             variant: full.variant,
@@ -4068,6 +4069,7 @@ function listTournaments() {
         return {
           id: t.id,
           name: t.name,
+          source: t.source,
           federation: t.federation,
           format: t.format,
           variant: t.variant,
