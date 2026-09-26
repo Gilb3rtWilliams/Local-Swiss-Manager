@@ -12,7 +12,8 @@
 // same tournament is a plain upsert on that id — no mapping table needed.
 
 const express = require("express");
-const { pool } = require("../db");
+const svc = require("../tournamentService");
+const { pool } = require("../db"); // still needed for auth-middleware's subscription check
 const {
   requireAuth,
   requireActiveSubscription: requireActiveSubscriptionFactory,
@@ -25,7 +26,7 @@ function isUuid(s) {
 
 function createPublishRouter() {
   const router = express.Router();
-  router.use(express.json({ limit: "10mb" })); // a big multi-round tournament's blob can get sizable
+  router.use(express.json({ limit: "10mb" }));
   router.use(requireAuth);
 
   router.put(
@@ -43,11 +44,10 @@ function createPublishRouter() {
           .status(400)
           .json({ error: "data (serialized tournament JSON) is required." });
       }
-      // Sanity-check before writing — a malformed blob now breaks every
-      // future read of this tournament, on the website and any later
-      // republish.
+
+      let parsed;
       try {
-        JSON.parse(data);
+        parsed = JSON.parse(data);
       } catch (err) {
         return res
           .status(400)
@@ -55,15 +55,7 @@ function createPublishRouter() {
       }
 
       try {
-        await pool.query(
-          `INSERT INTO tournaments (id, data, source, updated_at)
-           VALUES ($1, $2, 'desktop', now())
-           ON CONFLICT (id) DO UPDATE SET
-             data = EXCLUDED.data,
-             source = 'desktop',
-             updated_at = now()`,
-          [id, data],
-        );
+        await svc.adoptPublishedTournament(id, parsed, "desktop");
         res.json({ tournamentId: id });
       } catch (err) {
         res

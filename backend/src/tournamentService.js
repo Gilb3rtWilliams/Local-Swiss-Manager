@@ -4573,6 +4573,18 @@ async function exportStandingsWorkbook(id) {
   return { buffer, filename: `${slug}-standings.xlsx` };
 }
 
+// Publishing entry point: adopts an externally-supplied tournament blob
+// (from the desktop app) into this server's own in-memory db + Postgres,
+// tagged with its origin. Goes through the exact same db/persist() path as
+// every other mutation in this file, so it's visible to listTournaments()/
+// getTournament() immediately — not a separate write path that bypasses
+// the in-memory cache the rest of the app reads from.
+async function adoptPublishedTournament(id, tournamentData, source) {
+  db.tournaments[id] = { ...tournamentData, id, source };
+  await persist();
+  return db.tournaments[id];
+}
+
 function serializeBracket(t) {
   if (!t.bracket) return null;
   const nameOf = (id) => {
@@ -5362,6 +5374,7 @@ module.exports = {
   getPublicStandingsAtRound,
   listPublicTournaments,
   exportStandingsWorkbook,
+  adoptPublishedTournament,
   singleRoundRobinSchedule: roundRobin.singleRoundRobinSchedule,
   doubleRoundRobinSchedule: roundRobin.doubleRoundRobinSchedule,
   scheduleLength: roundRobin.scheduleLength,
