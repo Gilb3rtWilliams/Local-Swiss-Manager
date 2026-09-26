@@ -17,41 +17,7 @@ const AuthContext = createContext(null);
 // report authenticated immediately instead.
 const isDesktop = typeof window !== "undefined" && !!window.swissManagerDesktop;
 
-const refreshStatus = useCallback(async () => {
-  if (!isDesktop) {
-    setStatus("loggedOut");
-    return;
-  }
-  const s = await window.swissManagerDesktop.authStatus();
-  setStatus(s.loggedIn ? "loggedIn" : "loggedOut");
-}, []);
-
-const login = useCallback(async (password) => {
-  if (!isDesktop) return { ok: false, error: "Not available here." };
-  const result = await window.swissManagerDesktop.login(password);
-  if (result.ok) {
-    setSubscriptionActive(!!result.subscriptionActive);
-    setStatus("loggedIn");
-  }
-  return result;
-}, []);
-
-const logout = useCallback(async () => {
-  if (!isDesktop) return;
-  await window.swissManagerDesktop.logout();
-  setSubscriptionActive(false);
-  setStatus("loggedOut");
-}, []);
-
-const checkEntitled = useCallback(
-  () =>
-    isDesktop
-      ? window.swissManagerDesktop.isEntitled()
-      : Promise.resolve(false),
-  [],
-);
 export function AuthProvider({ children }) {
-  // null = still checking on first load, true/false once we know.
   const [authenticated, setAuthenticated] = useState(isDesktop ? true : null);
 
   const refresh = useCallback(() => {
@@ -70,13 +36,13 @@ export function AuthProvider({ children }) {
   }, [refresh]);
 
   async function login(password) {
-    if (isDesktop) return; // nothing to do — already authenticated locally
-    await api.login(password); // throws with a real message on wrong password
+    if (isDesktop) return;
+    await api.login(password);
     setAuthenticated(true);
   }
 
   async function logout() {
-    if (isDesktop) return; // no session to clear locally
+    if (isDesktop) return;
     await api.logout();
     setAuthenticated(false);
   }
