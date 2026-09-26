@@ -94,7 +94,7 @@ app.use("/api/reviews", reviewsRouter);
 
 // Live publishing API.
 // These routes are authenticated and are used by the tournament publisher.
-app.use("/api/publish", createPublishRouter(io));
+app.use("/api/publish", createPublishRouter());
 
 // Public spectator API.
 //
