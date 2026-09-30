@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { api } from "../api.js";
 import RoundHistory from "../components/RoundHistory.jsx";
 import BracketCanvas from "../components/BracketCanvas.jsx";
@@ -911,6 +911,9 @@ export default function PublicResults() {
       </div>
 
       <div className="pv-shell">
+        <Link to="/tournaments" className="pv-back-link">
+          ← Back to Past Tournaments
+        </Link>
         <span className="pv-eyebrow">
           {isMatch ? "Cage Match" : SYSTEM_LABEL[data.system] || data.system} ·
           Live Results
