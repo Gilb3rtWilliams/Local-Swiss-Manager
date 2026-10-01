@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import { useAuth } from "../AuthContext.jsx";
 import BackgroundSlideshow from "../components/BackgroundSlideshow.jsx";
 import "../css/Welcome.css";
 import useTypingEffect from "/hooks/useTypingEffect.js";
@@ -326,6 +327,7 @@ const SPORTS = [
 
 export default function Welcome() {
   const navigate = useNavigate();
+  const { authenticated } = useAuth();
 
   const welcomeMessage = useTypingEffect("Local Swiss Manager", 50);
   const subMessage = useTypingEffect(
@@ -334,17 +336,16 @@ export default function Welcome() {
   );
 
   const [showLoginBtn, setShowLoginBtn] = useState(false);
-  const isLoggedIn = Boolean(localStorage.getItem("adminToken"));
 
   const handleDashboardClick = () => {
-    if (!isLoggedIn) {
+    if (authenticated) {
+      navigate("/dashboard");
+    } else {
       toast.error("You have to log in as an admin to access this page.", {
         position: "top-right",
         autoClose: 3000,
       });
       setShowLoginBtn(true);
-    } else {
-      navigate("/dashboard");
     }
   };
 
@@ -375,7 +376,7 @@ export default function Welcome() {
               Admin Dashboard
             </button>
 
-            {!isLoggedIn && showLoginBtn && (
+            {!authenticated && showLoginBtn && (
               <button
                 className="btn-secondary btn-lg welcome-admin-cta"
                 onClick={() => navigate("/login")}
