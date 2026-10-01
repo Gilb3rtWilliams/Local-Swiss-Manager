@@ -773,4 +773,9 @@ router.get("/:id/pairings/export", requireAdmin, async (req, res) => {
   }
 });
 
+router.get(
+  "/public-view/:token/board-awards",
+  wrap((req) => svc.getPublicBoardAwards(req.params.token)),
+);
+
 module.exports = router;

@@ -463,3 +463,20 @@
       -55px -55px 0 2px rgba(255, 255, 255, 0);
   }
 }
+/* ── Board winner cards (one per board, not a medal ranking) ───────────── */
+.wr-board-card {
+  border-color: rgba(212, 168, 83, 0.35);
+}
+
+.wr-board-num {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #d4a853;
+  margin-bottom: 6px;
+}
+
+.wr-board-podium {
+  flex-wrap: wrap;
+}

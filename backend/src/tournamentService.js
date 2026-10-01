@@ -3556,6 +3556,8 @@ function getPublicResults(token) {
     standings: full.standings,
     teamStandings: full.teamStandings,
     crossTable: full.crossTable,
+    boardRankings: full.boardRankings, // add this
+    boardMVPs: full.boardMVPs,
     bracket: full.bracket,
     winner: full.winner,
     currentChess960: full.currentChess960,
@@ -5367,6 +5369,125 @@ function tournamentScheduleLength(id) {
   return { rounds: roundRobin.scheduleLength(n, t.system) };
 }
 
+// Aggregates, per board number, which individual player had the best
+// performance across every game played on that board — regardless of
+// which team they were on or which round. Reuses the same FIDE-style TPR
+// formula as getPlayerProfile() (see performanceDp() there), computed
+// per-board instead of per-player-overall.
+//
+// Only meaningful for team format; returns [] otherwise, since boards only
+// exist in team pairings.
+function getBoardAwards(t) {
+  if (t.format !== "team") return [];
+
+  const pById = new Map(t.players.map((p) => [p.id, p]));
+  // key: `${boardNum}:${playerId}` -> { boardNum, playerId, points, games, decisiveGames }
+  const byBoardPlayer = new Map();
+
+  function record(boardNum, playerId, points, opponentId) {
+    if (!playerId) return;
+    const key = `${boardNum}:${playerId}`;
+    if (!byBoardPlayer.has(key)) {
+      byBoardPlayer.set(key, {
+        boardNum,
+        playerId,
+        points: 0,
+        games: 0,
+        decisive: [], // { opponentRating, score } — for performance rating
+      });
+    }
+    const rec = byBoardPlayer.get(key);
+    rec.points += points;
+    rec.games += 1;
+    const opp = opponentId && pById.get(opponentId);
+    if (opp && typeof opp.rating === "number") {
+      rec.decisive.push({ opponentRating: opp.rating, score: points });
+    }
+  }
+
+  t.rounds.forEach((round) => {
+    round.pairings.forEach((pairing) => {
+      if (pairing.type !== "match") return;
+      (pairing.boards || []).forEach((board) => {
+        if (board.sitOut || !board.result) return;
+        const wScore = scoreFromResult(board.result, "white");
+        const bScore = scoreFromResult(board.result, "black");
+        record(board.boardNum, board.white, wScore, board.black);
+        record(board.boardNum, board.black, bScore, board.white);
+      });
+    });
+  });
+
+  const PERFORMANCE_DP_CAP = 800;
+  function performanceDp(p) {
+    if (p <= 0) return -PERFORMANCE_DP_CAP;
+    if (p >= 1) return PERFORMANCE_DP_CAP;
+    const dp = 400 * Math.log10(p / (1 - p));
+    return Math.max(-PERFORMANCE_DP_CAP, Math.min(PERFORMANCE_DP_CAP, dp));
+  }
+
+  const boardNums = [
+    ...new Set([...byBoardPlayer.values()].map((r) => r.boardNum)),
+  ].sort((a, b) => a - b);
+
+  return boardNums.map((boardNum) => {
+    const candidates = [...byBoardPlayer.values()].filter(
+      (r) => r.boardNum === boardNum && r.decisive.length > 0,
+    );
+
+    const scored = candidates.map((rec) => {
+      const avgOpp =
+        rec.decisive.reduce((s, g) => s + g.opponentRating, 0) /
+        rec.decisive.length;
+      const pct =
+        rec.decisive.reduce((s, g) => s + g.score, 0) / rec.decisive.length;
+      return {
+        ...rec,
+        performanceRating: Math.round(avgOpp + performanceDp(pct)),
+      };
+    });
+
+    scored.sort(
+      (a, b) =>
+        b.performanceRating - a.performanceRating ||
+        b.points - a.points ||
+        b.games - a.games,
+    );
+
+    const top = scored[0];
+    if (!top) return { boardNum, player: null };
+
+    const player = pById.get(top.playerId);
+    return {
+      boardNum,
+      player: {
+        id: player.id,
+        name: player.name,
+        teamId: player.teamId || null,
+        teamName:
+          t.teams.find((team) => team.id === player.teamId)?.name || null,
+        rating: player.rating ?? null,
+        score: top.points,
+        gamesPlayed: top.games,
+        performanceRating: top.performanceRating,
+      },
+    };
+  });
+}
+
+// Public equivalent — same token-resolution and publicViewOpen gate as
+// getPublicCageMatchSectionPerformance/getPublicMatchPlayHistory, for the
+// winner-reveal animation to call without admin auth.
+function getPublicBoardAwards(token) {
+  const t = findByPublicViewToken(token);
+  if (!t.publicViewOpen) {
+    const e = new Error("Results aren't public for this tournament right now");
+    e.status = 403;
+    throw e;
+  }
+  return getBoardAwards(t);
+}
+
 module.exports = {
   init,
   createTournament,
@@ -5441,4 +5562,6 @@ module.exports = {
   setMatchPlayBracketTierGames,
   getMatchPlayHistory,
   getPublicMatchPlayHistory,
+  getBoardAwards,
+  getPublicBoardAwards,
 };

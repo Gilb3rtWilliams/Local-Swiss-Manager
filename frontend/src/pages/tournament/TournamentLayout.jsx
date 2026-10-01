@@ -50,6 +50,9 @@ function tabsFor(t) {
     tabs.push({ to: "history", label: "Game History" });
   }
   tabs.push({ to: "standings", label: "Standings" });
+  if (t.format === "team") {
+    tabs.push({ to: "board-performance", label: "Board Performance" });
+  }
   return tabs;
 }
 

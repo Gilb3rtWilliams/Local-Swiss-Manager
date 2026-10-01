@@ -177,6 +177,11 @@ export default function NewTournament() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  // Progressive disclosure: officials/contact/schedule are secondary to
+  // naming the tournament and picking its format, so they're collapsed by
+  // default — same disclosure pattern as the rules/tiebreaks panel below,
+  // just a separate toggle since the two groups are unrelated.
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const competitorCount =
     format === "match"
@@ -576,98 +581,10 @@ export default function NewTournament() {
                 </div>
               </div>
 
-              {/* Panel 2: Officials & Contact */}
-              <div className="nt-panel">
-                <div className="nt-panel-label">Officials &amp; Contact</div>
-                <div className="form-grid">
-                  <label className="field">
-                    <span>Organizer</span>
-                    <input
-                      type="text"
-                      value={organizerName}
-                      onChange={(e) => setOrganizerName(e.target.value)}
-                      placeholder="Gilbert Williams"
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Public Contact Info</span>
-                    <input
-                      type="text"
-                      value={organizerContact}
-                      onChange={(e) => setOrganizerContact(e.target.value)}
-                      placeholder="Email or phone for inquiries"
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Chief Arbiter</span>
-                    <input
-                      type="text"
-                      value={chiefArbiter}
-                      onChange={(e) => setChiefArbiter(e.target.value)}
-                      placeholder="FA / IA name"
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Deputy Chief Arbiter</span>
-                    <input
-                      type="text"
-                      value={deputyChiefArbiter}
-                      onChange={(e) => setDeputyChiefArbiter(e.target.value)}
-                      placeholder="Optional"
-                    />
-                  </label>
-                </div>
-              </div>
-
-              {/* Panel 3: Schedule & Governance */}
-              <div className="nt-panel">
-                <div className="nt-panel-label">Schedule &amp; Governance</div>
-                <div className="form-grid">
-                  <label className="field">
-                    <span>Date From</span>
-                    <input
-                      type="date"
-                      value={dateFrom}
-                      onChange={(e) => setDateFrom(e.target.value)}
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Date To</span>
-                    <input
-                      type="date"
-                      value={dateTo}
-                      min={dateFrom || undefined}
-                      onChange={(e) => setDateTo(e.target.value)}
-                    />
-                  </label>
-                  <label className="field">
-                    <span>FIDE Rated</span>
-                    <SegmentedToggle
-                      name="fideRated"
-                      value={fideRated}
-                      onChange={setFideRated}
-                      options={[
-                        { value: true, label: "Yes" },
-                        { value: false, label: "No" },
-                      ]}
-                    />
-                  </label>
-                  <label className="field">
-                    <span>Tournament Type</span>
-                    <SegmentedToggle
-                      name="isTest"
-                      value={isTest}
-                      onChange={setIsTest}
-                      options={[
-                        { value: false, label: "Real" },
-                        { value: true, label: "Test" },
-                      ]}
-                    />
-                  </label>
-                </div>
-              </div>
-
-              {/* Panel 4: Format, System & Scoring */}
+              {/* Panel 4: Format, System & Scoring (moved up — this and
+                  Basics above are the only two panels needed to name a
+                  tournament and pick its shape; everything else is
+                  secondary and lives behind the disclosure toggle below) */}
               <div className="nt-panel">
                 <div className="nt-panel-label">
                   Format, System &amp; Scoring
@@ -857,6 +774,120 @@ export default function NewTournament() {
               </div>
             </div>
 
+            <button
+              type="button"
+              className="nt-advanced-toggle"
+              onClick={() => setDetailsOpen((o) => !o)}
+              aria-expanded={detailsOpen}
+            >
+              <span className="nt-advanced-toggle-label">
+                <span className="nt-advanced-chevron">
+                  {detailsOpen ? "▾" : "▸"}
+                </span>
+                Organizer, Contact &amp; Schedule
+              </span>
+              <span className="nt-advanced-toggle-hint">
+                Arbiters, contact info, dates &amp; registration type
+              </span>
+            </button>
+
+            {detailsOpen && (
+              <div className="nt-panels nt-panels-secondary">
+                {/* Panel 2: Officials & Contact */}
+                <div className="nt-panel">
+                  <div className="nt-panel-label">Officials &amp; Contact</div>
+                  <div className="form-grid">
+                    <label className="field">
+                      <span>Organizer</span>
+                      <input
+                        type="text"
+                        value={organizerName}
+                        onChange={(e) => setOrganizerName(e.target.value)}
+                        placeholder="Gilbert Williams"
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Public Contact Info</span>
+                      <input
+                        type="text"
+                        value={organizerContact}
+                        onChange={(e) => setOrganizerContact(e.target.value)}
+                        placeholder="Email or phone for inquiries"
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Chief Arbiter</span>
+                      <input
+                        type="text"
+                        value={chiefArbiter}
+                        onChange={(e) => setChiefArbiter(e.target.value)}
+                        placeholder="FA / IA name"
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Deputy Chief Arbiter</span>
+                      <input
+                        type="text"
+                        value={deputyChiefArbiter}
+                        onChange={(e) => setDeputyChiefArbiter(e.target.value)}
+                        placeholder="Optional"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Panel 3: Schedule & Governance */}
+                <div className="nt-panel">
+                  <div className="nt-panel-label">
+                    Schedule &amp; Governance
+                  </div>
+                  <div className="form-grid">
+                    <label className="field">
+                      <span>Date From</span>
+                      <input
+                        type="date"
+                        value={dateFrom}
+                        onChange={(e) => setDateFrom(e.target.value)}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Date To</span>
+                      <input
+                        type="date"
+                        value={dateTo}
+                        min={dateFrom || undefined}
+                        onChange={(e) => setDateTo(e.target.value)}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>FIDE Rated</span>
+                      <SegmentedToggle
+                        name="fideRated"
+                        value={fideRated}
+                        onChange={setFideRated}
+                        options={[
+                          { value: true, label: "Yes" },
+                          { value: false, label: "No" },
+                        ]}
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Tournament Type</span>
+                      <SegmentedToggle
+                        name="isTest"
+                        value={isTest}
+                        onChange={setIsTest}
+                        options={[
+                          { value: false, label: "Real" },
+                          { value: true, label: "Test" },
+                        ]}
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {format !== "match" && (
               <button
                 type="button"
@@ -868,7 +899,7 @@ export default function NewTournament() {
                   <span className="nt-advanced-chevron">
                     {advancedOpen ? "▾" : "▸"}
                   </span>
-                  Advanced Settings
+                  Advanced Rules &amp; Tiebreaks
                 </span>
                 <span className="nt-advanced-toggle-hint">
                   Rating type, byes, scoring, tiebreaks

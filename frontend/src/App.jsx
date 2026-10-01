@@ -29,6 +29,7 @@ import Login from "./pages/Login.jsx";
 import CageMatch from "./pages/tournament/Cagematch.jsx";
 import GameHistory from "./pages/tournament/GameHistory.jsx";
 import SectionPerformance from "./pages/tournament/SectionPerformance.jsx";
+import IndividualBoardPerformance from "./pages/tournament/IndividualBoardPerformance.jsx";
 
 export default function App() {
   return (
@@ -66,6 +67,10 @@ export default function App() {
             <Route path="cage-match" element={<CageMatch />} />
             <Route path="history" element={<GameHistory />} />
             <Route path="performance" element={<SectionPerformance />} />
+            <Route
+              path="board-performance"
+              element={<IndividualBoardPerformance />}
+            />
           </Route>
         </Routes>
         <ToastContainer />

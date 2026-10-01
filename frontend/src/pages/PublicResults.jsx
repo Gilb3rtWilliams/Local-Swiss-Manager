@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { api } from "../api.js";
 import RoundHistory from "../components/RoundHistory.jsx";
 import BracketCanvas from "../components/BracketCanvas.jsx";
@@ -911,9 +911,6 @@ export default function PublicResults() {
       </div>
 
       <div className="pv-shell">
-        <Link to="/tournaments" className="pv-back-link">
-          ← Back to Past Tournaments
-        </Link>
         <span className="pv-eyebrow">
           {isMatch ? "Cage Match" : SYSTEM_LABEL[data.system] || data.system} ·
           Live Results
@@ -1126,6 +1123,41 @@ export default function PublicResults() {
                   />
                 </div>
               )}
+
+              {/* Individual Board Performance — every player ranked against
+                  only the others who played the same board number, across
+                  all teams. Different from "Individual Board Standings"
+                  above, which mixes every board into one flat list. Live
+                  view only: boardRankings isn't carried by the past-round
+                  snapshot endpoint, same as Standings.jsx's admin-side
+                  equivalent. */}
+              {isTeam &&
+                !isViewingPastRound &&
+                (data.boardRankings || []).length > 0 && (
+                  <>
+                    <p
+                      style={{
+                        margin: "4px 0 0",
+                        color: "var(--pv-muted)",
+                        fontSize: "0.78rem",
+                      }}
+                    >
+                      Every player ranked against everyone else who played the
+                      same board number, across all teams.
+                    </p>
+                    {data.boardRankings.map((board) => (
+                      <div key={board.boardNum} className="pv-card">
+                        <h2>Board {board.boardNum}</h2>
+                        <StandingsTable
+                          standings={board.players}
+                          showTiebreaks={false}
+                          showTeam
+                          basePath={`/results/${token}`}
+                        />
+                      </div>
+                    ))}
+                  </>
+                )}
             </>
           )}
 

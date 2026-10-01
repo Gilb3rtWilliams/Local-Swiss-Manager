@@ -251,6 +251,17 @@
   font-family: inherit;
 }
 
+/* Two disclosure toggles can sit back to back (Organizer/Contact/Schedule,
+   then Advanced Rules & Tiebreaks) — tighten the gap between them so they
+   read as a pair of related controls rather than two unrelated dividers. */
+.nt-advanced-toggle + .nt-advanced-toggle {
+  margin-top: 4px;
+}
+
+.nt-panels-secondary {
+  margin-top: 4px;
+}
+
 .nt-advanced-toggle-label {
   display: flex;
   align-items: center;
@@ -426,7 +437,7 @@
 
 .nt-roster-legend {
   display: grid;
-  grid-template-columns: 32px 1fr 100px 34px;
+  grid-template-columns: 32px 1fr 130px 90px 34px;
   gap: 12px;
   padding: 14px 6px 6px;
   font-size: 0.66rem;
@@ -448,11 +459,15 @@
 
 .nt-roster-row {
   display: grid;
-  grid-template-columns: 32px 1fr 100px 34px;
+  grid-template-columns: 32px 1fr 130px 90px 34px;
   gap: 12px;
   align-items: center;
   padding: 8px 6px;
   border-bottom: 1px solid var(--nt-border);
+}
+
+.nt-roster-fideid {
+  text-align: center;
 }
 
 .nt-roster-row:last-of-type {
@@ -670,7 +685,7 @@ input.nt-roster-name {
   }
   .nt-roster-row,
   .nt-roster-legend {
-    grid-template-columns: 28px 1fr 80px 30px;
+    grid-template-columns: 28px 1fr 100px 70px 30px;
     gap: 8px;
   }
 

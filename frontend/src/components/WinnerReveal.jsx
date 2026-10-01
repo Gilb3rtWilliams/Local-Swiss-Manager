@@ -197,7 +197,14 @@ export default function WinnerReveal({ t }) {
   const isCage = isCageMatch(t);
   const standingsList = isTeam ? t.teamStandings : t.standings;
   const top3 = (standingsList || []).slice(0, 3);
-  const boardMVPs = isTeam ? t.boardMVPs || [] : [];
+  const boardWinners = isTeam
+    ? (t.boardRankings || [])
+        .map((board) => ({
+          boardNum: board.boardNum,
+          player: board.players[0],
+        }))
+        .filter((b) => b.player)
+    : [];
   const winnerName = t.winner || top3[0]?.name || "Champion";
   const showEffects = stage === "reveal" || stage === "podium";
 
@@ -300,69 +307,80 @@ export default function WinnerReveal({ t }) {
             </div>
           )}
 
-          {stage === "podium" && (top3.length > 0 || boardMVPs.length > 0) && (
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: 32,
-                justifyContent: "center",
-                alignItems: "flex-start",
-              }}
-            >
-              {top3.length > 0 && (
-                <div>
-                  {/* Only labeled when there's a second podium (board MVPs)
+          {stage === "podium" &&
+            (top3.length > 0 || boardWinners.length > 0) && (
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 32,
+                  justifyContent: "center",
+                  alignItems: "flex-start",
+                }}
+              >
+                {top3.length > 0 && (
+                  <div>
+                    {/* Only labeled when there's a second podium (board MVPs)
                       next to it to disambiguate from — the individual-format
                       case keeps its original unlabeled single podium. */}
-                  {isTeam && boardMVPs.length > 0 && (
-                    <p className="wr-winner-sub" style={{ marginBottom: 8 }}>
-                      Team Champions
-                    </p>
-                  )}
-                  <div className="wr-podium">
-                    {top3.map((c, i) => (
-                      <div
-                        className={`wr-podium-card ${MEDALS[i].cls}`}
-                        key={c.id || c.name}
-                      >
-                        <div className="wr-medal">{MEDALS[i].trophy}</div>
-                        <div className="wr-podium-place">{MEDALS[i].place}</div>
-                        <div className="wr-podium-name">{c.name}</div>
-                        <div className="wr-podium-score">{scoreOf(c)} pts</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {isTeam && boardMVPs.length > 0 && (
-                <div>
-                  <p className="wr-winner-sub" style={{ marginBottom: 8 }}>
-                    Best Individual Boards
-                  </p>
-                  <div className="wr-podium">
-                    {boardMVPs.map((p, i) => (
-                      <div
-                        className={`wr-podium-card ${MEDALS[i].cls}`}
-                        key={p.id}
-                      >
-                        <div className="wr-medal">{MEDALS[i].trophy}</div>
-                        <div className="wr-podium-place">{MEDALS[i].place}</div>
-                        <div className="wr-podium-name">{p.name}</div>
-                        <div className="wr-podium-score">{p.score} pts</div>
+                    {isTeam && boardWinners.length > 0 && (
+                      <p className="wr-winner-sub" style={{ marginBottom: 8 }}>
+                        Team Champions
+                      </p>
+                    )}
+                    <div className="wr-podium">
+                      {top3.map((c, i) => (
                         <div
-                          style={{ fontSize: 11, opacity: 0.75, marginTop: 2 }}
+                          className={`wr-podium-card ${MEDALS[i].cls}`}
+                          key={c.id || c.name}
                         >
-                          {p.teamName}
+                          <div className="wr-medal">{MEDALS[i].trophy}</div>
+                          <div className="wr-podium-place">
+                            {MEDALS[i].place}
+                          </div>
+                          <div className="wr-podium-name">{c.name}</div>
+                          <div className="wr-podium-score">
+                            {scoreOf(c)} pts
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+
+                {isTeam && boardWinners.length > 0 && (
+                  <div>
+                    <p className="wr-winner-sub" style={{ marginBottom: 8 }}>
+                      Best Individual Boards
+                    </p>
+                    <div className="wr-podium wr-board-podium">
+                      {boardWinners.map((b, i) => (
+                        <div
+                          className="wr-podium-card wr-board-card"
+                          key={b.boardNum}
+                          style={{ animationDelay: `${0.1 * i}s` }}
+                        >
+                          <div className="wr-board-num">Board {b.boardNum}</div>
+                          <div className="wr-podium-name">{b.player.name}</div>
+                          <div className="wr-podium-score">
+                            {b.player.score} pts
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 11,
+                              opacity: 0.75,
+                              marginTop: 2,
+                            }}
+                          >
+                            {b.player.teamName}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
           {stage === "podium" && (
             <button className="wr-dismiss" onClick={() => setDismissed(true)}>
