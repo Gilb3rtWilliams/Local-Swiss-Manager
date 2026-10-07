@@ -2,23 +2,23 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  color: #e8e8e8;
+  color: var(--tp-text, #e8e8e8);
   font-family: "SF Mono", Monaco, "Cascadia Code", monospace;
 }
 
 .gh-loading,
 .gh-error {
-  color: #8a8a9a;
+  color: var(--tp-muted, #8a8a9a);
   text-align: center;
   padding: 30px 0;
 }
 
 .gh-error {
-  color: #ff6b6b;
+  color: var(--tp-danger, #ff6b6b);
 }
 
 .gh-row-wrap {
-  border-bottom: 1px solid #252532;
+  border-bottom: 1px solid var(--tp-border, #252532);
 }
 
 .gh-row-wrap:last-child {
@@ -43,7 +43,7 @@
 }
 
 .gh-row:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--tp-fg-rgb, 255, 255, 255), 0.03);
 }
 
 /* Match Play's combined tags ("Round 3 · Board 2 · Tiebreak") run longer
@@ -83,16 +83,16 @@
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #d4a853;
+  color: var(--tp-brass, #d4a853);
 }
 
 .gh-game-num {
-  color: #8a8a9a;
+  color: var(--tp-muted, #8a8a9a);
   font-size: 0.8rem;
 }
 
 .gh-vs {
-  color: #555566;
+  color: var(--tp-faint, #555566);
   font-size: 0.7rem;
   text-transform: uppercase;
   margin: 0 4px;
@@ -100,11 +100,11 @@
 
 .gh-result {
   font-weight: 700;
-  color: #e8e8e8;
+  color: var(--tp-text, #e8e8e8);
 }
 
 .gh-chevron {
-  color: #d4a853;
+  color: var(--tp-brass, #d4a853);
   font-size: 0.75rem;
   text-align: right;
 }
@@ -118,8 +118,8 @@
   flex-wrap: wrap;
   gap: 4px 14px;
   font-size: 0.84rem;
-  background: rgba(19, 19, 26, 0.6);
-  border: 1px solid #252532;
+  background: color-mix(in srgb, var(--tp-bg, #13131a) 60%, transparent);
+  border: 1px solid var(--tp-border, #252532);
   border-radius: 10px;
   padding: 12px 14px;
 }
@@ -130,16 +130,16 @@
 }
 
 .gh-move-num {
-  color: #8a8a9a;
+  color: var(--tp-muted, #8a8a9a);
 }
 
 .gh-move {
-  color: #e8e8e8;
+  color: var(--tp-text, #e8e8e8);
   font-weight: 600;
 }
 
 .gh-no-moves {
-  color: #8a8a9a;
+  color: var(--tp-muted, #8a8a9a);
   font-size: 0.84rem;
   font-style: italic;
 }
@@ -151,19 +151,19 @@
 .gh-pgn summary {
   cursor: pointer;
   font-size: 0.78rem;
-  color: #8a8a9a;
+  color: var(--tp-muted, #8a8a9a);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .gh-pgn pre {
   margin-top: 8px;
-  background: rgba(19, 19, 26, 0.85);
-  border: 1px solid #252532;
+  background: color-mix(in srgb, var(--tp-bg, #13131a) 85%, transparent);
+  border: 1px solid var(--tp-border, #252532);
   border-radius: 8px;
   padding: 12px;
   font-size: 0.78rem;
   white-space: pre-wrap;
   word-break: break-word;
-  color: #c8c8d8;
+  color: var(--tp-soft, #c8c8d8);
 }

@@ -1,4 +1,5 @@
 import { Link, useOutletContext } from "react-router-dom";
+import RankCell from "./RankCell.jsx";
 
 // See CrossTable.jsx for why this is basePath rather than a bare id, and
 // why useOutletContext() is always called unconditionally.
@@ -32,7 +33,9 @@ export default function StandingsTable({
       <tbody>
         {standings.map((p, i) => (
           <tr key={p.id}>
-            <td className="rank-col">{i + 1}</td>
+            <td className="rank-col">
+              <RankCell rank={i + 1} />
+            </td>
             <td className="title-col">
               {p.player?.title || p.title || null || ""}
             </td>

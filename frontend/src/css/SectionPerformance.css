@@ -2,24 +2,24 @@
   display: flex;
   flex-direction: column;
   gap: 18px;
-  color: #e8e8e8;
+  color: var(--tp-text, #e8e8e8);
   font-family: "Georgia", "Times New Roman", serif;
 }
 
 .sp-loading,
 .sp-error {
-  color: #8a8a9a;
+  color: var(--tp-muted, #8a8a9a);
   text-align: center;
   padding: 30px 0;
 }
 
 .sp-error {
-  color: #ff6b6b;
+  color: var(--tp-danger, #ff6b6b);
 }
 
 .sp-card {
-  background: rgba(19, 19, 26, 0.6);
-  border: 1px solid #252532;
+  background: color-mix(in srgb, var(--tp-bg, #13131a) 60%, transparent);
+  border: 1px solid var(--tp-border, #252532);
   border-radius: 14px;
   padding: 18px 20px;
 }
@@ -42,7 +42,7 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #d4a853;
+  color: var(--tp-brass, #d4a853);
 }
 
 .sp-table {
@@ -57,14 +57,14 @@
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #8a8a9a;
+  color: var(--tp-muted, #8a8a9a);
   padding: 6px 8px;
-  border-bottom: 1px solid #252532;
+  border-bottom: 1px solid var(--tp-border, #252532);
 }
 
 .sp-table td {
   padding: 10px 8px;
-  border-bottom: 1px solid #1c1c26;
+  border-bottom: 1px solid var(--tp-surface-2, #1c1c26);
 }
 
 .sp-table tr:last-child td {
@@ -76,18 +76,18 @@
 }
 
 .sp-win {
-  color: #4caf50;
+  color: var(--tp-win, #4caf50);
 }
 
 .sp-draw {
-  color: #8a8a9a;
+  color: var(--tp-muted, #8a8a9a);
 }
 
 .sp-loss {
-  color: #f44336;
+  color: var(--tp-loss, #f44336);
 }
 
 .sp-points {
   font-weight: 800;
-  color: #d4a853;
+  color: var(--tp-brass, #d4a853);
 }

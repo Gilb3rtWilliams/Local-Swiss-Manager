@@ -25,9 +25,9 @@ function ResultButtons({
             key={r}
             onClick={() => onSetResult(matchKey, r)}
             style={{
-              background: isActive ? "#3a3a4a" : "transparent",
-              border: `1px solid ${isActive ? "#5a5a6a" : "#2a2a35"}`,
-              color: isActive ? "#fff" : "#8a8a9a",
+              background: isActive ? "var(--tp-border-strong, #3a3a4a)" : "transparent",
+              border: `1px solid ${isActive ? "var(--tp-dim, #5a5a6a)" : "var(--tp-border, #2a2a35)"}`,
+              color: isActive ? "var(--tp-heading, #ffffff)" : "var(--tp-muted, #8a8a9a)",
               fontSize: 10,
               padding: "4px 6px",
               borderRadius: 4,
@@ -78,7 +78,7 @@ export default function PairingsIndividual({
         {title && (
           <span
             style={{
-              color: "#c25555",
+              color: "var(--tp-loss-soft, #c25555)",
               marginRight: "6px",
               fontWeight: 700,
             }}
@@ -112,7 +112,7 @@ export default function PairingsIndividual({
         gap: "24px",
         fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
         background:
-          "radial-gradient(circle at 50% 0%, #1f1f2e 0%, transparent 70%)",
+          "radial-gradient(circle at 50% 0%, var(--tp-surface-2, #1f1f2e) 0%, transparent 70%)",
         padding: "24px 0",
         borderRadius: "16px",
       }}
@@ -124,17 +124,17 @@ export default function PairingsIndividual({
             <div
               key={p.idx}
               style={{
-                background: "#13131a",
-                border: "1px solid #252532",
+                background: "var(--tp-bg, #13131a)",
+                border: "1px solid var(--tp-border, #252532)",
                 borderRadius: 12,
                 padding: 24,
                 textAlign: "center",
-                color: "#e8e8e8",
+                color: "var(--tp-text, #e8e8e8)",
               }}
             >
               <div
                 style={{
-                  color: "#d4a853",
+                  color: "var(--tp-brass, #d4a853)",
                   textTransform: "uppercase",
                   letterSpacing: "0.1em",
                   fontSize: 16,
@@ -151,7 +151,7 @@ export default function PairingsIndividual({
                 style={{
                   display: "block",
                   marginTop: 8,
-                  color: "#8a8a9a",
+                  color: "var(--tp-muted, #8a8a9a)",
                   fontSize: 12,
                   letterSpacing: "0.05em",
                 }}
@@ -169,11 +169,11 @@ export default function PairingsIndividual({
           <div
             key={p.idx}
             style={{
-              background: "#13131a",
-              border: "1px solid #252532",
+              background: "var(--tp-bg, #13131a)",
+              border: "1px solid var(--tp-border, #252532)",
               borderRadius: 12,
               overflow: "hidden",
-              color: "#e8e8e8",
+              color: "var(--tp-text, #e8e8e8)",
             }}
           >
             <div
@@ -190,7 +190,7 @@ export default function PairingsIndividual({
                   display: "flex",
                   alignItems: "center",
                   gap: 16,
-                  borderRight: "1px solid #252532",
+                  borderRight: "1px solid var(--tp-border, #252532)",
                 }}
               >
                 <div
@@ -215,7 +215,7 @@ export default function PairingsIndividual({
                     style={{
                       fontSize: 20,
                       fontWeight: 700,
-                      color: "#e8e8e8",
+                      color: "var(--tp-text, #e8e8e8)",
                       letterSpacing: "-0.02em",
                       lineHeight: 1.2,
                     }}
@@ -235,12 +235,12 @@ export default function PairingsIndividual({
                       padding: "4px 10px",
                       borderRadius: 4,
                       background: "transparent",
-                      border: "1px solid #353545",
+                      border: "1px solid var(--tp-border-strong, #353545)",
                       fontSize: 9,
                       fontWeight: 600,
                       letterSpacing: "0.08em",
                       textTransform: "uppercase",
-                      color: "#8a8a9a",
+                      color: "var(--tp-muted, #8a8a9a)",
                     }}
                   >
                     <span
@@ -267,7 +267,7 @@ export default function PairingsIndividual({
                   alignItems: "center",
                   justifyContent: "center",
                   gap: 8,
-                  borderRight: "1px solid #252532",
+                  borderRight: "1px solid var(--tp-border, #252532)",
                   background: "rgba(25, 25, 34, 0.5)",
                 }}
               >
@@ -277,7 +277,7 @@ export default function PairingsIndividual({
                     fontWeight: 600,
                     letterSpacing: "0.15em",
                     textTransform: "uppercase",
-                    color: "#6b6b7b",
+                    color: "var(--tp-dim, #6b6b7b)",
                   }}
                 >
                   Board {i + 1}
@@ -288,7 +288,7 @@ export default function PairingsIndividual({
                       style={{
                         fontSize: 20,
                         fontWeight: 800,
-                        color: "#d4a853",
+                        color: "var(--tp-brass, #d4a853)",
                         letterSpacing: "0.02em",
                       }}
                     >
@@ -301,10 +301,10 @@ export default function PairingsIndividual({
                         letterSpacing: "0.08em",
                         textTransform: "uppercase",
                         color: p.result
-                          ? "#4caf50"
+                          ? "var(--tp-win, #4caf50)"
                           : p.miniMatch.tieAlert
-                          ? "#f44336"
-                          : "#8a8a9a",
+                          ? "var(--tp-loss, #f44336)"
+                          : "var(--tp-muted, #8a8a9a)",
                       }}
                     >
                       {p.result
@@ -317,9 +317,9 @@ export default function PairingsIndividual({
                       type="button"
                       onClick={() => onOpenMiniMatch(p.idx, undefined)}
                       style={{
-                        background: "#252532",
-                        border: "1px solid #353545",
-                        color: "#e8e8e8",
+                        background: "var(--tp-border, #252532)",
+                        border: "1px solid var(--tp-border-strong, #353545)",
+                        color: "var(--tp-text, #e8e8e8)",
                         fontSize: 10,
                         fontWeight: 600,
                         letterSpacing: "0.05em",
@@ -339,7 +339,7 @@ export default function PairingsIndividual({
                       style={{
                         fontSize: 16,
                         fontWeight: 700,
-                        color: "#4a4a5a",
+                        color: "var(--tp-faint, #4a4a5a)",
                         letterSpacing: "0.05em",
                       }}
                     >
@@ -370,7 +370,7 @@ export default function PairingsIndividual({
                     style={{
                       fontSize: 20,
                       fontWeight: 700,
-                      color: "#e8e8e8",
+                      color: "var(--tp-text, #e8e8e8)",
                       letterSpacing: "-0.02em",
                       lineHeight: 1.2,
                     }}
@@ -390,12 +390,12 @@ export default function PairingsIndividual({
                       padding: "4px 10px",
                       borderRadius: 4,
                       background: "transparent",
-                      border: "1px solid #353545",
+                      border: "1px solid var(--tp-border-strong, #353545)",
                       fontSize: 9,
                       fontWeight: 600,
                       letterSpacing: "0.08em",
                       textTransform: "uppercase",
-                      color: "#8a8a9a",
+                      color: "var(--tp-muted, #8a8a9a)",
                       flexDirection: "row-reverse",
                     }}
                   >
@@ -405,8 +405,8 @@ export default function PairingsIndividual({
                         height: 6,
                         borderRadius: 1,
                         display: "inline-block",
-                        background: "#252532",
-                        border: "1px solid #454555",
+                        background: "var(--tp-border, #252532)",
+                        border: "1px solid var(--tp-faint, #454555)",
                       }}
                     />
                     BLACK
@@ -422,9 +422,9 @@ export default function PairingsIndividual({
                     justifyContent: "center",
                     fontSize: 24,
                     flexShrink: 0,
-                    background: "#252532",
-                    color: "#e8e8e8",
-                    border: "1px solid #353545",
+                    background: "var(--tp-border, #252532)",
+                    color: "var(--tp-text, #e8e8e8)",
+                    border: "1px solid var(--tp-border-strong, #353545)",
                   }}
                 >
                   ♚

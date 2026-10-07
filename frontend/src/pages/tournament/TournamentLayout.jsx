@@ -9,7 +9,9 @@ import {
 } from "react-router-dom";
 import { api } from "../../api.js";
 import WinnerReveal from "../../components/WinnerReveal.jsx";
-import BackgroundSlideshow from "../../components/BackgroundSlideshow.jsx";
+import ThemePicker from "../../components/ThemePicker.jsx";
+import { useTheme } from "../../themes.js";
+import "../../css/theme.css";
 
 function isElimination(t) {
   return t.system === "single_elimination" || t.system === "double_elimination";
@@ -72,6 +74,7 @@ export default function TournamentLayout() {
   const { id } = useParams();
   const [t, setT] = useState(null);
   const [error, setError] = useState("");
+  const [theme, setTheme] = useTheme();
 
   const refresh = useCallback(() => {
     api
@@ -88,9 +91,13 @@ export default function TournamentLayout() {
   if (error)
     return (
       <div
+        className="tp-theme"
+        data-theme={theme}
         style={{
+          minHeight: "100vh",
+          background: "var(--tp-bg, #13131a)",
           padding: "40px",
-          color: "#ff6b6b",
+          color: "var(--tp-danger, #ff6b6b)",
           fontFamily: "'SF Mono', Monaco, monospace",
           textAlign: "center",
         }}
@@ -102,9 +109,13 @@ export default function TournamentLayout() {
   if (!t)
     return (
       <div
+        className="tp-theme"
+        data-theme={theme}
         style={{
+          minHeight: "100vh",
+          background: "var(--tp-bg, #13131a)",
           padding: "40px",
-          color: "#8a8a9a",
+          color: "var(--tp-muted, #8a8a9a)",
           fontFamily: "'SF Mono', Monaco, monospace",
           textAlign: "center",
         }}
@@ -115,31 +126,16 @@ export default function TournamentLayout() {
 
   return (
     <div
+      className="tp-theme"
+      data-theme={theme}
       style={{
         minHeight: "100vh",
-        background: "#0a0a0e",
-        color: "#e8e8e8",
+        background: "var(--tp-bg, #13131a)",
+        color: "var(--tp-text, #e8e8e8)",
         fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
         position: "relative",
-        overflow: "hidden",
       }}
     >
-      {/* Ambient Background Layer */}
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background:
-            "radial-gradient(circle at 50% 0%, #1a1a2e 0%, transparent 60%), radial-gradient(circle at 100% 100%, #151520 0%, transparent 50%)",
-          zIndex: 0,
-          pointerEvents: "none",
-        }}
-      />
-      <BackgroundSlideshow />
-
       <div
         style={{
           position: "relative",
@@ -151,7 +147,16 @@ export default function TournamentLayout() {
       >
         <WinnerReveal t={t} />
 
-        <div style={{ marginBottom: 20 }}>
+        <div
+          style={{
+            marginBottom: 20,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 12,
+          }}
+        >
           <Link
             to="/dashboard"
             style={{
@@ -162,17 +167,18 @@ export default function TournamentLayout() {
               fontWeight: 600,
               letterSpacing: "0.05em",
               textTransform: "uppercase",
-              color: "#8a8a9a",
+              color: "var(--tp-muted, #8a8a9a)",
               textDecoration: "none",
-              border: "1px solid #252532",
+              border: "1px solid var(--tp-border, #252532)",
               padding: "8px 14px",
               borderRadius: 10,
-              background: "#13131a",
+              background: "var(--tp-bg, #13131a)",
               transition: "all 0.2s ease",
             }}
           >
             ← Back to Dashboard
           </Link>
+          <ThemePicker theme={theme} onChange={setTheme} />
         </div>
 
         {/* Header Section */}
@@ -180,14 +186,14 @@ export default function TournamentLayout() {
           <div
             style={{
               display: "inline-block",
-              border: "1px solid #353545",
+              border: "1px solid var(--tp-border-strong, #353545)",
               padding: "6px 16px",
               borderRadius: 20,
               fontSize: 10,
               fontWeight: 600,
               letterSpacing: "0.15em",
               textTransform: "uppercase",
-              color: "#8a8a9a",
+              color: "var(--tp-muted, #8a8a9a)",
               marginBottom: 16,
             }}
           >
@@ -210,11 +216,11 @@ export default function TournamentLayout() {
             style={{
               fontSize: 32,
               fontWeight: 800,
-              color: "#e8e8e8",
+              color: "var(--tp-text, #e8e8e8)",
               letterSpacing: "0.05em",
               textTransform: "uppercase",
               margin: 0,
-              textShadow: "0 2px 10px rgba(0,0,0,0.5)",
+              textShadow: "0 2px 10px color-mix(in srgb, var(--tp-shadow-color, #000) 50%, transparent)",
             }}
           >
             {t.name}
@@ -229,11 +235,11 @@ export default function TournamentLayout() {
             flexWrap: "wrap",
             gap: 8,
             marginBottom: 40,
-            background: "#13131a",
+            background: "var(--tp-bg, #13131a)",
             padding: 8,
             borderRadius: 16,
-            border: "1px solid #252532",
-            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.4)",
+            border: "1px solid var(--tp-border, #252532)",
+            boxShadow: "0 8px 32px color-mix(in srgb, var(--tp-shadow-color, #000) 40%, transparent)",
           }}
         >
           {tabsFor(t).map((tab) => (
@@ -249,10 +255,10 @@ export default function TournamentLayout() {
                 textTransform: "uppercase",
                 textDecoration: "none",
                 transition: "all 0.2s ease",
-                color: isActive ? "#fff" : "#8a8a9a",
-                background: isActive ? "#252532" : "transparent",
-                border: `1px solid ${isActive ? "#353545" : "transparent"}`,
-                boxShadow: isActive ? "0 2px 8px rgba(0,0,0,0.2)" : "none",
+                color: isActive ? "var(--tp-heading, #ffffff)" : "var(--tp-muted, #8a8a9a)",
+                background: isActive ? "var(--tp-border, #252532)" : "transparent",
+                border: `1px solid ${isActive ? "var(--tp-border-strong, #353545)" : "transparent"}`,
+                boxShadow: isActive ? "0 2px 8px color-mix(in srgb, var(--tp-shadow-color, #000) 20%, transparent)" : "none",
               })}
             >
               {tab.label}
@@ -263,8 +269,8 @@ export default function TournamentLayout() {
         {/* Content Outlet Container */}
         <div
           style={{
-            background: "rgba(19, 19, 26, 0.6)",
-            border: "1px solid #252532",
+            background: "color-mix(in srgb, var(--tp-bg, #13131a) 60%, transparent)",
+            border: "1px solid var(--tp-border, #252532)",
             borderRadius: 16,
             backdropFilter: "blur(10px)",
             padding: "32px",

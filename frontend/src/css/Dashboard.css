@@ -1,219 +1,218 @@
-/* ── Dashboard: token system ──────────────────────────────────────────────
-   A dark control-room read on a tournament hall: near-black surfaces,
-   a single mint-teal accent for anything live or actionable, and a
-   monospace scoreboard typeface for numbers and headings — the vocabulary
-   of a chess clock / pairing board rather than a generic SaaS palette.
-   Everything below is scoped under `.dash-root` so it never leaks onto
-   other pages that reuse .card, .btn-primary, etc.
+/* ── Dashboard ────────────────────────────────────────────────────────────
+   Themed by the same system as the tournament pages: the root carries
+   `tp-theme` + `data-theme`, and every color below resolves from the
+   --tp-* variables (with the same fallbacks TournamentLayout.jsx uses), so
+   switching theme with <ThemePicker> restyles this page too.
+
+   No ambient background: the page is the flat theme background. Panels are
+   separated by borders only.
+
+   Everything is scoped under `.dash-root` so nothing leaks to other pages.
 ─────────────────────────────────────────────────────────────────────────── */
 
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap");
-
 .dash-root {
-  position: relative;
-  isolation: isolate;
+  /* Local aliases — one place to see which theme variables this page uses */
+  --d-bg: var(--tp-bg, #13131a);
+  --d-text: var(--tp-text, #e8e8e8);
+  --d-heading: var(--tp-heading, #ffffff);
+  --d-muted: var(--tp-muted, #8a8a9a);
+  --d-border: var(--tp-border, #252532);
+  --d-border-strong: var(--tp-border-strong, #353545);
+  --d-danger: var(--tp-danger, #ff6b6b);
+  --d-shadow: color-mix(in srgb, var(--tp-shadow-color, #000) 40%, transparent);
+  /* Subtle hover/fill tint that works on any theme: a sliver of the text color */
+  --d-tint: color-mix(in srgb, var(--d-text) 5%, transparent);
+  --d-tint-strong: color-mix(in srgb, var(--d-text) 10%, transparent);
+
+  /* Accent: use the theme's own accent if it defines one, otherwise brass. */
+  --d-accent: var(--tp-accent, #d4a853);
+  --d-on-accent: #13131a;
+
+  /* Status colors, mixed toward the text color so they stay legible on both
+     light and dark themes. */
+  --d-ok: color-mix(in srgb, #00b894 65%, var(--d-text));
+  --d-ok-soft: color-mix(in srgb, #00b894 16%, transparent);
+  --d-warn: color-mix(in srgb, #d4a853 65%, var(--d-text));
+  --d-warn-soft: color-mix(in srgb, #d4a853 16%, transparent);
+  --d-info: color-mix(in srgb, #7c93e6 65%, var(--d-text));
+  --d-info-soft: color-mix(in srgb, #7c93e6 16%, transparent);
+
   min-height: 100vh;
-  color: var(--ink);
-  font-family: "Inter", system-ui, sans-serif;
-  transition: color 0.2s ease;
+  background: var(--d-bg);
+  color: var(--d-text);
+  font-family: "SF Mono", Monaco, "Cascadia Code", monospace;
+  box-sizing: border-box;
 }
 
-/* Dark is the default look (no data-theme attr yet, or explicitly "dark") */
-.dash-root,
-.dash-root[data-theme="dark"] {
-  --bg: #14141b;
-  --surface: #23232e;
-  --surface-alt: #2a2a37;
-  --border: rgba(232, 230, 240, 0.09);
-  --border-strong: rgba(232, 230, 240, 0.16);
-  --ink: #eeecf4;
-  --muted: #8d8da0;
-  --muted-soft: #6b6b7c;
-  --teal: #00d4a8;
-  --teal-strong: #00b894;
-  --teal-soft: rgba(0, 212, 168, 0.14);
-  --indigo: #8ea2ec;
-  --indigo-soft: rgba(124, 147, 230, 0.16);
-  --amber: #d4a853;
-  --amber-soft: rgba(212, 168, 83, 0.14);
-  --claret: #d97a72;
-  --watermark-line: rgba(232, 230, 240, 0.035);
-  --watermark-glow: rgba(0, 212, 168, 0.06);
-  --watermark-corner: rgba(35, 35, 46, 0.9);
+.dash-root *,
+.dash-root *::before,
+.dash-root *::after {
+  box-sizing: border-box;
 }
 
-.dash-root[data-theme="light"] {
-  --bg: #f4f3ee;
-  --surface: #ffffff;
-  --surface-alt: #ebe9e1;
-  --border: rgba(20, 20, 27, 0.08);
-  --border-strong: rgba(20, 20, 27, 0.16);
-  --ink: #1c1c22;
-  --muted: #63636f;
-  --muted-soft: #8a8a94;
-  --teal: #00967a;
-  --teal-strong: #007c64;
-  --teal-soft: rgba(0, 150, 122, 0.12);
-  --indigo: #5568c9;
-  --indigo-soft: rgba(85, 104, 201, 0.12);
-  --amber: #a9781f;
-  --amber-soft: rgba(169, 120, 31, 0.14);
-  --claret: #b6473e;
-  --watermark-line: rgba(20, 20, 27, 0.05);
-  --watermark-glow: rgba(0, 150, 122, 0.05);
-  --watermark-corner: rgba(235, 233, 225, 0.9);
+.dash-container {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 40px 20px;
 }
 
 .dash-root h1,
 .dash-root h2,
-.dash-root h3 {
-  font-family: "Georgia", "Times New Roman", serif;
-  font-weight: 700;
-  letter-spacing: -0.01em;
+.dash-root h3,
+.dash-root p {
+  margin: 0;
 }
 
-.dash-mono {
-  font-family: "Georgia", "Times New Roman", serif;
-}
-
-/* ── Background: quiet, near-flat — a faint board-grid watermark is the
-   only texture, no color-cycling scenes. The room is dim; the accent
-   color is what's meant to draw the eye. ────────────────────────────── */
-.dash-bg {
-  position: fixed;
-  inset: 0;
-  z-index: -2;
-  overflow: hidden;
-  background: var(--bg);
-}
-
-.dash-bg::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-      120% 70% at 50% -10%,
-      var(--watermark-glow) 0%,
-      transparent 55%
-    ),
-    radial-gradient(
-      90% 60% at 100% 110%,
-      var(--watermark-corner) 0%,
-      transparent 60%
-    );
-}
-
-.dash-bg::after {
-  content: "";
-  position: absolute;
-  inset: -20%;
-  background-image: repeating-linear-gradient(
-      0deg,
-      var(--watermark-line) 0 1px,
-      transparent 1px 64px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      var(--watermark-line) 0 1px,
-      transparent 1px 64px
-    );
-  transform: rotate(-8deg);
-}
-
-/* ── Surfaces: overrides .card only within the dashboard ───────────────── */
-.dash-root .card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
-  backdrop-filter: none;
-}
-
-.dash-root .page-title {
-  color: var(--ink);
-}
-.dash-root .page-subtitle {
-  color: var(--muted);
-}
-
-/* ── Signature: a small teal tick marks every section's lead-in, like a
-   cursor on a scoreboard. Used sparingly — this is the one accent
-   device the page repeats. ─────────────────────────────────────────── */
-.dash-accent-bar {
-  display: inline-block;
-  width: 4px;
-  height: 0.85em;
-  margin-right: 10px;
-  border-radius: 2px;
-  background: var(--teal);
-  vertical-align: -0.05em;
-}
-
-.dash-theme-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border: 1px solid var(--border-strong);
-  background: var(--surface-alt);
-  color: var(--ink);
-  border-radius: 999px;
-  padding: 6px 14px;
-  font-size: 0.78rem;
-  font-family: "IBM Plex Mono", monospace;
-  cursor: pointer;
-  transition: border-color 0.15s ease;
-}
-
-.dash-theme-toggle:hover {
-  border-color: var(--teal);
-}
-
-/* ── Hero: title + primary action + stat strip, one card ───────────────── */
-.dash-hero {
-  padding: 26px 28px;
-  margin-bottom: 28px;
-}
-
-.dash-hero-top {
+/* ── Top bar ──────────────────────────────────────────────────────────── */
+.dash-topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 20px;
   flex-wrap: wrap;
-  margin-bottom: 22px;
-}
-
-.dash-hero-title {
-  display: flex;
-  align-items: center;
-  margin: 0;
-  font-size: 1.4rem;
-}
-
-.dash-stats {
-  display: flex;
   gap: 12px;
-  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.dash-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--d-muted);
+}
+
+/* ── Header ───────────────────────────────────────────────────────────── */
+.dash-root .dash-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  margin: 0 0 32px;
+  padding: 0;
+  float: none;
+  text-align: center;
+  gap: 16px;
+}
+
+.dash-root .dash-header > * {
+  margin-left: 0;
+  margin-right: 0;
+  align-self: center;
+}
+
+.dash-eyebrow {
+  display: inline-block;
+  border: 1px solid var(--d-border-strong);
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--d-muted);
+}
+
+.dash-root .dash-title {
+  text-align: center;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--d-heading);
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────── */
+.dash-btn {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 10px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid var(--d-border-strong);
+  background: transparent;
+  color: var(--d-text);
+  transition: all 0.2s ease;
+}
+
+.dash-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dash-btn-primary {
+  background: var(--d-accent);
+  border-color: var(--d-accent);
+  color: var(--d-on-accent);
+}
+
+.dash-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.dash-btn-ghost:hover:not(:disabled) {
+  background: var(--d-tint);
+  border-color: var(--d-accent);
+}
+
+.dash-link-btn {
+  display: block;
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--d-border);
+  color: var(--d-muted);
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 12px;
+  cursor: pointer;
+}
+
+.dash-link-btn:hover {
+  color: var(--d-text);
+  background: var(--d-tint);
+}
+
+/* ── Stats bar: one segmented strip instead of separate cards ─────────── */
+.dash-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--d-border);
+  border-radius: 16px;
+  background: var(--d-bg);
+  box-shadow: 0 8px 32px var(--d-shadow);
+  margin-bottom: 24px;
+  overflow: hidden;
 }
 
 .dash-stat {
   display: flex;
   align-items: center;
-  gap: 12px;
-  background: rgba(232, 230, 240, 0.03);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px 16px;
-  min-width: 150px;
-  flex: 1;
+  gap: 14px;
+  padding: 18px 22px;
+  border-right: 1px solid var(--d-border);
+}
+
+.dash-stat:last-child {
+  border-right: none;
 }
 
 .dash-stat-icon {
   flex-shrink: 0;
   width: 38px;
   height: 38px;
-  border-radius: 9px;
-  background: var(--surface-alt);
-  color: var(--ink);
+  border-radius: 10px;
+  background: var(--d-tint-strong);
+  color: var(--d-accent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -228,285 +227,442 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
-.dash-stat strong {
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 1.5rem;
+.dash-stat-body strong {
+  font-size: 1.6rem;
   line-height: 1.1;
-  color: var(--ink);
+  color: var(--d-heading);
 }
 
-.dash-stat span {
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--muted);
-}
-
-/* ── Sections ─────────────────────────────────────────────────────────── */
-.dash-section {
-  margin-bottom: 40px;
-}
-
-.dash-section-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.dash-section-head h2 {
-  display: flex;
-  align-items: center;
-  color: var(--ink);
-  font-size: 1.15rem;
-  margin: 0;
-}
-
-.dash-section-note {
-  font-size: 0.78rem;
-  color: var(--muted);
-}
-
-/* ── Filters ──────────────────────────────────────────────────────────── */
-.dash-filters {
-  display: flex;
-  gap: 18px;
-  flex-wrap: wrap;
-  margin-bottom: 18px;
-}
-
-.dash-filter-group {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.dash-filter-label {
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 0.7rem;
+.dash-stat-body span {
+  font-size: 0.64rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--muted);
-  margin-right: 4px;
+  color: var(--d-muted);
 }
 
-.dash-chip {
-  font-family: "IBM Plex Mono", monospace;
-  border: 1px solid var(--border-strong);
-  background: transparent;
-  color: var(--muted);
-  border-radius: 999px;
-  padding: 5px 14px;
-  font-size: 0.78rem;
-  cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+/* ── Two-column body ──────────────────────────────────────────────────── */
+.dash-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 24px;
+  align-items: start;
 }
 
-.dash-chip:hover {
-  border-color: var(--teal);
-  color: var(--ink);
-}
-
-.dash-chip.active {
-  background: var(--teal);
-  border-color: var(--teal);
-  color: #08211c;
-  font-weight: 600;
-}
-
-/* ── Tournament grid ──────────────────────────────────────────────────── */
-.dash-root .tourney-card {
-  cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.15s ease;
-}
-
-.dash-root .tourney-card:hover {
-  border-color: var(--border-strong);
-  transform: translateY(-2px);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .dash-root .tourney-card:hover {
-    transform: none;
-  }
-}
-
-.status-pill {
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 0.66rem;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  padding: 4px 11px;
-  border-radius: 999px;
-  background: var(--surface-alt);
-  color: var(--muted);
-}
-
-.status-pill-active {
-  background: var(--teal-soft);
-  color: var(--teal);
-}
-
-.status-pill-finished {
-  background: var(--surface-alt);
-  color: var(--muted);
-}
-
-.status-pill-setup {
-  background: var(--amber-soft);
-  color: var(--amber);
-}
-
-.tourney-tags {
+.dash-main,
+.dash-side {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
 }
 
-.tourney-chip {
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 0.68rem;
-  letter-spacing: 0.02em;
-  padding: 3px 9px;
-  border-radius: 6px;
-  line-height: 1.4;
-}
-
-.tourney-chip-neutral {
-  background: var(--surface-alt);
-  border: 1px solid var(--border);
-  color: var(--muted);
-}
-
-.tourney-chip-variant {
-  background: var(--indigo-soft);
-  color: var(--indigo);
-}
-
-.tourney-chip-time {
-  background: transparent;
-  border: 1px solid var(--teal-soft);
-  color: var(--teal);
-}
-
-.tourney-federation {
-  font-size: 0.76rem;
-  font-style: italic;
-  color: var(--muted-soft);
-}
-
-.tourney-progress {
-  height: 4px;
-  border-radius: 999px;
-  background: var(--surface-alt);
+/* ── Panels ───────────────────────────────────────────────────────────── */
+.dash-panel {
+  background: var(--d-bg);
+  border: 1px solid var(--d-border);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px var(--d-shadow);
   overflow: hidden;
 }
 
-.tourney-progress-fill {
+.dash-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--d-border);
+}
+
+.dash-panel-head h2 {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--d-heading);
+}
+
+.dash-error {
+  padding: 14px 20px;
+  margin-bottom: 20px;
+  color: var(--d-danger);
+  border-color: color-mix(in srgb, var(--d-danger) 35%, transparent);
+  font-size: 13px;
+}
+
+.dash-note {
+  font-size: 12px;
+  color: var(--d-muted);
+  line-height: 1.5;
+}
+
+.dash-pad {
+  padding: 24px 22px;
+}
+
+.dash-pad-sm {
+  padding: 12px 22px 16px;
+}
+
+.dash-center {
+  text-align: center;
+}
+
+/* ── Filters: segmented controls ──────────────────────────────────────── */
+.dash-filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.dash-segmented {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border: 1px solid var(--d-border);
+  border-radius: 10px;
+}
+
+.dash-segmented button {
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--d-muted);
+  padding: 6px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dash-segmented button:hover {
+  color: var(--d-text);
+}
+
+.dash-segmented button.active {
+  background: var(--d-border);
+  border-color: var(--d-border-strong);
+  color: var(--d-heading);
+}
+
+/* ── Tournament list ──────────────────────────────────────────────────── */
+.dash-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dash-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2.4fr) minmax(130px, 1fr) 84px 150px;
+  align-items: center;
+  column-gap: 24px;
+  row-gap: 10px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--d-border);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.dash-row:last-child {
+  border-bottom: none;
+}
+
+.dash-row:hover,
+.dash-row:focus-visible {
+  background: var(--d-tint);
+  outline: none;
+}
+
+.dash-row:focus-visible {
+  box-shadow: inset 3px 0 0 var(--d-accent);
+}
+
+.dash-row-title {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--d-heading);
+  margin-bottom: 8px;
+  overflow-wrap: anywhere;
+}
+
+.dash-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.dash-chip {
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  padding: 3px 9px;
+  border-radius: 6px;
+  line-height: 1.4;
+  background: var(--d-tint-strong);
+  color: var(--d-muted);
+}
+
+.dash-chip-variant {
+  background: var(--d-info-soft);
+  color: var(--d-info);
+}
+
+.dash-chip-outline {
+  background: transparent;
+  border: 1px solid var(--d-border-strong);
+  color: var(--d-text);
+}
+
+.dash-federation {
+  font-size: 11px;
+  font-style: italic;
+  color: var(--d-muted);
+}
+
+.dash-row-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dash-row-progress > span {
+  font-size: 11px;
+  color: var(--d-muted);
+}
+
+.dash-bar {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--d-tint-strong);
+  overflow: hidden;
+}
+
+.dash-bar-fill {
   height: 100%;
   border-radius: 999px;
-  background: var(--teal);
+  background: var(--d-accent);
 }
 
-.tourney-progress-fill.is-muted {
-  background: var(--muted-soft);
+.dash-bar-fill.is-muted {
+  background: var(--d-muted);
 }
 
-/* ── News / blog cards ────────────────────────────────────────────────── */
-.dash-news-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 16px;
+.dash-row-count {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  text-align: right;
 }
 
-.dash-news-card {
-  padding: 18px;
+.dash-row-count strong {
+  font-size: 1.15rem;
+  color: var(--d-heading);
+}
+
+.dash-row-count span {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--d-muted);
+}
+
+.dash-row-end {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.dash-pill {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: var(--d-tint-strong);
+  color: var(--d-muted);
+}
+
+.dash-pill-active {
+  background: var(--d-ok-soft);
+  color: var(--d-ok);
+}
+
+.dash-pill-setup {
+  background: var(--d-warn-soft);
+  color: var(--d-warn);
+}
+
+.dash-pill-finished {
+  background: var(--d-tint-strong);
+  color: var(--d-muted);
+}
+
+.dash-delete {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 4px;
+  line-height: 1;
+  color: var(--d-muted);
+  transition: color 0.15s ease;
+}
+
+.dash-delete:hover {
+  color: var(--d-danger);
+}
+
+.dash-winner {
+  grid-column: 1 / -1;
+  background: var(--d-warn-soft);
+  border: 1px solid color-mix(in srgb, #d4a853 28%, transparent);
+  color: var(--d-warn);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ── Empty state ──────────────────────────────────────────────────────── */
+.dash-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 48px 22px;
+}
+
+.dash-empty-icon {
+  font-size: 32px;
+  color: var(--d-accent);
+}
+
+.dash-empty h3 {
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--d-heading);
+}
+
+.dash-empty .dash-btn {
+  margin-top: 8px;
+}
+
+/* ── News ─────────────────────────────────────────────────────────────── */
+.dash-news {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.dash-news-item {
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--d-border);
+}
+
+.dash-news-item:last-child {
+  border-bottom: none;
+}
+
+.dash-news-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 10px;
+  color: var(--d-muted);
 }
 
 .dash-news-tag {
-  display: inline-block;
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 0.66rem;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--teal);
-  background: var(--teal-soft);
-  border-radius: 999px;
-  padding: 3px 10px;
-  margin-bottom: 10px;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: var(--d-accent);
 }
 
-.dash-news-card h3 {
-  font-size: 1rem;
-  margin: 0 0 8px;
+.dash-news-item h3 {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--d-heading);
+  margin-bottom: 6px;
 }
 
-.dash-news-card p {
-  font-size: 0.88rem;
-  color: var(--muted);
+.dash-news-item p {
+  font-size: 12px;
   line-height: 1.55;
-  margin: 0 0 10px;
-}
-
-.dash-news-date {
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 0.7rem;
-  color: var(--muted-soft);
+  color: var(--d-muted);
+  display: -webkit-box;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* ── Reviews ──────────────────────────────────────────────────────────── */
-.dash-reviews-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 16px;
-  margin-bottom: 16px;
+.dash-reviews {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
-.dash-review-card {
-  padding: 18px;
+.dash-review {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--d-border);
+}
+
+.dash-review:last-child {
+  border-bottom: none;
 }
 
 .dash-review-stars {
-  color: var(--amber);
+  color: var(--d-accent);
   letter-spacing: 2px;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 .dash-review-quote {
-  font-size: 0.92rem;
-  line-height: 1.55;
-  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.6;
   font-style: italic;
+  color: var(--d-text);
 }
 
 .dash-review-author {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  font-size: 0.82rem;
-  color: var(--muted);
+  gap: 8px;
+  font-size: 11px;
+  color: var(--d-muted);
 }
 
 .dash-review-author strong {
-  color: var(--ink);
-  font-style: normal;
+  color: var(--d-heading);
 }
 
-.dash-review-form {
-  padding: 18px;
+.dash-review-cta {
+  padding: 16px 22px;
+  border-top: 1px solid var(--d-border);
 }
 
-.dash-review-form .form-grid {
-  margin-bottom: 12px;
+.dash-review-cta .dash-btn {
+  width: 100%;
 }
 
 .dash-star-picker {
@@ -517,21 +673,68 @@
 }
 
 .dash-star-picker span {
-  color: var(--border-strong);
+  color: var(--d-border-strong);
 }
 
 .dash-star-picker span.filled {
-  color: var(--amber);
+  color: var(--d-accent);
 }
 
-/* ── Footer acknowledgement banner ───────────────────────────────────── */
-.dash-footer {
-  margin-top: 48px;
-  border-radius: 14px;
-  padding: 26px 30px;
-  background: rgba(10, 10, 15, 0.6);
-  border: 1px solid var(--border);
-  color: var(--ink);
+/* ── Review form ──────────────────────────────────────────────────────── */
+.dash-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dash-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dash-label > span:first-child {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--d-muted);
+}
+
+.dash-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--d-border-strong);
+  background: var(--d-tint);
+  color: var(--d-text);
+  font-family: inherit;
+  font-size: 12px;
+  resize: vertical;
+}
+
+.dash-input:focus {
+  outline: 2px solid var(--d-accent);
+  outline-offset: 1px;
+}
+
+.dash-form-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.dash-form-error {
+  color: var(--d-danger);
+  font-size: 12px;
+}
+
+/* ── Footer ───────────────────────────────────────────────────────────── */
+.dash-root .dash-footer {
+  width: 100%;
+  margin-top: 40px;
+  border: 1px solid var(--d-border);
+  border-radius: 16px;
+  padding: 24px 28px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -540,33 +743,71 @@
 }
 
 .dash-footer-title {
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 1rem;
-  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--d-heading);
+  margin-bottom: 4px;
 }
 
 .dash-footer-sub {
-  font-size: 0.82rem;
-  color: var(--muted);
-  margin: 0;
+  font-size: 12px;
+  color: var(--d-muted);
 }
 
 .dash-footer-contact {
   display: flex;
   flex-direction: column;
-  gap: 4px;
   align-items: flex-end;
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 0.82rem;
+  gap: 4px;
+  font-size: 12px;
 }
 
 .dash-footer-contact a {
-  color: var(--teal);
+  color: var(--d-muted);
   text-decoration: none;
 }
 
 .dash-footer-contact a:hover {
+  color: var(--d-accent);
   text-decoration: underline;
+}
+
+/* ── Responsive ───────────────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .dash-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .dash-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .dash-stat:nth-child(2) {
+    border-right: none;
+  }
+  .dash-stat:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--d-border);
+  }
+
+  .dash-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .dash-row-main {
+    grid-column: 1 / -1;
+  }
+  .dash-row-progress {
+    grid-column: 1 / 2;
+  }
+  .dash-row-count {
+    align-items: flex-end;
+  }
+  .dash-row-end {
+    grid-column: 1 / -1;
+    justify-content: space-between;
+  }
 }
 
 @media (max-width: 640px) {
@@ -577,181 +818,7 @@
   .dash-footer-contact {
     align-items: flex-start;
   }
-}
-
-/* ── Structural layout ───────────────────────────────────────────────── */
-.dash-container {
-  max-width: 100%;
-  width: 100%;
-  margin: 0 auto;
-  padding: 40px 20px;
-  box-sizing: border-box;
-}
-
-.dash-title-margin {
-  margin: 0 0 8px 0;
-}
-
-.dash-m-0 {
-  margin: 0;
-}
-
-.dash-mt-16 {
-  margin-top: 16px;
-}
-
-.dash-error-card {
-  color: var(--claret);
-  margin-bottom: 20px;
-}
-
-.dash-empty-card {
-  text-align: center;
-  padding: 48px;
-}
-
-.dash-empty-icon {
-  font-size: 32px;
-  margin-bottom: 12px;
-  color: var(--teal);
-}
-
-.dash-empty-title {
-  margin: 0 0 8px;
-}
-
-.dash-note-card {
-  padding: 24px;
-  text-align: center;
-}
-
-.tourney-grid-layout {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
-}
-
-.tourney-card-layout {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 20px;
-  position: relative;
-}
-
-.tourney-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.text-uppercase {
-  text-transform: uppercase;
-}
-
-.btn-delete {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: 13px;
-  padding: 4px;
-  color: var(--muted-soft);
-  line-height: 1;
-  transition: color 0.15s ease;
-}
-
-.btn-delete:hover {
-  color: var(--claret);
-}
-
-.tourney-title {
-  margin: 0;
-  font-size: 1.05rem;
-  line-height: 1.35;
-  color: var(--ink);
-}
-
-.tourney-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.tourney-footer {
-  padding-top: 2px;
-  margin-top: 2px;
-  font-size: 0.82rem;
-  font-family: "IBM Plex Mono", monospace;
-  display: flex;
-  justify-content: space-between;
-  color: var(--muted);
-}
-
-.tourney-winner {
-  background: var(--amber-soft);
-  border: 1px solid rgba(212, 168, 83, 0.25);
-  color: var(--amber);
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  margin-top: 4px;
-}
-
-.dash-author-footer {
-  border-top: 1px solid var(--border);
-  padding-top: 10px;
-  margin-top: auto;
-}
-
-.form-grid-layout {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.form-label {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.form-label-mb {
-  margin-bottom: 16px;
-}
-
-.form-input,
-.form-textarea {
-  padding: 8px 12px;
-  border-radius: 6px;
-  border: 1px solid var(--border-strong);
-  background: rgba(232, 230, 240, 0.04);
-  color: inherit;
-  font-family: inherit;
-}
-
-.form-input:focus,
-.form-textarea:focus {
-  outline: 2px solid var(--teal);
-  outline-offset: 1px;
-}
-
-.form-textarea {
-  resize: vertical;
-}
-
-.form-rating-wrapper {
-  height: 35px;
-  display: flex;
-  align-items: center;
-}
-
-.form-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.footer-email {
-  color: var(--muted);
+  .dash-title {
+    font-size: 26px;
+  }
 }

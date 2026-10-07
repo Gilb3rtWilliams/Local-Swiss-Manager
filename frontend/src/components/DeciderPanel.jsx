@@ -9,14 +9,14 @@ import { api } from "../api.js";
 // already uses.
 
 const CARD = {
-  background: "#13131a",
-  border: "1px solid #252532",
+  background: "var(--tp-bg, #13131a)",
+  border: "1px solid var(--tp-border, #252532)",
   borderRadius: 12,
   padding: 24,
 };
-const MUTED = "#8a8a9a";
-const GOLD = "#d4a853";
-const RED = "#ff6b6b";
+const MUTED = "var(--tp-muted, #8a8a9a)";
+const GOLD = "var(--tp-brass, #d4a853)";
+const RED = "var(--tp-danger, #ff6b6b)";
 
 const RESULT_OPTIONS = [
   { value: "1-0", label: "1 – 0 (White wins)" },
@@ -25,9 +25,9 @@ const RESULT_OPTIONS = [
 ];
 
 const selectStyle = {
-  background: "#1a1a24",
-  border: "1px solid #353545",
-  color: "#e8e8e8",
+  background: "var(--tp-surface, #1a1a24)",
+  border: "1px solid var(--tp-border-strong, #353545)",
+  color: "var(--tp-text, #e8e8e8)",
   padding: "8px 10px",
   borderRadius: 8,
   fontFamily: "inherit",
@@ -38,9 +38,9 @@ const selectStyle = {
 };
 
 const buttonStyle = (disabled, tone = "primary") => ({
-  background: tone === "danger" ? "#3a2222" : disabled ? "#1c1c26" : "#252532",
-  border: `1px solid ${tone === "danger" ? "#5a3030" : "#353545"}`,
-  color: tone === "danger" ? RED : "#e8e8e8",
+  background: tone === "danger" ? "color-mix(in srgb, var(--tp-loss, #f44336) 16%, var(--tp-card-solid, #191924))" : disabled ? "var(--tp-surface-2, #1c1c26)" : "var(--tp-border, #252532)",
+  border: `1px solid ${tone === "danger" ? "color-mix(in srgb, var(--tp-loss, #f44336) 35%, var(--tp-card-solid, #191924))" : "var(--tp-border-strong, #353545)"}`,
+  color: tone === "danger" ? RED : "var(--tp-text, #e8e8e8)",
   fontSize: 11,
   fontWeight: 700,
   letterSpacing: "0.05em",
@@ -62,7 +62,7 @@ function GameRow({ game, editable, busy, onSubmit }) {
         alignItems: "center",
         gap: 12,
         padding: "10px 0",
-        borderBottom: "1px solid #1c1c26",
+        borderBottom: "1px solid var(--tp-surface-2, #1c1c26)",
         flexWrap: "wrap",
       }}
     >
@@ -143,8 +143,8 @@ function ArmageddonCard({ leg, editable, busy, onSubmit }) {
     <div
       style={{
         marginTop: 16,
-        background: "rgba(212, 168, 83, 0.06)",
-        border: "1px solid rgba(212, 168, 83, 0.3)",
+        background: "rgba(var(--tp-accent-rgb, 212, 168, 83), 0.06)",
+        border: "1px solid rgba(var(--tp-accent-rgb, 212, 168, 83), 0.3)",
         borderRadius: 10,
         padding: 16,
       }}
@@ -273,8 +273,8 @@ export default function DeciderPanel({ t, refresh }) {
       <div
         style={{
           ...CARD,
-          border: "1px solid rgba(212, 168, 83, 0.35)",
-          background: "rgba(212, 168, 83, 0.06)",
+          border: "1px solid rgba(var(--tp-accent-rgb, 212, 168, 83), 0.35)",
+          background: "rgba(var(--tp-accent-rgb, 212, 168, 83), 0.06)",
         }}
       >
         <p style={{ margin: "0 0 12px", fontSize: 14 }}>

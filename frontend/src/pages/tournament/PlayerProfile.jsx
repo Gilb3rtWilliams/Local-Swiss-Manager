@@ -4,9 +4,9 @@ import { api } from "../../api.js";
 
 const RESULT_STYLE = {
   win: { label: "WIN", color: "#4ade80" },
-  draw: { label: "DRAW", color: "#8a8a9a" },
-  loss: { label: "LOSS", color: "#ff6b6b" },
-  bye: { label: "BYE", color: "#d4a853" },
+  draw: { label: "DRAW", color: "var(--tp-muted, #8a8a9a)" },
+  loss: { label: "LOSS", color: "var(--tp-danger, #ff6b6b)" },
+  bye: { label: "BYE", color: "var(--tp-brass, #d4a853)" },
 };
 
 // Derived from points rather than re-parsing the raw result string — the
@@ -21,8 +21,8 @@ function outcomeFor(game) {
 }
 
 const cardStyle = {
-  background: "#13131a",
-  border: "1px solid #252532",
+  background: "var(--tp-bg, #13131a)",
+  border: "1px solid var(--tp-border, #252532)",
   borderRadius: 12,
   padding: "24px",
 };
@@ -32,10 +32,10 @@ const sectionHeadingStyle = {
   fontWeight: 700,
   letterSpacing: "0.08em",
   textTransform: "uppercase",
-  color: "#e8e8e8",
+  color: "var(--tp-text, #e8e8e8)",
   margin: 0,
   marginBottom: 20,
-  borderBottom: "1px solid #252532",
+  borderBottom: "1px solid var(--tp-border, #252532)",
   paddingBottom: 12,
 };
 
@@ -76,9 +76,9 @@ export default function PlayerProfile() {
     flexDirection: "column",
     gap: "24px",
     fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
-    color: "#e8e8e8",
+    color: "var(--tp-text, #e8e8e8)",
     background:
-      "radial-gradient(circle at 50% 0%, #1f1f2e 0%, transparent 70%)",
+      "radial-gradient(circle at 50% 0%, var(--tp-surface-2, #1f1f2e) 0%, transparent 70%)",
     padding: "8px 0",
     borderRadius: "16px",
   };
@@ -86,7 +86,7 @@ export default function PlayerProfile() {
   if (loading) {
     return (
       <div style={wrapperStyle}>
-        <div style={{ ...cardStyle, textAlign: "center", color: "#8a8a9a" }}>
+        <div style={{ ...cardStyle, textAlign: "center", color: "var(--tp-muted, #8a8a9a)" }}>
           Loading player profile…
         </div>
       </div>
@@ -97,10 +97,10 @@ export default function PlayerProfile() {
     return (
       <div style={wrapperStyle}>
         <div style={{ ...cardStyle, textAlign: "center" }}>
-          <p style={{ color: "#ff6b6b", margin: "0 0 16px 0" }}>{error}</p>
+          <p style={{ color: "var(--tp-danger, #ff6b6b)", margin: "0 0 16px 0" }}>{error}</p>
           <Link
             to={`/tournament/${t.id}/standings`}
-            style={{ color: "#8a8a9a", fontSize: 12 }}
+            style={{ color: "var(--tp-muted, #8a8a9a)", fontSize: 12 }}
           >
             ← Back to standings
           </Link>
@@ -117,7 +117,7 @@ export default function PlayerProfile() {
         <Link
           to={`/tournament/${t.id}/standings`}
           style={{
-            color: "#8a8a9a",
+            color: "var(--tp-muted, #8a8a9a)",
             fontSize: 11,
             textDecoration: "none",
             letterSpacing: "0.05em",
@@ -149,14 +149,14 @@ export default function PlayerProfile() {
             >
               {profile.title && (
                 <span
-                  style={{ color: "#c25555", marginRight: 8, fontWeight: 700 }}
+                  style={{ color: "var(--tp-loss-soft, #c25555)", marginRight: 8, fontWeight: 700 }}
                 >
                   {profile.title}
                 </span>
               )}
               {profile.name}
             </h2>
-            <div style={{ color: "#8a8a9a", fontSize: 12, marginTop: 6 }}>
+            <div style={{ color: "var(--tp-muted, #8a8a9a)", fontSize: 12, marginTop: 6 }}>
               Rating {profile.rating ?? "Unrated"}
               {profile.fideId && (
                 <>
@@ -195,7 +195,7 @@ export default function PlayerProfile() {
         {profile.performanceRating != null && (
           <p
             style={{
-              color: "#6b6b7b",
+              color: "var(--tp-dim, #6b6b7b)",
               fontSize: 11,
               marginTop: 16,
               marginBottom: 0,
@@ -213,7 +213,7 @@ export default function PlayerProfile() {
       <div style={cardStyle}>
         <h3 style={sectionHeadingStyle}>Opponents Faced</h3>
         {profile.opponents.length === 0 ? (
-          <p style={{ color: "#8a8a9a", fontSize: 13, margin: 0 }}>
+          <p style={{ color: "var(--tp-muted, #8a8a9a)", fontSize: 13, margin: 0 }}>
             No games played yet.
           </p>
         ) : (
@@ -229,8 +229,8 @@ export default function PlayerProfile() {
               <thead>
                 <tr
                   style={{
-                    borderBottom: "1px solid #252532",
-                    color: "#6b6b7b",
+                    borderBottom: "1px solid var(--tp-border, #252532)",
+                    color: "var(--tp-dim, #6b6b7b)",
                     fontSize: 10,
                     textTransform: "uppercase",
                     letterSpacing: "0.08em",
@@ -255,13 +255,13 @@ export default function PlayerProfile() {
                 {profile.opponents.map((o) => (
                   <tr
                     key={o.opponentId}
-                    style={{ borderBottom: "1px solid #1f1f2a" }}
+                    style={{ borderBottom: "1px solid var(--tp-surface-2, #1f1f2a)" }}
                   >
                     <td style={{ padding: "10px 12px", fontWeight: 600 }}>
                       {o.title && (
                         <span
                           style={{
-                            color: "#c25555",
+                            color: "var(--tp-loss-soft, #c25555)",
                             marginRight: 6,
                             fontWeight: 700,
                           }}
@@ -308,14 +308,14 @@ export default function PlayerProfile() {
                           {o.fideId}
                         </a>
                       ) : (
-                        <span style={{ color: "#4a4a55" }}>—</span>
+                        <span style={{ color: "var(--tp-faint, #4a4a55)" }}>—</span>
                       )}
                     </td>
                     <td
                       style={{
                         padding: "10px 12px",
                         textAlign: "right",
-                        color: "#8a8a9a",
+                        color: "var(--tp-muted, #8a8a9a)",
                       }}
                     >
                       {o.rating ?? "—"}
@@ -324,7 +324,7 @@ export default function PlayerProfile() {
                       style={{
                         padding: "10px 12px",
                         textAlign: "right",
-                        color: "#8a8a9a",
+                        color: "var(--tp-muted, #8a8a9a)",
                       }}
                     >
                       {o.gamesPlayed}
@@ -350,7 +350,7 @@ export default function PlayerProfile() {
       <div style={cardStyle}>
         <h3 style={sectionHeadingStyle}>Game History</h3>
         {profile.games.length === 0 ? (
-          <p style={{ color: "#8a8a9a", fontSize: 13, margin: 0 }}>
+          <p style={{ color: "var(--tp-muted, #8a8a9a)", fontSize: 13, margin: 0 }}>
             No games recorded yet.
           </p>
         ) : (
@@ -365,8 +365,8 @@ export default function PlayerProfile() {
                     alignItems: "center",
                     justifyContent: "space-between",
                     gap: 12,
-                    background: "#181822",
-                    border: "1px solid #252532",
+                    background: "var(--tp-surface-2, #181822)",
+                    border: "1px solid var(--tp-border, #252532)",
                     borderRadius: 8,
                     padding: "12px 16px",
                     flexWrap: "wrap",
@@ -379,7 +379,7 @@ export default function PlayerProfile() {
                       style={{
                         fontSize: 10,
                         fontWeight: 700,
-                        color: "#6b6b7b",
+                        color: "var(--tp-dim, #6b6b7b)",
                         letterSpacing: "0.06em",
                         minWidth: 56,
                       }}
@@ -391,7 +391,7 @@ export default function PlayerProfile() {
                         {g.opponentTitle && (
                           <span
                             style={{
-                              color: "#c25555",
+                              color: "var(--tp-loss-soft, #c25555)",
                               marginRight: 6,
                               fontWeight: 700,
                             }}
@@ -412,7 +412,7 @@ export default function PlayerProfile() {
                           {g.opponentName}
                         </Link>
                         {g.opponentRating != null && (
-                          <span style={{ color: "#8a8a9a", fontWeight: 400 }}>
+                          <span style={{ color: "var(--tp-muted, #8a8a9a)", fontWeight: 400 }}>
                             {" "}
                             ({g.opponentRating})
                           </span>
@@ -442,7 +442,7 @@ export default function PlayerProfile() {
                         )}
                         <span
                           style={{
-                            color: "#6b6b7b",
+                            color: "var(--tp-dim, #6b6b7b)",
                             fontWeight: 400,
                             marginLeft: 8,
                             fontSize: 11,
@@ -452,7 +452,7 @@ export default function PlayerProfile() {
                         </span>
                       </span>
                     ) : (
-                      <span style={{ color: "#8a8a9a", fontStyle: "italic" }}>
+                      <span style={{ color: "var(--tp-muted, #8a8a9a)", fontStyle: "italic" }}>
                         No opponent — bye round
                       </span>
                     )}
@@ -483,9 +483,9 @@ function StatBox({ label, value, highlight }) {
   return (
     <div
       style={{
-        background: highlight ? "rgba(212, 168, 83, 0.08)" : "#181822",
+        background: highlight ? "rgba(var(--tp-accent-rgb, 212, 168, 83), 0.08)" : "var(--tp-surface-2, #181822)",
         border: `1px solid ${
-          highlight ? "rgba(212, 168, 83, 0.35)" : "#252532"
+          highlight ? "rgba(var(--tp-accent-rgb, 212, 168, 83), 0.35)" : "var(--tp-border, #252532)"
         }`,
         borderRadius: 8,
         padding: "10px 16px",
@@ -497,7 +497,7 @@ function StatBox({ label, value, highlight }) {
         style={{
           fontSize: 18,
           fontWeight: 700,
-          color: highlight ? "#d4a853" : "#e8e8e8",
+          color: highlight ? "var(--tp-brass, #d4a853)" : "var(--tp-text, #e8e8e8)",
         }}
       >
         {value}
@@ -508,7 +508,7 @@ function StatBox({ label, value, highlight }) {
           fontWeight: 600,
           letterSpacing: "0.08em",
           textTransform: "uppercase",
-          color: "#8a8a9a",
+          color: "var(--tp-muted, #8a8a9a)",
           marginTop: 2,
         }}
       >

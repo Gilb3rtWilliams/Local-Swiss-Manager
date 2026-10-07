@@ -31,7 +31,7 @@ const RevealPrompt = ({ closeToast, onAccept, onDecline }) => {
           padding: "12px 0",
           fontSize: "14px",
           fontWeight: 600,
-          color: "#e8e8e8",
+          color: "var(--tp-text, #e8e8e8)",
         }}
       >
         Okay, let's see who our winners are!
@@ -52,7 +52,7 @@ const RevealPrompt = ({ closeToast, onAccept, onDecline }) => {
       {/* The CSS Firework Animation triggers when this mounts */}
       <div className="wr-mini-burst"></div>
 
-      <span style={{ fontSize: "14px", fontWeight: 600, color: "#e8e8e8" }}>
+      <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--tp-text, #e8e8e8)" }}>
         Play the winner reveal animation?
       </span>
 
@@ -73,9 +73,9 @@ const RevealPrompt = ({ closeToast, onAccept, onDecline }) => {
             padding: "6px 16px",
             margin: 0,
             fontSize: "12px",
-            background: "#e8e8e8",
-            color: "#0a0a0e",
-            borderColor: "#e8e8e8",
+            background: "var(--tp-text, #e8e8e8)",
+            color: "var(--tp-bg, #0a0a0e)",
+            borderColor: "var(--tp-text, #e8e8e8)",
           }}
           onClick={() => {
             setAccepted(true);

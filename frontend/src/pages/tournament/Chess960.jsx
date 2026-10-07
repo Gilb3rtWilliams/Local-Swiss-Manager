@@ -24,9 +24,9 @@ function CopyFenButton({ fen }) {
         });
       }}
       style={{
-        background: "#252532",
-        border: "1px solid #353545",
-        color: "#e8e8e8",
+        background: "var(--tp-border, #252532)",
+        border: "1px solid var(--tp-border-strong, #353545)",
+        color: "var(--tp-text, #e8e8e8)",
         fontSize: 11,
         fontWeight: 600,
         letterSpacing: "0.05em",
@@ -74,9 +74,9 @@ function CageGamePicker({ games, selectedId, onSelect }) {
             type="button"
             onClick={() => onSelect(g.id)}
             style={{
-              background: active ? "#252532" : "#1a1a24",
-              border: `1px solid ${active ? "#d4a853" : "#353545"}`,
-              color: active ? "#e8e8e8" : "#8a8a9a",
+              background: active ? "var(--tp-border, #252532)" : "var(--tp-surface, #1a1a24)",
+              border: `1px solid ${active ? "var(--tp-brass, #d4a853)" : "var(--tp-border-strong, #353545)"}`,
+              color: active ? "var(--tp-text, #e8e8e8)" : "var(--tp-muted, #8a8a9a)",
               fontSize: 11,
               fontWeight: 600,
               padding: "8px 12px",
@@ -128,9 +128,9 @@ function BracketMatchPicker({ matches, selectedId, onSelect }) {
             type="button"
             onClick={() => onSelect(m.id)}
             style={{
-              background: active ? "#252532" : "#1a1a24",
-              border: `1px solid ${active ? "#d4a853" : "#353545"}`,
-              color: active ? "#e8e8e8" : "#8a8a9a",
+              background: active ? "var(--tp-border, #252532)" : "var(--tp-surface, #1a1a24)",
+              border: `1px solid ${active ? "var(--tp-brass, #d4a853)" : "var(--tp-border-strong, #353545)"}`,
+              color: active ? "var(--tp-text, #e8e8e8)" : "var(--tp-muted, #8a8a9a)",
               fontSize: 11,
               fontWeight: 600,
               padding: "8px 12px",
@@ -267,12 +267,12 @@ export default function Chess960() {
     return (
       <div
         style={{
-          background: "#13131a",
-          border: "1px solid #252532",
+          background: "var(--tp-bg, #13131a)",
+          border: "1px solid var(--tp-border, #252532)",
           borderRadius: 12,
           padding: 40,
           textAlign: "center",
-          color: "#8a8a9a",
+          color: "var(--tp-muted, #8a8a9a)",
           fontFamily: "'SF Mono', Monaco, monospace",
           fontSize: 14,
         }}
@@ -328,9 +328,9 @@ export default function Chess960() {
       } starts from this position — set boards up accordingly before play begins.`;
 
   const selectStyle = {
-    background: "#1a1a24",
-    border: "1px solid #353545",
-    color: "#e8e8e8",
+    background: "var(--tp-surface, #1a1a24)",
+    border: "1px solid var(--tp-border-strong, #353545)",
+    color: "var(--tp-text, #e8e8e8)",
     padding: "6px 12px",
     borderRadius: 6,
     fontFamily: "inherit",
@@ -346,17 +346,17 @@ export default function Chess960() {
         flexDirection: "column",
         gap: "24px",
         fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
-        color: "#e8e8e8",
+        color: "var(--tp-text, #e8e8e8)",
         background:
-          "radial-gradient(circle at 50% 0%, #1f1f2e 0%, transparent 70%)",
+          "radial-gradient(circle at 50% 0%, var(--tp-surface-2, #1f1f2e) 0%, transparent 70%)",
         padding: "8px 0",
         borderRadius: "16px",
       }}
     >
       <div
         style={{
-          background: "#13131a",
-          border: "1px solid #252532",
+          background: "var(--tp-bg, #13131a)",
+          border: "1px solid var(--tp-border, #252532)",
           borderRadius: 12,
           padding: "24px",
         }}
@@ -369,7 +369,7 @@ export default function Chess960() {
             justifyContent: "space-between",
             alignItems: "center",
             marginBottom: 24,
-            borderBottom: "1px solid #252532",
+            borderBottom: "1px solid var(--tp-border, #252532)",
             paddingBottom: 12,
             gap: 16,
           }}
@@ -380,7 +380,7 @@ export default function Chess960() {
               fontWeight: 700,
               letterSpacing: "0.08em",
               textTransform: "uppercase",
-              color: "#e8e8e8",
+              color: "var(--tp-text, #e8e8e8)",
               margin: 0,
             }}
           >
@@ -428,9 +428,9 @@ export default function Chess960() {
                   textTransform: "uppercase",
                   padding: "4px 8px",
                   borderRadius: 4,
-                  background: "#252532",
-                  color: "#d4a853",
-                  border: "1px solid #353545",
+                  background: "var(--tp-border, #252532)",
+                  color: "var(--tp-brass, #d4a853)",
+                  border: "1px solid var(--tp-border-strong, #353545)",
                 }}
               >
                 {badgeLabel}
@@ -460,7 +460,7 @@ export default function Chess960() {
         )}
 
         {!current ? (
-          <p style={{ color: "#8a8a9a", fontSize: 14, margin: 0 }}>
+          <p style={{ color: "var(--tp-muted, #8a8a9a)", fontSize: 14, margin: 0 }}>
             {emptyStateHint}
           </p>
         ) : (
@@ -478,7 +478,7 @@ export default function Chess960() {
                 flexShrink: 0,
                 overflow: "hidden",
                 borderRadius: 8,
-                border: "1px solid #252532",
+                border: "1px solid var(--tp-border, #252532)",
               }}
             >
               <ChessBoard
@@ -503,7 +503,7 @@ export default function Chess960() {
                   style={{
                     fontSize: 20,
                     fontWeight: 700,
-                    color: "#e8e8e8",
+                    color: "var(--tp-text, #e8e8e8)",
                     margin: "0 0 8px 0",
                   }}
                 >
@@ -512,12 +512,12 @@ export default function Chess960() {
                 {current.id === 518 && (
                   <p
                     style={{
-                      color: "#d4a853",
+                      color: "var(--tp-brass, #d4a853)",
                       fontSize: 12,
-                      background: "rgba(212, 168, 83, 0.1)",
+                      background: "rgba(var(--tp-accent-rgb, 212, 168, 83), 0.1)",
                       padding: "8px 12px",
                       borderRadius: 6,
-                      border: "1px solid rgba(212, 168, 83, 0.2)",
+                      border: "1px solid rgba(var(--tp-accent-rgb, 212, 168, 83), 0.2)",
                       margin: 0,
                       lineHeight: 1.4,
                     }}
@@ -536,7 +536,7 @@ export default function Chess960() {
                     fontWeight: 700,
                     letterSpacing: "0.1em",
                     textTransform: "uppercase",
-                    color: "#8a8a9a",
+                    color: "var(--tp-muted, #8a8a9a)",
                   }}
                 >
                   FEN String
@@ -549,9 +549,9 @@ export default function Chess960() {
                     onClick={(e) => e.target.select()}
                     style={{
                       flex: 1,
-                      background: "#1a1a24",
-                      border: "1px solid #353545",
-                      color: "#e8e8e8",
+                      background: "var(--tp-surface, #1a1a24)",
+                      border: "1px solid var(--tp-border-strong, #353545)",
+                      color: "var(--tp-text, #e8e8e8)",
                       padding: "10px 12px",
                       borderRadius: 8,
                       fontFamily: "inherit",
@@ -565,7 +565,7 @@ export default function Chess960() {
 
               <p
                 style={{
-                  color: "#6b6b7b",
+                  color: "var(--tp-dim, #6b6b7b)",
                   fontSize: 12,
                   margin: 0,
                   lineHeight: 1.5,

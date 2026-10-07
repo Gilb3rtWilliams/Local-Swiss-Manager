@@ -3657,6 +3657,27 @@ function getPublicResults(token) {
     matchPlay: full.matchPlay,
     matchPlayNumberOfGames: full.matchPlayNumberOfGames,
     cageMatch: full.format === "match" ? full.cageMatch : null,
+
+    // Everything the Tournament Details card and the Starting Rank list
+    // render, so the spectator view can show the same overview the
+    // organizer sees. organizerContact is included on purpose: it is
+    // entered as "Phone or email for public listings". Registration and
+    // admin tokens are never part of this payload.
+    description: full.description,
+    category: full.category,
+    venue: full.venue,
+    scoringSystem: full.scoringSystem,
+    ratingType: full.ratingType,
+    tiebreaks: full.tiebreaks,
+    maxHalfPointByes: full.maxHalfPointByes,
+    byeCutoffRound: full.byeCutoffRound,
+    organizerName: full.organizerName,
+    organizerContact: full.organizerContact,
+    chiefArbiter: full.chiefArbiter,
+    deputyChiefArbiter: full.deputyChiefArbiter,
+    fideRated: full.fideRated,
+    isTest: full.isTest,
+    startingRankList: full.startingRankList,
   };
 }
 
@@ -4914,7 +4935,21 @@ function computeBoardMVPs(t) {
   }));
 }
 
-function computeStandingsBlock(format, players, teams, remainingRounds) {
+// opts (team format only):
+//   boardNumbers   Map<playerId, boardNum> from computeBoardNumbers() — the
+//                  boards players actually sat on in completed rounds.
+//   ratingFallback when a player has no completed-round board yet (e.g.
+//                  before Round 1), derive it the same way buildTeamBoards()
+//                  does — rating rank within the team. Pass false for
+//                  bughouse, whose board assignment works differently.
+function computeStandingsBlock(
+  format,
+  players,
+  teams,
+  remainingRounds,
+  opts = {},
+) {
+  const { boardNumbers = new Map(), ratingFallback = true } = opts;
   let standings,
     teamStandings = null,
     crossTable = null;
@@ -4930,14 +4965,31 @@ function computeStandingsBlock(format, players, teams, remainingRounds) {
       const maxGainPerRound = Math.max(team.playerIds.length, 1);
       const inContention =
         c.score + remainingRounds * maxGainPerRound >= leaderScore;
-      const resolvedPlayers = team.playerIds
+      const teamPlayers = team.playerIds
         .map((id) => players.find((p) => p.id === id))
-        .filter(Boolean) // Safely remove undefined
+        .filter(Boolean); // Safely remove undefined
+      // Same ordering buildTeamBoards() uses to hand out board numbers.
+      const byRating = [...teamPlayers].sort((a, b) => b.rating - a.rating);
+      const resolvedPlayers = teamPlayers
         .map((p) => ({
+          id: p.id,
           name: p.name,
           title: p.title || null,
           fideId: p.fideId || null,
-        }));
+          boardNum:
+            boardNumbers.get(p.id) ??
+            (ratingFallback ? byRating.indexOf(p) + 1 : null),
+          score: engine.formatScore(p.score),
+        }))
+        .sort((a, b) =>
+          a.boardNum != null && b.boardNum != null
+            ? a.boardNum - b.boardNum
+            : a.boardNum != null
+            ? -1
+            : b.boardNum != null
+            ? 1
+            : 0,
+        );
       return {
         id: team.id,
         name: team.name,
@@ -5083,6 +5135,10 @@ function standingsAtRoundForTournament(t, roundNumber) {
     players,
     teams,
     remainingRounds,
+    {
+      boardNumbers: computeBoardNumbers({ rounds: roundsThrough }),
+      ratingFallback: t.variant !== "bughouse",
+    },
   );
 
   return {
@@ -5216,6 +5272,10 @@ function serializeTournament(t) {
     t.players,
     t.teams,
     remainingRounds,
+    {
+      boardNumbers: computeBoardNumbers(t),
+      ratingFallback: t.variant !== "bughouse",
+    },
   );
   // A resolved decider promotes its winner to rank 1 in the live standings
   // only — historical per-round snapshots (standingsAtRound, above) predate

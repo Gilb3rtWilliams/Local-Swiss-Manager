@@ -19,7 +19,7 @@ function resolvePlayerMeta(playerObj, livePlayers) {
   return { title: "", id: null };
 }
 
-function PlayerLink({ basePath, id, title, name, titleColor = "#c25555" }) {
+function PlayerLink({ basePath, id, title, name, titleColor = "var(--tp-loss-soft, #c25555)" }) {
   const label = (
     <>
       {title && (
@@ -94,9 +94,9 @@ function TeamResultButtons({
             key={label}
             onClick={() => onSetResult(result)}
             style={{
-              background: isActive ? "#3a3a4a" : "transparent",
-              border: `1px solid ${isActive ? "#5a5a6a" : "#2a2a35"}`,
-              color: isActive ? "#fff" : "#8a8a9a",
+              background: isActive ? "var(--tp-border-strong, #3a3a4a)" : "transparent",
+              border: `1px solid ${isActive ? "var(--tp-dim, #5a5a6a)" : "var(--tp-border, #2a2a35)"}`,
+              color: isActive ? "var(--tp-heading, #ffffff)" : "var(--tp-muted, #8a8a9a)",
               fontSize: 10,
               padding: "4px 6px",
               borderRadius: 4,
@@ -135,13 +135,13 @@ function TeamBoardsMatch({
   return (
     <div
       style={{
-        background: "#13131a",
-        border: "1px solid #252532",
+        background: "var(--tp-bg, #13131a)",
+        border: "1px solid var(--tp-border, #252532)",
         borderRadius: 12,
         overflow: "hidden",
         marginBottom: 24,
         fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
-        color: "#e8e8e8",
+        color: "var(--tp-text, #e8e8e8)",
       }}
     >
       {/* Header */}
@@ -149,16 +149,16 @@ function TeamBoardsMatch({
         style={{
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
-          borderBottom: "1px solid #252532",
+          borderBottom: "1px solid var(--tp-border, #252532)",
         }}
       >
-        <div style={{ padding: "16px 24px", borderRight: "1px solid #252532" }}>
+        <div style={{ padding: "16px 24px", borderRight: "1px solid var(--tp-border, #252532)" }}>
           <span
             style={{
               display: "inline-flex",
               alignItems: "center",
               gap: 8,
-              color: "#d4a853",
+              color: "var(--tp-brass, #d4a853)",
               fontSize: 11,
               fontWeight: 600,
               letterSpacing: "0.12em",
@@ -170,7 +170,7 @@ function TeamBoardsMatch({
                 width: 6,
                 height: 6,
                 borderRadius: "50%",
-                background: "#d4a853",
+                background: "var(--tp-brass, #d4a853)",
                 display: "inline-block",
               }}
             />
@@ -226,18 +226,18 @@ function TeamBoardsMatch({
               style={{
                 padding: "24px",
                 textAlign: "center",
-                color: "#6b6b7b",
+                color: "var(--tp-dim, #6b6b7b)",
                 fontSize: 13,
-                borderBottom: "1px solid #252532",
+                borderBottom: "1px solid var(--tp-border, #252532)",
               }}
             >
-              <span style={{ color: "#a0a0b0" }}>
+              <span style={{ color: "var(--tp-soft, #a0a0b0)" }}>
                 <PlayerLink
                   basePath={basePath}
                   id={sitOutMeta.id}
                   title={sitOutMeta.title}
                   name={sitOutPlayer?.name}
-                  titleColor="#c25555"
+                  titleColor="var(--tp-loss-soft, #c25555)"
                 />
               </span>{" "}
               sits out this round
@@ -252,7 +252,7 @@ function TeamBoardsMatch({
               display: "grid",
               gridTemplateColumns: "1fr 140px 1fr",
               borderBottom:
-                b.boardNum === p.boards.length ? "none" : "1px solid #252532",
+                b.boardNum === p.boards.length ? "none" : "1px solid var(--tp-border, #252532)",
               minHeight: 120,
             }}
           >
@@ -263,7 +263,7 @@ function TeamBoardsMatch({
                 display: "flex",
                 alignItems: "center",
                 gap: 16,
-                borderRight: "1px solid #252532",
+                borderRight: "1px solid var(--tp-border, #252532)",
               }}
             >
               <div
@@ -288,7 +288,7 @@ function TeamBoardsMatch({
                   style={{
                     fontSize: 20,
                     fontWeight: 700,
-                    color: "#e8e8e8",
+                    color: "var(--tp-text, #e8e8e8)",
                     letterSpacing: "-0.02em",
                     lineHeight: 1.2,
                   }}
@@ -304,7 +304,7 @@ function TeamBoardsMatch({
                       style={{
                         fontSize: 12,
                         fontWeight: 500,
-                        color: "#8a8a9a",
+                        color: "var(--tp-muted, #8a8a9a)",
                         marginLeft: 8,
                         letterSpacing: 0,
                       }}
@@ -316,7 +316,7 @@ function TeamBoardsMatch({
                 <div
                   style={{
                     fontSize: 10,
-                    color: "#d4a853",
+                    color: "var(--tp-brass, #d4a853)",
                     fontWeight: 600,
                     letterSpacing: "0.1em",
                     textTransform: "uppercase",
@@ -334,12 +334,12 @@ function TeamBoardsMatch({
                     padding: "4px 10px",
                     borderRadius: 4,
                     background: "transparent",
-                    border: "1px solid #353545",
+                    border: "1px solid var(--tp-border-strong, #353545)",
                     fontSize: 9,
                     fontWeight: 600,
                     letterSpacing: "0.08em",
                     textTransform: "uppercase",
-                    color: "#8a8a9a",
+                    color: "var(--tp-muted, #8a8a9a)",
                   }}
                 >
                   <span
@@ -368,7 +368,7 @@ function TeamBoardsMatch({
                 alignItems: "center",
                 justifyContent: "center",
                 gap: 8,
-                borderRight: "1px solid #252532",
+                borderRight: "1px solid var(--tp-border, #252532)",
               }}
             >
               <div
@@ -377,7 +377,7 @@ function TeamBoardsMatch({
                   fontWeight: 600,
                   letterSpacing: "0.15em",
                   textTransform: "uppercase",
-                  color: "#4a4a5a",
+                  color: "var(--tp-faint, #4a4a5a)",
                 }}
               >
                 Board {b.boardNum}
@@ -386,7 +386,7 @@ function TeamBoardsMatch({
                 style={{
                   fontSize: 16,
                   fontWeight: 700,
-                  color: "#3a3a4a",
+                  color: "var(--tp-faint, #3a3a4a)",
                   letterSpacing: "0.05em",
                 }}
               >
@@ -396,7 +396,7 @@ function TeamBoardsMatch({
                 style={{
                   width: 24,
                   height: 24,
-                  background: `linear-gradient(45deg, #2a2a35 25%, transparent 25%), linear-gradient(-45deg, #2a2a35 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #2a2a35 75%), linear-gradient(-45deg, transparent 75%, #2a2a35 75%)`,
+                  background: `linear-gradient(45deg, var(--tp-border, #2a2a35) 25%, transparent 25%), linear-gradient(-45deg, var(--tp-border, #2a2a35) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, var(--tp-border, #2a2a35) 75%), linear-gradient(-45deg, transparent 75%, var(--tp-border, #2a2a35) 75%)`,
                   backgroundSize: "8px 8px",
                   backgroundPosition: "0 0, 0 4px, 4px -4px, -4px 0px",
                   borderRadius: 4,
@@ -416,7 +416,7 @@ function TeamBoardsMatch({
                   }}
                 >
                   <span
-                    style={{ color: "#d4a853", fontWeight: 800, fontSize: 15 }}
+                    style={{ color: "var(--tp-brass, #d4a853)", fontWeight: 800, fontSize: 15 }}
                   >
                     {/* score.A / score.B follow White / Black, so flip them
                         when the left-hand team is Black on this board */}
@@ -432,10 +432,10 @@ function TeamBoardsMatch({
                       textTransform: "uppercase",
                       textAlign: "center",
                       color: b.result
-                        ? "#4caf50"
+                        ? "var(--tp-win, #4caf50)"
                         : b.miniMatch.tieAlert
-                        ? "#f44336"
-                        : "#8a8a9a",
+                        ? "var(--tp-loss, #f44336)"
+                        : "var(--tp-muted, #8a8a9a)",
                     }}
                   >
                     {b.result
@@ -448,9 +448,9 @@ function TeamBoardsMatch({
                     type="button"
                     onClick={() => onOpenMiniMatch(p.idx, b.boardNum)}
                     style={{
-                      background: "#252532",
-                      border: "1px solid #353545",
-                      color: "#e8e8e8",
+                      background: "var(--tp-border, #252532)",
+                      border: "1px solid var(--tp-border-strong, #353545)",
+                      color: "var(--tp-text, #e8e8e8)",
                       fontSize: 10,
                       fontWeight: 600,
                       letterSpacing: "0.05em",
@@ -468,7 +468,7 @@ function TeamBoardsMatch({
                 <div
                   style={{
                     fontSize: 9,
-                    color: "#6b6b7b",
+                    color: "var(--tp-dim, #6b6b7b)",
                     textAlign: "center",
                     lineHeight: 1.4,
                     maxWidth: 120,
@@ -504,7 +504,7 @@ function TeamBoardsMatch({
                   style={{
                     fontSize: 20,
                     fontWeight: 700,
-                    color: "#e8e8e8",
+                    color: "var(--tp-text, #e8e8e8)",
                     letterSpacing: "-0.02em",
                     lineHeight: 1.2,
                   }}
@@ -520,7 +520,7 @@ function TeamBoardsMatch({
                       style={{
                         fontSize: 12,
                         fontWeight: 500,
-                        color: "#8a8a9a",
+                        color: "var(--tp-muted, #8a8a9a)",
                         marginLeft: 8,
                         letterSpacing: 0,
                       }}
@@ -550,12 +550,12 @@ function TeamBoardsMatch({
                     padding: "4px 10px",
                     borderRadius: 4,
                     background: "transparent",
-                    border: "1px solid #353545",
+                    border: "1px solid var(--tp-border-strong, #353545)",
                     fontSize: 9,
                     fontWeight: 600,
                     letterSpacing: "0.08em",
                     textTransform: "uppercase",
-                    color: "#8a8a9a",
+                    color: "var(--tp-muted, #8a8a9a)",
                     flexDirection: "row-reverse",
                   }}
                 >
@@ -628,21 +628,21 @@ export default function PairingsTeam({
             className="team-match-card bughouse-bye"
             key={p.idx}
             style={{
-              background: "#13131a",
-              border: "1px solid #252532",
+              background: "var(--tp-bg, #13131a)",
+              border: "1px solid var(--tp-border, #252532)",
               borderRadius: 12,
               padding: 24,
               textAlign: "center",
               marginBottom: 24,
               fontFamily: "'SF Mono', monospace",
-              color: "#e8e8e8",
+              color: "var(--tp-text, #e8e8e8)",
             }}
           >
             <div className="team-match-bye">
               <span
                 className="player-name"
                 style={{
-                  color: "#d4a853",
+                  color: "var(--tp-brass, #d4a853)",
                   textTransform: "uppercase",
                   letterSpacing: "0.1em",
                 }}
@@ -654,7 +654,7 @@ export default function PairingsTeam({
                 style={{
                   display: "block",
                   marginTop: 8,
-                  color: "#8a8a9a",
+                  color: "var(--tp-muted, #8a8a9a)",
                   fontSize: 12,
                 }}
               >

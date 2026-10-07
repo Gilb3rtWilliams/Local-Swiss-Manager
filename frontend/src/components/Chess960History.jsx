@@ -22,8 +22,8 @@ export default function Chess960History({
   return (
     <div
       style={{
-        background: "#13131a",
-        border: "1px solid #252532",
+        background: "var(--tp-bg, #13131a)",
+        border: "1px solid var(--tp-border, #252532)",
         borderRadius: 12,
         padding: "24px",
         fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
@@ -33,7 +33,7 @@ export default function Chess960History({
       <div
         style={{
           marginBottom: 20,
-          borderBottom: "1px solid #252532",
+          borderBottom: "1px solid var(--tp-border, #252532)",
           paddingBottom: 12,
         }}
       >
@@ -43,7 +43,7 @@ export default function Chess960History({
             fontWeight: 700,
             letterSpacing: "0.08em",
             textTransform: "uppercase",
-            color: "#e8e8e8",
+            color: "var(--tp-text, #e8e8e8)",
             margin: 0,
           }}
         >
@@ -59,7 +59,7 @@ export default function Chess960History({
           overflowX: "auto",
           paddingBottom: 16,
           scrollbarWidth: "thin",
-          scrollbarColor: "#252532 transparent",
+          scrollbarColor: "var(--tp-border, #252532) transparent",
         }}
       >
         {/* Track */}
@@ -73,14 +73,14 @@ export default function Chess960History({
                 display: "flex",
                 flexDirection: "column",
                 gap: 12,
-                background: isActive ? "#1a1a24" : "transparent",
-                border: `1px solid ${isActive ? "#5a5a6a" : "#252532"}`,
+                background: isActive ? "var(--tp-surface, #1a1a24)" : "transparent",
+                border: `1px solid ${isActive ? "var(--tp-dim, #5a5a6a)" : "var(--tp-border, #252532)"}`,
                 borderRadius: 10,
                 padding: 12,
                 cursor: "pointer",
                 transition: "all 0.2s ease",
                 flexShrink: 0,
-                boxShadow: isActive ? "0 4px 12px rgba(0,0,0,0.2)" : "none",
+                boxShadow: isActive ? "0 4px 12px color-mix(in srgb, var(--tp-shadow-color, #000) 20%, transparent)" : "none",
               }}
             >
               {/* Card Header */}
@@ -96,7 +96,7 @@ export default function Chess960History({
                     fontSize: 10,
                     fontWeight: 700,
                     letterSpacing: "0.08em",
-                    color: isActive ? "#d4a853" : "#6b6b7b",
+                    color: isActive ? "var(--tp-brass, #d4a853)" : "var(--tp-dim, #6b6b7b)",
                     textTransform: "uppercase",
                   }}
                 >
@@ -106,7 +106,7 @@ export default function Chess960History({
                   style={{
                     fontSize: 12,
                     fontWeight: 600,
-                    color: isActive ? "#e8e8e8" : "#8a8a9a",
+                    color: isActive ? "var(--tp-text, #e8e8e8)" : "var(--tp-muted, #8a8a9a)",
                   }}
                 >
                   #{r.chess960.id}
@@ -120,7 +120,7 @@ export default function Chess960History({
                   overflow: "hidden",
                   opacity: isActive ? 1 : 0.6,
                   transition: "opacity 0.2s ease",
-                  border: "1px solid #1a1a24",
+                  border: "1px solid var(--tp-surface, #1a1a24)",
                   pointerEvents: "none",
                 }}
               >

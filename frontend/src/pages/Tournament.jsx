@@ -8,6 +8,12 @@ import TeamStandingsTable from "../components/TeamStandingsTable.jsx";
 import CrossTable from "../components/CrossTable.jsx";
 import WinnerReveal from "../components/WinnerReveal.jsx";
 import RoundHistory from "../components/RoundHistory.jsx";
+import {
+  THEMES,
+  DEFAULT_THEME,
+  THEME_STORAGE_KEY,
+  isValidTheme,
+} from "../themes.js";
 import "../css/Tournament.css";
 
 const SYSTEM_LABELS = {
@@ -41,6 +47,24 @@ export default function Tournament() {
 
   const [historyRound, setHistoryRound] = useState(null);
 
+  const [theme, setTheme] = useState(() => {
+    try {
+      const saved = localStorage.getItem(THEME_STORAGE_KEY);
+      return isValidTheme(saved) ? saved : DEFAULT_THEME;
+    } catch {
+      return DEFAULT_THEME;
+    }
+  });
+
+  function handleThemeChange(next) {
+    setTheme(next);
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, next);
+    } catch {
+      /* storage unavailable — the theme still applies for this session */
+    }
+  }
+
   useEffect(() => {
     refresh();
   }, [id]);
@@ -72,13 +96,13 @@ export default function Tournament() {
 
   if (error)
     return (
-      <div className="container tp-root">
+      <div className="container tp-root" data-theme={theme}>
         <div className="banner-error">{error}</div>
       </div>
     );
   if (!t)
     return (
-      <div className="container tp-root">
+      <div className="container tp-root" data-theme={theme}>
         <p className="muted">Loading…</p>
       </div>
     );
@@ -217,13 +241,7 @@ export default function Tournament() {
   const showTables = t.currentRound > 1 || t.status === "finished";
 
   return (
-    <div className="container tp-root">
-      <div className="tp-bg" aria-hidden="true">
-        <div className="tp-bg-scene" />
-        <div className="tp-bg-scene" />
-        <div className="tp-bg-scene" />
-      </div>
-
+    <div className="container tp-root" data-theme={theme}>
       <WinnerReveal t={t} />
 
       <div className="tourney-header-row">
@@ -235,7 +253,34 @@ export default function Tournament() {
             {isTeam ? "Team" : "Individual"} tournament
           </p>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          <label className="tp-picker">
+            <span className="tp-picker-swatch" aria-hidden="true">
+              {(THEMES.find((x) => x.id === theme) || THEMES[0]).swatch.map(
+                (c) => (
+                  <i key={c} style={{ background: c }} />
+                ),
+              )}
+            </span>
+            <select
+              value={theme}
+              onChange={(e) => handleThemeChange(e.target.value)}
+              aria-label="Theme"
+            >
+              {THEMES.map((x) => (
+                <option key={x.id} value={x.id}>
+                  {x.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <button className="btn-secondary btn-sm" onClick={openEdit}>
             ✎ Edit Details
           </button>

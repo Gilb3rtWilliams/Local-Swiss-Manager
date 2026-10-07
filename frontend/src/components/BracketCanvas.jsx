@@ -248,9 +248,9 @@ function MatchNode({ match, seeds, onOpen }) {
             fontSize: 9,
             fontWeight: 700,
             letterSpacing: "0.05em",
-            color: "#d4a853",
-            background: "rgba(212,168,83,0.14)",
-            border: "1px solid rgba(212,168,83,0.35)",
+            color: "var(--tp-brass, #d4a853)",
+            background: "rgba(var(--tp-accent-rgb, 212, 168, 83), 0.14)",
+            border: "1px solid rgba(var(--tp-accent-rgb, 212, 168, 83), 0.35)",
             borderRadius: 4,
             padding: "1px 5px",
             pointerEvents: "none",
@@ -377,7 +377,7 @@ export default function BracketCanvas({
                   e.dashed
                     ? {
                         strokeDasharray: "5,4",
-                        stroke: "#c9a227",
+                        stroke: "var(--tp-brass, #c9a227)",
                         strokeWidth: 2,
                         fill: "none",
                       }
@@ -427,7 +427,7 @@ export default function BracketCanvas({
                 fontWeight: 700,
                 letterSpacing: "0.04em",
                 textTransform: "uppercase",
-                color: "#9a9aa8",
+                color: "var(--tp-muted, #9a9aa8)",
                 pointerEvents: "none",
               }}
             >

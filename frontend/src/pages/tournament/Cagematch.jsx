@@ -542,9 +542,9 @@ export default function CageMatch() {
   }
 
   const selectStyle = {
-    background: "#1a1a24",
-    border: "1px solid #353545",
-    color: "#e8e8e8",
+    background: "var(--tp-surface, #1a1a24)",
+    border: "1px solid var(--tp-border-strong, #353545)",
+    color: "var(--tp-text, #e8e8e8)",
     padding: "6px 12px",
     borderRadius: 6,
     fontFamily: "inherit",
@@ -741,9 +741,9 @@ export default function CageMatch() {
                 flex: 1,
                 padding: "7px 10px",
                 borderRadius: 8,
-                border: "1px solid #252532",
-                background: "rgba(19, 19, 26, 0.85)",
-                color: "#e8e8e8",
+                border: "1px solid var(--tp-border, #252532)",
+                background: "color-mix(in srgb, var(--tp-bg, #13131a) 85%, transparent)",
+                color: "var(--tp-text, #e8e8e8)",
                 fontFamily: "inherit",
                 fontSize: "0.82rem",
               }}

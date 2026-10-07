@@ -1,27 +1,27 @@
-/* ── Tournament View: token system ───────────────────────────────────────
-   Dark slate glassmorphism panels, glowing gold accents, monospaced typography,
-   and dark tables. Scoped under `.tp-root`.
+/* ── Tournament View (single-page) ───────────────────────────────────────
+   Layout and component rules only. All colors come from the shared theme
+   tokens in theme.css. Scoped under `.tp-root`.
 ─────────────────────────────────────────────────────────────────────────── */
 
+@import "./theme.css";
 @import url("https://fonts.googleapis.com/css2?family=Cascadia+Code:wght@400;500;600;700&display=swap");
 
 .tp-root {
-  --tp-bg: #13131a;
-  --tp-card: rgba(25, 25, 36, 0.85);
-  --tp-card-solid: #191924;
-  --tp-border: #252532;
-  --tp-text: #e8e8e8;
-  --tp-muted: #8a8a9a;
-  --tp-brass: #d4a853;
-  --tp-felt: #4caf50;
-  --tp-maroon: #f44336;
-
   position: relative;
   isolation: isolate;
   min-height: 100vh;
   color: var(--tp-text);
   font-family: var(--font-mono, "Georgia", "Times New Roman", serif);
   padding-bottom: 60px;
+}
+
+/* Flat page background that follows the active theme. */
+.tp-root::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--tp-bg);
 }
 
 .tp-root h1,
@@ -31,111 +31,13 @@
   letter-spacing: -0.02em;
 }
 
-/* ── Ambient background ───────────────────────────────────────────────── */
-.tp-bg {
-  position: fixed;
-  inset: 0;
-  z-index: -2;
-  overflow: hidden;
-  background: var(--tp-bg);
-}
-
-.tp-bg-scene {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-}
-
-.tp-bg-scene:nth-child(1) {
-  background: radial-gradient(
-    120% 90% at 15% 10%,
-    #252536 0%,
-    #13131a 55%,
-    #0a0a0f 100%
-  );
-}
-
-.tp-bg-scene:nth-child(2) {
-  background: radial-gradient(
-    120% 90% at 85% 15%,
-    #322818 0%,
-    #13131a 55%,
-    #0a0a0f 100%
-  );
-}
-
-.tp-bg-scene:nth-child(3) {
-  background: radial-gradient(
-    120% 90% at 50% 90%,
-    #1a241f 0%,
-    #13131a 55%,
-    #0a0a0f 100%
-  );
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .tp-bg-scene {
-    animation: tpCycle 24s infinite;
-  }
-  .tp-bg-scene:nth-child(1) {
-    animation-delay: 0s;
-  }
-  .tp-bg-scene:nth-child(2) {
-    animation-delay: 8s;
-  }
-  .tp-bg-scene:nth-child(3) {
-    animation-delay: 16s;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tp-bg-scene:nth-child(1) {
-    opacity: 1;
-  }
-}
-
-@keyframes tpCycle {
-  0% {
-    opacity: 0;
-  }
-  4% {
-    opacity: 1;
-  }
-  29% {
-    opacity: 1;
-  }
-  33% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
-.tp-bg::after {
-  content: "";
-  position: absolute;
-  inset: -20%;
-  background-image: repeating-linear-gradient(
-      0deg,
-      rgba(255, 255, 255, 0.02) 0 2px,
-      transparent 2px 64px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.02) 0 2px,
-      transparent 2px 64px
-    );
-  transform: rotate(-8deg);
-}
-
 /* ── Glass surfaces ───────────────────────────────────────────────────── */
 .tp-root .card {
   background: var(--tp-card);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border: 1px solid var(--tp-border);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 12px 30px var(--tp-shadow);
   border-radius: 14px;
   padding: 24px 26px;
   margin-bottom: 22px;
@@ -177,29 +79,28 @@
 
 /* ── Buttons ──────────────────────────────────────────────────────────── */
 .tp-root .btn-secondary {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--tp-fg-rgb), 0.04);
   border: 1px solid var(--tp-border);
   color: var(--tp-text);
   transition: all 0.15s ease;
 }
 
 .tp-root .btn-secondary:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(212, 168, 83, 0.4);
+  background: rgba(var(--tp-fg-rgb), 0.08);
+  border-color: rgba(var(--tp-accent-rgb), 0.4);
 }
 
 .tp-root .btn-primary {
   background: var(--tp-brass);
   border: 1px solid var(--tp-brass);
-  color: #13131a;
+  color: var(--tp-on-accent);
   font-weight: 700;
-  box-shadow: 0 4px 12px rgba(212, 168, 83, 0.25);
+  box-shadow: 0 4px 12px rgba(var(--tp-accent-rgb), 0.25);
   transition: all 0.15s ease;
 }
 
 .tp-root .btn-primary:hover:not(:disabled) {
-  background: #e5b964;
-  border-color: #e5b964;
+  filter: brightness(1.1);
 }
 
 .tp-root .btn-del {
@@ -228,7 +129,7 @@
 .tp-root input,
 .tp-root select,
 .tp-root textarea {
-  background: rgba(19, 19, 26, 0.85);
+  background: var(--tp-input-bg);
   border: 1px solid var(--tp-border);
   color: var(--tp-text);
   border-radius: 8px;
@@ -243,12 +144,12 @@
 .tp-root textarea:focus {
   outline: none;
   border-color: var(--tp-brass);
-  box-shadow: 0 0 0 3px rgba(212, 168, 83, 0.18);
+  box-shadow: 0 0 0 3px rgba(var(--tp-accent-rgb), 0.18);
 }
 
 .tp-root input::placeholder,
 .tp-root textarea::placeholder {
-  color: #555566;
+  color: rgba(var(--tp-fg-rgb), 0.35);
 }
 
 .tp-root .field span:first-child {
@@ -269,14 +170,14 @@
 }
 
 .tp-root .inline-error {
-  color: #ff8a80;
+  color: var(--tp-danger);
   font-size: 0.85rem;
 }
 
 .tp-root .banner-error {
-  background: rgba(244, 67, 54, 0.12);
-  border: 1px solid rgba(244, 67, 54, 0.35);
-  color: #ff8a80;
+  background: rgba(var(--tp-danger-rgb), 0.12);
+  border: 1px solid rgba(var(--tp-danger-rgb), 0.35);
+  color: var(--tp-danger);
   border-radius: 10px;
   padding: 12px 16px;
   margin-bottom: 18px;
@@ -291,7 +192,7 @@
 }
 
 .tp-root .info-bar > div {
-  background: rgba(19, 19, 26, 0.6);
+  background: var(--tp-card);
   border: 1px solid var(--tp-border);
   border-radius: 8px;
   padding: 8px 14px;
@@ -309,10 +210,10 @@
 .tp-root .finished-banner {
   background: linear-gradient(
     135deg,
-    rgba(212, 168, 83, 0.18),
-    rgba(212, 168, 83, 0.05)
+    rgba(var(--tp-accent-rgb), 0.18),
+    rgba(var(--tp-accent-rgb), 0.05)
   );
-  border: 1px solid rgba(212, 168, 83, 0.35);
+  border: 1px solid rgba(var(--tp-accent-rgb), 0.35);
   text-align: center;
 }
 
@@ -331,8 +232,8 @@
   font-size: 0.72rem;
   font-weight: 700;
   color: var(--tp-brass);
-  background: rgba(212, 168, 83, 0.12);
-  border: 1px solid rgba(212, 168, 83, 0.35);
+  background: rgba(var(--tp-accent-rgb), 0.12);
+  border: 1px solid rgba(var(--tp-accent-rgb), 0.35);
   border-radius: 999px;
   padding: 3px 12px;
 }
@@ -346,7 +247,7 @@
 
 .tp-root .round-tab {
   border: 1px solid var(--tp-border);
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--tp-fg-rgb), 0.03);
   color: var(--tp-muted);
   border-radius: 999px;
   padding: 6px 16px;
@@ -358,17 +259,17 @@
 }
 
 .tp-root .round-tab:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(212, 168, 83, 0.4);
+  background: rgba(var(--tp-fg-rgb), 0.08);
+  border-color: rgba(var(--tp-accent-rgb), 0.4);
   color: var(--tp-text);
 }
 
 .tp-root .round-tab.active {
   background: var(--tp-brass);
   border-color: var(--tp-brass);
-  color: #13131a;
+  color: var(--tp-on-accent);
   font-weight: 700;
-  box-shadow: 0 4px 12px rgba(212, 168, 83, 0.25);
+  box-shadow: 0 4px 12px rgba(var(--tp-accent-rgb), 0.25);
 }
 
 /* ── Late registration row ────────────────────────────────────────────── */
@@ -417,11 +318,11 @@
 
 .tp-root td {
   padding: 9px 10px;
-  border-bottom: 1px solid rgba(37, 37, 50, 0.6);
+  border-bottom: 1px solid color-mix(in srgb, var(--tp-border) 60%, transparent);
 }
 
 .tp-root tbody tr:hover {
-  background: rgba(212, 168, 83, 0.05);
+  background: rgba(var(--tp-accent-rgb), 0.05);
 }
 
 .tp-root tbody tr:last-child td {

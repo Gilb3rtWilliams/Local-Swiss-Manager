@@ -40,12 +40,12 @@ export default function Pairings() {
     return (
       <div
         style={{
-          background: "#13131a",
-          border: "1px solid #252532",
+          background: "var(--tp-bg, #13131a)",
+          border: "1px solid var(--tp-border, #252532)",
           borderRadius: 12,
           padding: 40,
           textAlign: "center",
-          color: "#8a8a9a",
+          color: "var(--tp-muted, #8a8a9a)",
           fontFamily: "Georgia, 'Times New Roman', Times, serif",
           fontSize: 14,
         }}
@@ -55,9 +55,9 @@ export default function Pairings() {
           type="button"
           onClick={() => navigate(`/tournament/${t.id}/overview`)}
           style={{
-            background: "#252532",
-            border: "1px solid #353545",
-            color: "#e8e8e8",
+            background: "var(--tp-border, #252532)",
+            border: "1px solid var(--tp-border-strong, #353545)",
+            color: "var(--tp-text, #e8e8e8)",
             fontSize: 11,
             fontFamily: "Georgia, 'Times New Roman', Times, serif",
             fontWeight: 600,
@@ -173,9 +173,9 @@ export default function Pairings() {
   }
 
   const inputStyle = {
-    background: "#1a1a24",
-    border: "1px solid #353545",
-    color: "#e8e8e8",
+    background: "var(--tp-surface, #1a1a24)",
+    border: "1px solid var(--tp-border-strong, #353545)",
+    color: "var(--tp-text, #e8e8e8)",
     padding: "10px 12px",
     borderRadius: 8,
     fontFamily: "inherit",
@@ -186,9 +186,9 @@ export default function Pairings() {
   };
 
   const btnStyle = (disabled) => ({
-    background: disabled ? "#1a1a24" : "#252532",
-    border: `1px solid ${disabled ? "#252532" : "#353545"}`,
-    color: disabled ? "#6b6b7b" : "#e8e8e8",
+    background: disabled ? "var(--tp-surface, #1a1a24)" : "var(--tp-border, #252532)",
+    border: `1px solid ${disabled ? "var(--tp-border, #252532)" : "var(--tp-border-strong, #353545)"}`,
+    color: disabled ? "var(--tp-dim, #6b6b7b)" : "var(--tp-text, #e8e8e8)",
     fontSize: 11,
     fontWeight: 600,
     letterSpacing: "0.05em",
@@ -207,17 +207,17 @@ export default function Pairings() {
         flexDirection: "column",
         gap: "24px",
         fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
-        color: "#e8e8e8",
+        color: "var(--tp-text, #e8e8e8)",
         background:
-          "radial-gradient(circle at 50% 0%, #1f1f2e 0%, transparent 70%)",
+          "radial-gradient(circle at 50% 0%, var(--tp-surface-2, #1f1f2e) 0%, transparent 70%)",
         padding: "8px 0",
         borderRadius: "16px",
       }}
     >
       <div
         style={{
-          background: "#13131a",
-          border: "1px solid #252532",
+          background: "var(--tp-bg, #13131a)",
+          border: "1px solid var(--tp-border, #252532)",
           borderRadius: 12,
           padding: "24px",
         }}
@@ -228,7 +228,7 @@ export default function Pairings() {
             justifyContent: "space-between",
             alignItems: "center",
             marginBottom: 24,
-            borderBottom: "1px solid #252532",
+            borderBottom: "1px solid var(--tp-border, #252532)",
             paddingBottom: 12,
             flexWrap: "wrap",
             gap: 12,
@@ -240,7 +240,7 @@ export default function Pairings() {
               fontWeight: 700,
               letterSpacing: "0.08em",
               textTransform: "uppercase",
-              color: "#e8e8e8",
+              color: "var(--tp-text, #e8e8e8)",
               margin: 0,
             }}
           >
@@ -254,9 +254,9 @@ export default function Pairings() {
               textTransform: "uppercase",
               padding: "4px 8px",
               borderRadius: 4,
-              background: "#252532",
-              color: "#d4a853",
-              border: "1px solid #353545",
+              background: "var(--tp-border, #252532)",
+              color: "var(--tp-brass, #d4a853)",
+              border: "1px solid var(--tp-border-strong, #353545)",
             }}
           >
             Round {t.currentRound} / {t.totalRounds}
@@ -268,7 +268,7 @@ export default function Pairings() {
             style={{
               background: "rgba(255, 107, 107, 0.1)",
               border: "1px solid rgba(255, 107, 107, 0.3)",
-              color: "#ff6b6b",
+              color: "var(--tp-danger, #ff6b6b)",
               padding: "12px 16px",
               borderRadius: 8,
               marginBottom: 20,
@@ -319,8 +319,8 @@ export default function Pairings() {
       {t.currentRound <= 1 && t.status !== "finished" && (
         <div
           style={{
-            background: "#13131a",
-            border: "1px solid #252532",
+            background: "var(--tp-bg, #13131a)",
+            border: "1px solid var(--tp-border, #252532)",
             borderRadius: 12,
             padding: "24px",
           }}
@@ -332,14 +332,14 @@ export default function Pairings() {
               alignItems: "center",
               cursor: "pointer",
               marginBottom: lateOpen ? 20 : 0,
-              borderBottom: lateOpen ? "1px solid #252532" : "none",
+              borderBottom: lateOpen ? "1px solid var(--tp-border, #252532)" : "none",
               paddingBottom: lateOpen ? 12 : 0,
             }}
             onClick={() => setLateOpen((o) => !o)}
           >
             <h2
               style={{
-                color: "#8a8a9a",
+                color: "var(--tp-muted, #8a8a9a)",
                 fontSize: 14,
                 fontWeight: 700,
                 textTransform: "uppercase",
@@ -356,9 +356,9 @@ export default function Pairings() {
                 setLateOpen((o) => !o);
               }}
               style={{
-                background: "#252532",
-                border: "1px solid #353545",
-                color: "#e8e8e8",
+                background: "var(--tp-border, #252532)",
+                border: "1px solid var(--tp-border-strong, #353545)",
+                color: "var(--tp-text, #e8e8e8)",
                 fontSize: 10,
                 fontWeight: 600,
                 letterSpacing: "0.05em",
@@ -376,7 +376,7 @@ export default function Pairings() {
             <form onSubmit={handleAddLate}>
               <p
                 style={{
-                  color: "#8a8a9a",
+                  color: "var(--tp-muted, #8a8a9a)",
                   fontSize: 12,
                   lineHeight: 1.5,
                   marginTop: 0,
@@ -429,9 +429,9 @@ export default function Pairings() {
                 <button
                   type="submit"
                   style={{
-                    background: "#252532",
-                    border: "1px solid #353545",
-                    color: "#e8e8e8",
+                    background: "var(--tp-border, #252532)",
+                    border: "1px solid var(--tp-border-strong, #353545)",
+                    color: "var(--tp-text, #e8e8e8)",
                     fontSize: 11,
                     fontWeight: 600,
                     letterSpacing: "0.05em",
@@ -446,7 +446,7 @@ export default function Pairings() {
                 </button>
                 {lateError && (
                   <span
-                    style={{ color: "#ff6b6b", fontSize: 11, fontWeight: 600 }}
+                    style={{ color: "var(--tp-danger, #ff6b6b)", fontSize: 11, fontWeight: 600 }}
                   >
                     {lateError}
                   </span>

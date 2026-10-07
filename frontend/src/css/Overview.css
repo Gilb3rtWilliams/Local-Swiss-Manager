@@ -6,18 +6,18 @@
 @import url("https://fonts.googleapis.com/css2?family=Cascadia+Code:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap");
 
 .ov-root {
-  --bg-dark: #13131a;
-  --card-bg: rgba(22, 22, 31, 0.75);
-  --card-border: #252532;
-  --text-main: #e8e8e8;
-  --text-muted: #8a8a9a;
-  --accent-gold: #d4a853;
-  --accent-gold-hover: #e5b964;
-  --input-bg: #1a1a24;
-  --input-border: #2e2e3e;
-  --error-bg: rgba(244, 67, 54, 0.12);
-  --error-border: rgba(244, 67, 54, 0.35);
-  --error-text: #ff8a80;
+  --bg-dark: var(--tp-bg, #13131a);
+  --card-bg: color-mix(in srgb, var(--tp-card-solid, #191924) 75%, transparent);
+  --card-border: var(--tp-border, #252532);
+  --text-main: var(--tp-text, #e8e8e8);
+  --text-muted: var(--tp-muted, #8a8a9a);
+  --accent-gold: var(--tp-brass, #d4a853);
+  --accent-gold-hover: var(--tp-brass-hover, #e5b964);
+  --input-bg: var(--tp-surface, #1a1a24);
+  --input-border: var(--tp-input-border, #2e2e3e);
+  --error-bg: rgba(var(--tp-danger-rgb, 244, 67, 54), 0.12);
+  --error-border: rgba(var(--tp-danger-rgb, 244, 67, 54), 0.35);
+  --error-text: var(--tp-danger, #ff8a80);
 
   position: relative;
   isolation: isolate;
@@ -31,7 +31,7 @@
   font-family: "Georgia", "Times New Roman", serif;
   font-weight: 700;
   letter-spacing: -0.01em;
-  color: #ffffff;
+  color: var(--tp-heading, #ffffff);
 }
 
 /* ── Glass surfaces ───────────────────────────────────────────────────── */
@@ -40,14 +40,14 @@
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border: 1px solid var(--card-border);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--tp-shadow-color, #000) 35%, transparent);
   border-radius: 14px;
   padding: 24px 26px;
   margin-bottom: 22px;
 }
 
 .ov-root .card > h2 {
-  color: #ffffff;
+  color: var(--tp-heading, #ffffff);
   font-size: 1.2rem;
   margin: 0 0 6px;
 }
@@ -69,7 +69,7 @@
 .ov-root .section-header h2 {
   margin: 0;
   font-size: 1.25rem;
-  color: #ffffff;
+  color: var(--tp-heading, #ffffff);
 }
 
 /* ── Info bar ─────────────────────────────────────────────────────────── */
@@ -81,7 +81,7 @@
 }
 
 .ov-root .info-bar > div {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--tp-fg-rgb, 255, 255, 255), 0.03);
   border: 1px solid var(--card-border);
   border-radius: 10px;
   padding: 8px 14px;
@@ -121,7 +121,7 @@
 .ov-root textarea:focus {
   outline: none;
   border-color: var(--accent-gold);
-  box-shadow: 0 0 0 3px rgba(212, 168, 83, 0.18);
+  box-shadow: 0 0 0 3px rgba(var(--tp-accent-rgb, 212, 168, 83), 0.18);
 }
 
 .ov-root select {
@@ -129,8 +129,8 @@
 }
 
 .ov-root select option {
-  background-color: #1a1a24;
-  color: #e8e8e8;
+  background-color: var(--tp-surface, #1a1a24);
+  color: var(--tp-text, #e8e8e8);
 }
 
 .ov-root .field span:first-child {
@@ -181,9 +181,9 @@
 
 .ov-root .nt-toggle label.checked {
   background: var(--accent-gold);
-  color: #13131a;
+  color: var(--tp-on-accent, #13131a);
   font-weight: 700;
-  box-shadow: 0 2px 8px rgba(212, 168, 83, 0.25);
+  box-shadow: 0 2px 8px rgba(var(--tp-accent-rgb, 212, 168, 83), 0.25);
 }
 
 /* Checkbox grid */
@@ -225,7 +225,7 @@
   font-family: var(--font-mono, "Georgia", "Times New Roman", serif);
   font-size: 0.85rem;
   color: var(--accent-gold);
-  background: rgba(10, 10, 15, 0.6);
+  background: color-mix(in srgb, var(--tp-bg, #13131a) 60%, transparent);
   border: 1px solid var(--card-border);
   border-radius: 8px;
   padding: 8px 12px;
@@ -234,7 +234,7 @@
 /* ── Buttons ──────────────────────────────────────────────────────────── */
 .ov-root .btn-primary {
   background: var(--accent-gold);
-  color: #13131a;
+  color: var(--tp-on-accent, #13131a);
   border: 1px solid var(--accent-gold);
   font-weight: 600;
   padding: 9px 18px;
@@ -242,18 +242,18 @@
   cursor: pointer;
   transition: all 0.2s ease;
   font-family: "Georgia", "Times New Roman", serif;
-  box-shadow: 0 4px 12px rgba(212, 168, 83, 0.2);
+  box-shadow: 0 4px 12px rgba(var(--tp-accent-rgb, 212, 168, 83), 0.2);
 }
 
 .ov-root .btn-primary:hover:not(:disabled) {
   background: var(--accent-gold-hover);
   border-color: var(--accent-gold-hover);
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(212, 168, 83, 0.3);
+  box-shadow: 0 6px 16px rgba(var(--tp-accent-rgb, 212, 168, 83), 0.3);
 }
 
 .ov-root .btn-secondary {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--tp-fg-rgb, 255, 255, 255), 0.05);
   border: 1px solid var(--card-border);
   color: var(--text-main);
   font-weight: 500;
@@ -265,8 +265,8 @@
 }
 
 .ov-root .btn-secondary:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(212, 168, 83, 0.4);
+  background: rgba(var(--tp-fg-rgb, 255, 255, 255), 0.1);
+  border-color: rgba(var(--tp-accent-rgb, 212, 168, 83), 0.4);
   color: var(--accent-gold);
 }
 
@@ -321,7 +321,7 @@
 
 /* ── Roster editor & Player Title Updates ─────────────────────────────── */
 .ov-root .roster-editor {
-  background: rgba(15, 15, 22, 0.6);
+  background: color-mix(in srgb, var(--tp-bg, #13131a) 60%, transparent);
   border: 1px solid var(--card-border);
   border-radius: 12px;
   padding: 20px;
@@ -335,7 +335,7 @@
 }
 
 .ov-root .team-box {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(var(--tp-fg-rgb, 255, 255, 255), 0.02);
   border: 1px solid var(--card-border);
   border-radius: 10px;
   padding: 16px;
@@ -381,12 +381,12 @@
 .ov-root .finished-banner {
   background: linear-gradient(
     135deg,
-    rgba(212, 168, 83, 0.18) 0%,
-    rgba(212, 168, 83, 0.05) 100%
+    rgba(var(--tp-accent-rgb, 212, 168, 83), 0.18) 0%,
+    rgba(var(--tp-accent-rgb, 212, 168, 83), 0.05) 100%
   );
-  border: 1px solid rgba(212, 168, 83, 0.4);
+  border: 1px solid rgba(var(--tp-accent-rgb, 212, 168, 83), 0.4);
   text-align: center;
-  box-shadow: 0 0 25px rgba(212, 168, 83, 0.15);
+  box-shadow: 0 0 25px rgba(var(--tp-accent-rgb, 212, 168, 83), 0.15);
 }
 
 .ov-root .finished-banner h2 {

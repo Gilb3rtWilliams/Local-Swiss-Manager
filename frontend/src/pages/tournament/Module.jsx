@@ -379,9 +379,9 @@ function ScoreModal({
                     textTransform: "uppercase",
                     padding: "3px 7px",
                     borderRadius: 4,
-                    background: "#252532",
-                    color: "#d4a853",
-                    border: "1px solid #353545",
+                    background: "var(--tp-border, #252532)",
+                    color: "var(--tp-brass, #d4a853)",
+                    border: "1px solid var(--tp-border-strong, #353545)",
                   }}
                 >
                   Chess960 #{match.chess960.id}

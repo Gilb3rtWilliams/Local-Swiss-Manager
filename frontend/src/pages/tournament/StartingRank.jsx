@@ -1,7 +1,18 @@
 import { Link, useOutletContext } from "react-router-dom";
 
-export default function StartingRank() {
-  const { t } = useOutletContext();
+// Works in both places it's shown:
+//  - admin: rendered as a route inside TournamentLayout, so `t` comes from
+//    the outlet context and profile links live under /tournament/<id>.
+//  - public results: rendered with explicit props — `t` from the public
+//    payload and `basePath` ("/results/<token>") — same explicit-prop-wins,
+//    outlet-context-as-default pattern CrossTable/StandingsTable use.
+// useOutletContext() is always called unconditionally (it returns undefined
+// outside an <Outlet>, it doesn't throw).
+export default function StartingRank({ t: tProp, basePath } = {}) {
+  const outletContext = useOutletContext();
+  const t = tProp ?? outletContext?.t;
+  const resolvedBasePath = basePath ?? (t?.id ? `/tournament/${t.id}` : null);
+  if (!t) return null;
   const isTeam = t.format === "team";
 
   const livePlayers = t.players || [];
@@ -51,7 +62,7 @@ export default function StartingRank() {
         {title && (
           <span
             style={{
-              color: "#c25555",
+              color: "var(--tp-loss-soft, #c25555)",
               marginRight: "6px",
               fontWeight: 700,
             }}
@@ -63,11 +74,15 @@ export default function StartingRank() {
       </>
     );
 
-    if (!match?.id) return label;
+    // The public payload has no live roster to resolve against, so there the
+    // list entry's own id is the link target. On the admin side a player with
+    // no live match (removed since) deliberately stays unlinked.
+    const linkId = match?.id ?? (livePlayers.length === 0 ? p?.id : null);
+    if (!linkId || !resolvedBasePath) return label;
 
     return (
       <Link
-        to={`/tournament/${t.id}/player/${match.id}`}
+        to={`${resolvedBasePath}/player/${linkId}`}
         style={{ color: "inherit", textDecoration: "none" }}
         onMouseEnter={(e) =>
           (e.currentTarget.style.textDecoration = "underline")
@@ -86,7 +101,8 @@ export default function StartingRank() {
   // visible styling, since most club-level players won't have one.
   function FideId({ p }) {
     const fideId = resolvePlayer(p)?.fideId || p?.fideId;
-    if (!fideId) return <span style={{ color: "#4a4a55" }}>—</span>;
+    if (!fideId)
+      return <span style={{ color: "var(--tp-faint, #4a4a55)" }}>—</span>;
     return (
       <a
         href={`https://ratings.fide.com/profile/${fideId}`}
@@ -111,17 +127,17 @@ export default function StartingRank() {
         flexDirection: "column",
         gap: "24px",
         fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
-        color: "#e8e8e8",
+        color: "var(--tp-text, #e8e8e8)",
         background:
-          "radial-gradient(circle at 50% 0%, #1f1f2e 0%, transparent 70%)",
+          "radial-gradient(circle at 50% 0%, var(--tp-surface-2, #1f1f2e) 0%, transparent 70%)",
         padding: "8px 0",
         borderRadius: "16px",
       }}
     >
       <div
         style={{
-          background: "#13131a",
-          border: "1px solid #252532",
+          background: "var(--tp-bg, #13131a)",
+          border: "1px solid var(--tp-border, #252532)",
           borderRadius: 12,
           padding: "24px",
         }}
@@ -130,7 +146,7 @@ export default function StartingRank() {
         <div
           style={{
             marginBottom: 16,
-            borderBottom: "1px solid #252532",
+            borderBottom: "1px solid var(--tp-border, #252532)",
             paddingBottom: 12,
           }}
         >
@@ -140,7 +156,7 @@ export default function StartingRank() {
               fontWeight: 700,
               letterSpacing: "0.08em",
               textTransform: "uppercase",
-              color: "#e8e8e8",
+              color: "var(--tp-text, #e8e8e8)",
               margin: 0,
             }}
           >
@@ -150,7 +166,7 @@ export default function StartingRank() {
 
         <p
           style={{
-            color: "#8a8a9a",
+            color: "var(--tp-muted, #8a8a9a)",
             fontSize: 12,
             lineHeight: 1.5,
             marginTop: 0,
@@ -173,8 +189,8 @@ export default function StartingRank() {
                 <div
                   key={team.id || team.rank || team.name}
                   style={{
-                    background: "#181822",
-                    border: "1px solid #252532",
+                    background: "var(--tp-surface-2, #181822)",
+                    border: "1px solid var(--tp-border, #252532)",
                     borderRadius: 10,
                     overflow: "hidden",
                   }}
@@ -186,8 +202,8 @@ export default function StartingRank() {
                       alignItems: "center",
                       justifyContent: "space-between",
                       padding: "12px 18px",
-                      background: "#13131a",
-                      borderBottom: "1px solid #252532",
+                      background: "var(--tp-bg, #13131a)",
+                      borderBottom: "1px solid var(--tp-border, #252532)",
                     }}
                   >
                     <div
@@ -201,9 +217,9 @@ export default function StartingRank() {
                           textTransform: "uppercase",
                           padding: "4px 8px",
                           borderRadius: 4,
-                          background: "#252532",
-                          color: "#d4a853",
-                          border: "1px solid #353545",
+                          background: "var(--tp-border, #252532)",
+                          color: "var(--tp-brass, #d4a853)",
+                          border: "1px solid var(--tp-border-strong, #353545)",
                         }}
                       >
                         Seed {team.rank}
@@ -212,7 +228,7 @@ export default function StartingRank() {
                         style={{
                           fontWeight: 700,
                           fontSize: 15,
-                          color: "#e8e8e8",
+                          color: "var(--tp-text, #e8e8e8)",
                         }}
                       >
                         {teamName}
@@ -221,9 +237,9 @@ export default function StartingRank() {
                     <span
                       style={{
                         fontSize: 11,
-                        color: "#8a8a9a",
+                        color: "var(--tp-muted, #8a8a9a)",
                         background: "transparent",
-                        border: "1px solid #252532",
+                        border: "1px solid var(--tp-border, #252532)",
                         padding: "3px 8px",
                         borderRadius: 4,
                       }}
@@ -245,8 +261,8 @@ export default function StartingRank() {
                       <thead>
                         <tr
                           style={{
-                            borderBottom: "1px solid #252532",
-                            color: "#6b6b7b",
+                            borderBottom: "1px solid var(--tp-border, #252532)",
+                            color: "var(--tp-dim, #6b6b7b)",
                             fontSize: 10,
                             textTransform: "uppercase",
                             letterSpacing: "0.08em",
@@ -269,12 +285,15 @@ export default function StartingRank() {
                         {(team.players || []).map((p) => (
                           <tr
                             key={p.id || p.startingRank || p.name}
-                            style={{ borderBottom: "1px solid #1f1f2a" }}
+                            style={{
+                              borderBottom:
+                                "1px solid var(--tp-surface-2, #1f1f2a)",
+                            }}
                           >
                             <td
                               style={{
                                 padding: "10px 18px",
-                                color: "#6b6b7b",
+                                color: "var(--tp-dim, #6b6b7b)",
                               }}
                             >
                               {p.startingRank}
@@ -283,7 +302,7 @@ export default function StartingRank() {
                               style={{
                                 padding: "10px 18px",
                                 fontWeight: 600,
-                                color: "#e8e8e8",
+                                color: "var(--tp-text, #e8e8e8)",
                               }}
                             >
                               <PlayerName p={p} />
@@ -302,7 +321,7 @@ export default function StartingRank() {
                               style={{
                                 padding: "10px 18px",
                                 textAlign: "right",
-                                color: "#8a8a9a",
+                                color: "var(--tp-muted, #8a8a9a)",
                               }}
                             >
                               {p.rating}
@@ -320,8 +339,8 @@ export default function StartingRank() {
           /* Individual Players Starting Rank Table */
           <div
             style={{
-              background: "#181822",
-              border: "1px solid #252532",
+              background: "var(--tp-surface-2, #181822)",
+              border: "1px solid var(--tp-border, #252532)",
               borderRadius: 10,
               overflowX: "auto",
             }}
@@ -337,8 +356,8 @@ export default function StartingRank() {
               <thead>
                 <tr
                   style={{
-                    borderBottom: "1px solid #252532",
-                    color: "#6b6b7b",
+                    borderBottom: "1px solid var(--tp-border, #252532)",
+                    color: "var(--tp-dim, #6b6b7b)",
                     fontSize: 10,
                     textTransform: "uppercase",
                     letterSpacing: "0.08em",
@@ -356,15 +375,17 @@ export default function StartingRank() {
                 {(t.startingRankList || []).map((p) => (
                   <tr
                     key={p.id || p.rank || p.name}
-                    style={{ borderBottom: "1px solid #1f1f2a" }}
+                    style={{
+                      borderBottom: "1px solid var(--tp-surface-2, #1f1f2a)",
+                    }}
                   >
                     <td style={{ padding: "12px 18px" }}>
                       <span
                         style={{
                           fontSize: 10,
                           fontWeight: 700,
-                          color: "#d4a853",
-                          background: "#252532",
+                          color: "var(--tp-brass, #d4a853)",
+                          background: "var(--tp-border, #252532)",
                           padding: "3px 8px",
                           borderRadius: 4,
                         }}
@@ -376,7 +397,7 @@ export default function StartingRank() {
                       style={{
                         padding: "12px 18px",
                         fontWeight: 600,
-                        color: "#e8e8e8",
+                        color: "var(--tp-text, #e8e8e8)",
                       }}
                     >
                       <PlayerName p={p} />
@@ -395,7 +416,7 @@ export default function StartingRank() {
                       style={{
                         padding: "12px 18px",
                         textAlign: "right",
-                        color: "#8a8a9a",
+                        color: "var(--tp-muted, #8a8a9a)",
                       }}
                     >
                       {p.rating}

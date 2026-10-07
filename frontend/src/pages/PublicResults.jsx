@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import RoundHistory from "../components/RoundHistory.jsx";
 import BracketCanvas from "../components/BracketCanvas.jsx";
@@ -15,6 +15,11 @@ import {
 import StandingsTable from "../components/StandingsTable.jsx";
 import TeamStandingsTable from "../components/TeamStandingsTable.jsx";
 import CrossTable from "../components/CrossTable.jsx";
+import TournamentDetailsCard from "../components/TournamentDetailsCard.jsx";
+import StartingRank from "./tournament/StartingRank.jsx";
+import ThemePicker from "../components/ThemePicker.jsx";
+import { useTheme } from "../themes.js";
+import "../css/theme.css";
 import "../css/PublicResults.css";
 import "../css/Chess960.css";
 import "../css/CageMatch.css";
@@ -313,7 +318,7 @@ function PublicArmageddonPanel({ armageddon }) {
 // via the same PUBLIC_THEME_KEY/PUBLIC_PIECE_THEME_KEY — the two sections
 // never render for the same tournament, so there's no risk of them
 // colliding.
-function CageMatchSection({ cm, history, performance, extrasError }) {
+function CageMatchSection({ cm, history, performance, extrasError, view }) {
   const [theme, setTheme] = useState(() => {
     try {
       const saved = localStorage.getItem(PUBLIC_THEME_KEY);
@@ -352,9 +357,9 @@ function CageMatchSection({ cm, history, performance, extrasError }) {
   }
 
   const selectStyle = {
-    background: "#1a1a24",
-    border: "1px solid #353545",
-    color: "#e8e8e8",
+    background: "var(--tp-surface, #1a1a24)",
+    border: "1px solid var(--tp-border-strong, #353545)",
+    color: "var(--tp-text, #e8e8e8)",
     padding: "6px 12px",
     borderRadius: 6,
     fontFamily: "inherit",
@@ -365,245 +370,259 @@ function CageMatchSection({ cm, history, performance, extrasError }) {
 
   return (
     <div className="cm-root">
-      <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
-        <select
-          value={theme}
-          onChange={(e) => setTheme(e.target.value)}
-          aria-label="Board theme"
-          style={selectStyle}
-        >
-          {Object.entries(BOARD_THEMES).map(([key, th]) => (
-            <option key={key} value={key}>
-              {th.label}
-            </option>
-          ))}
-        </select>
-        <select
-          value={pieceTheme}
-          onChange={(e) => setPieceTheme(e.target.value)}
-          aria-label="Piece theme"
-          style={selectStyle}
-        >
-          {Object.entries(PIECE_THEMES).map(([key, pt]) => (
-            <option key={key} value={key}>
-              {pt.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      {view === "match" && (
+        <>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+            <select
+              value={theme}
+              onChange={(e) => setTheme(e.target.value)}
+              aria-label="Board theme"
+              style={selectStyle}
+            >
+              {Object.entries(BOARD_THEMES).map(([key, th]) => (
+                <option key={key} value={key}>
+                  {th.label}
+                </option>
+              ))}
+            </select>
+            <select
+              value={pieceTheme}
+              onChange={(e) => setPieceTheme(e.target.value)}
+              aria-label="Piece theme"
+              style={selectStyle}
+            >
+              {Object.entries(PIECE_THEMES).map(([key, pt]) => (
+                <option key={key} value={key}>
+                  {pt.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-      <div className="cm-scoreboard">
-        <div className="cm-competitor">
-          <PublicAvatar competitor={cm.competitors.A} />
-          <div className="cm-competitor-info">
-            <span className="cm-competitor-name">
-              {cm.competitors.A.title && (
-                <span className="cm-competitor-title-badge">
-                  {cm.competitors.A.title}
+          <div className="cm-scoreboard">
+            <div className="cm-competitor">
+              <PublicAvatar competitor={cm.competitors.A} />
+              <div className="cm-competitor-info">
+                <span className="cm-competitor-name">
+                  {cm.competitors.A.title && (
+                    <span className="cm-competitor-title-badge">
+                      {cm.competitors.A.title}
+                    </span>
+                  )}
+                  {cm.competitors.A.name}
                 </span>
-              )}
-              {cm.competitors.A.name}
-            </span>
-            <CompetitorMeta competitor={cm.competitors.A} />
-          </div>
-        </div>
-        <div className="cm-score">
-          <span className="cm-score-num">{cm.score.A}</span>
-          <span className="cm-score-sep">–</span>
-          <span className="cm-score-num">{cm.score.B}</span>
-        </div>
-        <div className="cm-competitor">
-          <PublicAvatar competitor={cm.competitors.B} />
-          <div className="cm-competitor-info">
-            <span className="cm-competitor-name">
-              {cm.competitors.B.title && (
-                <span className="cm-competitor-title-badge">
-                  {cm.competitors.B.title}
+                <CompetitorMeta competitor={cm.competitors.A} />
+              </div>
+            </div>
+            <div className="cm-score">
+              <span className="cm-score-num">{cm.score.A}</span>
+              <span className="cm-score-sep">–</span>
+              <span className="cm-score-num">{cm.score.B}</span>
+            </div>
+            <div className="cm-competitor">
+              <PublicAvatar competitor={cm.competitors.B} />
+              <div className="cm-competitor-info">
+                <span className="cm-competitor-name">
+                  {cm.competitors.B.title && (
+                    <span className="cm-competitor-title-badge">
+                      {cm.competitors.B.title}
+                    </span>
+                  )}
+                  {cm.competitors.B.name}
                 </span>
-              )}
-              {cm.competitors.B.name}
-            </span>
-            <CompetitorMeta competitor={cm.competitors.B} />
-          </div>
-        </div>
-      </div>
-
-      {cm.status === "finished" && (
-        <div className="cm-winner-banner">
-          🏆 {cm.winnerName} wins the match!
-        </div>
-      )}
-
-      {cm.tieAlert && !cm.tiebreak && (
-        <div className="cm-tie-banner">
-          <span>
-            Scores are level at {cm.tieAlert.scoreA}–{cm.tieAlert.scoreB} across
-            every section. The tiebreak mini-match will begin shortly.
-          </span>
-        </div>
-      )}
-
-      {cm.sections.map((section) => (
-        <div className="cm-section-card" key={section.id}>
-          <div className="cm-section-head">
-            <h3>{section.label}</h3>
-            <span className="cm-section-meta">
-              {section.variant === "chess960" ? "Chess960" : "Standard"}
-              {section.timeControl ? ` · ${section.timeControl}` : ""}
-            </span>
+                <CompetitorMeta competitor={cm.competitors.B} />
+              </div>
+            </div>
           </div>
 
-          <div className="cm-game-list">
-            {section.games.map((game) => {
-              const key = `${section.id}:${game.id}`;
-              const isOpen = openGameKey === key;
-              return (
-                <div className="cm-game-row-wrap" key={game.id}>
-                  <div className="cm-game-row cm-public-row">
+          {cm.status === "finished" && (
+            <div className="cm-winner-banner">
+              🏆 {cm.winnerName} wins the match!
+            </div>
+          )}
+
+          {cm.tieAlert && !cm.tiebreak && (
+            <div className="cm-tie-banner">
+              <span>
+                Scores are level at {cm.tieAlert.scoreA}–{cm.tieAlert.scoreB}{" "}
+                across every section. The tiebreak mini-match will begin
+                shortly.
+              </span>
+            </div>
+          )}
+
+          {cm.sections.map((section) => (
+            <div className="cm-section-card" key={section.id}>
+              <div className="cm-section-head">
+                <h3>{section.label}</h3>
+                <span className="cm-section-meta">
+                  {section.variant === "chess960" ? "Chess960" : "Standard"}
+                  {section.timeControl ? ` · ${section.timeControl}` : ""}
+                </span>
+              </div>
+
+              <div className="cm-game-list">
+                {section.games.map((game) => {
+                  const key = `${section.id}:${game.id}`;
+                  const isOpen = openGameKey === key;
+                  return (
+                    <div className="cm-game-row-wrap" key={game.id}>
+                      <div className="cm-game-row cm-public-row">
+                        <span className="cm-game-num">#{game.gameNum}</span>
+                        <span className="cm-game-players">
+                          {game.whiteName}{" "}
+                          <span className="cm-vs-tiny">vs</span>{" "}
+                          {game.blackName}
+                        </span>
+                        <span
+                          className={`cm-game-status cm-status-${game.status}`}
+                        >
+                          {game.result
+                            ? resultLabel(game.result)
+                            : game.status === "in_progress"
+                            ? "In progress"
+                            : "Pending"}
+                        </span>
+                        <button
+                          type="button"
+                          className="cm-toggle-board"
+                          onClick={() => toggleBoard(key)}
+                        >
+                          {isOpen ? "Hide Board" : "Open Board"}
+                        </button>
+                      </div>
+                      {isOpen && (
+                        <div className="cm-board-panel">
+                          <MoveEntryBoard
+                            game={game}
+                            disabled
+                            theme={theme}
+                            pieceTheme={pieceTheme}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          {cm.tiebreak && (
+            <div className="cm-section-card cm-tiebreak-card">
+              <div className="cm-section-head">
+                <h3>Tiebreak — Mini-Match (first to 2.5 points)</h3>
+                <span className="cm-section-meta">
+                  {cm.tiebreak.miniMatch.score.A} –{" "}
+                  {cm.tiebreak.miniMatch.score.B}
+                </span>
+              </div>
+
+              <div className="cm-game-list">
+                {cm.tiebreak.miniMatch.games.map((game) => (
+                  <div className="cm-game-row" key={game.id}>
                     <span className="cm-game-num">#{game.gameNum}</span>
                     <span className="cm-game-players">
                       {game.whiteName} <span className="cm-vs-tiny">vs</span>{" "}
                       {game.blackName}
                     </span>
                     <span className={`cm-game-status cm-status-${game.status}`}>
-                      {game.result
-                        ? resultLabel(game.result)
-                        : game.status === "in_progress"
+                      {game.result ? resultLabel(game.result) : "Pending"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {cm.tiebreak.status === "armageddon" &&
+                cm.tiebreak.armageddon && (
+                  <PublicArmageddonPanel armageddon={cm.tiebreak.armageddon} />
+                )}
+            </div>
+          )}
+        </>
+      )}
+
+      {view === "history" && (
+        <div className="cm-section-card">
+          <div className="cm-section-head">
+            <h3>Game History</h3>
+          </div>
+          {extrasError ? (
+            <p className="cm-error">{extrasError}</p>
+          ) : !history ? (
+            <p className="cm-hint">Loading…</p>
+          ) : history.length === 0 ? (
+            <p className="cm-hint">No games played yet.</p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Section</th>
+                  <th>#</th>
+                  <th>White</th>
+                  <th>Black</th>
+                  <th>Result</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.map((g) => (
+                  <tr key={g.id}>
+                    <td>{g.sectionLabel}</td>
+                    <td>{g.gameNum}</td>
+                    <td>{g.whiteName}</td>
+                    <td>{g.blackName}</td>
+                    <td>
+                      {g.result
+                        ? resultLabel(g.result)
+                        : g.status === "in_progress"
                         ? "In progress"
                         : "Pending"}
-                    </span>
-                    <button
-                      type="button"
-                      className="cm-toggle-board"
-                      onClick={() => toggleBoard(key)}
-                    >
-                      {isOpen ? "Hide Board" : "Open Board"}
-                    </button>
-                  </div>
-                  {isOpen && (
-                    <div className="cm-board-panel">
-                      <MoveEntryBoard
-                        game={game}
-                        disabled
-                        theme={theme}
-                        pieceTheme={pieceTheme}
-                      />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ))}
-
-      {cm.tiebreak && (
-        <div className="cm-section-card cm-tiebreak-card">
-          <div className="cm-section-head">
-            <h3>Tiebreak — Mini-Match (first to 2.5 points)</h3>
-            <span className="cm-section-meta">
-              {cm.tiebreak.miniMatch.score.A} – {cm.tiebreak.miniMatch.score.B}
-            </span>
-          </div>
-
-          <div className="cm-game-list">
-            {cm.tiebreak.miniMatch.games.map((game) => (
-              <div className="cm-game-row" key={game.id}>
-                <span className="cm-game-num">#{game.gameNum}</span>
-                <span className="cm-game-players">
-                  {game.whiteName} <span className="cm-vs-tiny">vs</span>{" "}
-                  {game.blackName}
-                </span>
-                <span className={`cm-game-status cm-status-${game.status}`}>
-                  {game.result ? resultLabel(game.result) : "Pending"}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          {cm.tiebreak.status === "armageddon" && cm.tiebreak.armageddon && (
-            <PublicArmageddonPanel armageddon={cm.tiebreak.armageddon} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
         </div>
       )}
 
-      <div className="cm-section-card">
-        <div className="cm-section-head">
-          <h3>Game History</h3>
-        </div>
-        {extrasError ? (
-          <p className="cm-error">{extrasError}</p>
-        ) : !history ? (
-          <p className="cm-hint">Loading…</p>
-        ) : history.length === 0 ? (
-          <p className="cm-hint">No games played yet.</p>
-        ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Section</th>
-                <th>#</th>
-                <th>White</th>
-                <th>Black</th>
-                <th>Result</th>
-              </tr>
-            </thead>
-            <tbody>
-              {history.map((g) => (
-                <tr key={g.id}>
-                  <td>{g.sectionLabel}</td>
-                  <td>{g.gameNum}</td>
-                  <td>{g.whiteName}</td>
-                  <td>{g.blackName}</td>
-                  <td>
-                    {g.result
-                      ? resultLabel(g.result)
-                      : g.status === "in_progress"
-                      ? "In progress"
-                      : "Pending"}
-                  </td>
+      {view === "performance" && (
+        <div className="cm-section-card">
+          <div className="cm-section-head">
+            <h3>Section Performance</h3>
+          </div>
+          {extrasError ? (
+            <p className="cm-error">{extrasError}</p>
+          ) : !performance ? (
+            <p className="cm-hint">Loading…</p>
+          ) : performance.length === 0 ? (
+            <p className="cm-hint">No sections yet.</p>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>Section</th>
+                  <th>{cm.competitors.A.name}</th>
+                  <th>{cm.competitors.B.name}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      <div className="cm-section-card">
-        <div className="cm-section-head">
-          <h3>Section Performance</h3>
+              </thead>
+              <tbody>
+                {performance.map((s) => (
+                  <tr key={s.sectionId}>
+                    <td>{s.label}</td>
+                    <td>
+                      {s.A.wins}-{s.A.losses}-{s.A.draws} ({s.A.points} pts)
+                    </td>
+                    <td>
+                      {s.B.wins}-{s.B.losses}-{s.B.draws} ({s.B.points} pts)
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
-        {extrasError ? (
-          <p className="cm-error">{extrasError}</p>
-        ) : !performance ? (
-          <p className="cm-hint">Loading…</p>
-        ) : performance.length === 0 ? (
-          <p className="cm-hint">No sections yet.</p>
-        ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Section</th>
-                <th>{cm.competitors.A.name}</th>
-                <th>{cm.competitors.B.name}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {performance.map((s) => (
-                <tr key={s.sectionId}>
-                  <td>{s.label}</td>
-                  <td>
-                    {s.A.wins}-{s.A.losses}-{s.A.draws} ({s.A.points} pts)
-                  </td>
-                  <td>
-                    {s.B.wins}-{s.B.losses}-{s.B.draws} ({s.B.points} pts)
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      )}
     </div>
   );
 }
@@ -740,6 +759,13 @@ function CurrentRoundPreview({ format, pairings }) {
 
 export default function PublicResults() {
   const { token } = useParams();
+  const [theme, setTheme] = useTheme();
+
+  // Which view the sidebar is showing. Kept in the URL (?view=…) so a refresh
+  // or a shared link opens the same view.
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Selected board chip in "Board Rankings" (a board number, or "all").
+  const [boardSel, setBoardSel] = useState(null);
 
   const [data, setData] = useState(null);
   const [loadError, setLoadError] = useState("");
@@ -864,12 +890,7 @@ export default function PublicResults() {
 
   if (loadError) {
     return (
-      <div className="pv-root">
-        <div className="pv-bg" aria-hidden="true">
-          <div className="pv-bg-scene" />
-          <div className="pv-bg-scene" />
-          <div className="pv-bg-scene" />
-        </div>
+      <div className="pv-root tp-theme" data-theme={theme}>
         <div className="pv-shell">
           <div className="pv-closed">
             <h2>Link not found</h2>
@@ -889,12 +910,7 @@ export default function PublicResults() {
 
   if (!data) {
     return (
-      <div className="pv-root">
-        <div className="pv-bg" aria-hidden="true">
-          <div className="pv-bg-scene" />
-          <div className="pv-bg-scene" />
-          <div className="pv-bg-scene" />
-        </div>
+      <div className="pv-root tp-theme" data-theme={theme}>
         <div className="pv-shell">
           <p className="pv-meta">Loading…</p>
         </div>
@@ -908,272 +924,449 @@ export default function PublicResults() {
     data.system === "single_elimination" ||
     data.system === "double_elimination";
   const hasAnyRounds = (data.rounds?.length ?? 0) > 0 || !!data.currentPairings;
+  const hasStandings = !isMatch && (data.standings?.length ?? 0) > 0;
+  const boardRankings = data.boardRankings || [];
+
+  // ── Sidebar sections ──────────────────────────────────────────────────
+  // Which views exist depends on the kind of tournament. A section marked
+  // `disabled` stays visible (so spectators know it exists) but can't be
+  // opened for the round currently being viewed.
+  const sections = [];
+  if (isMatch) {
+    sections.push({ id: "match", label: "Match" });
+    sections.push({ id: "history", label: "Game History" });
+    sections.push({ id: "performance", label: "Section Performance" });
+  } else {
+    // Tournament details + starting rank — what the organizer sees on the
+    // admin "Tournament" and "Starting Rank" tabs, in one read-only view.
+    // Not offered for cage matches: they have no rounds or seeding, so the
+    // details card's format/rounds fields don't apply to them.
+    sections.push({ id: "overview", label: "Overview" });
+    sections.push(
+      isElimination
+        ? { id: "bracket", label: "Bracket" }
+        : { id: "pairings", label: "Pairings" },
+    );
+    if (data.chess960 && !isElimination) {
+      sections.push({ id: "chess960", label: "Chess960" });
+    }
+    if (hasStandings) {
+      sections.push({
+        id: "standings",
+        label: isTeam ? "Team Standings" : "Standings",
+      });
+      sections.push({ id: "cross-table", label: "Cross Table" });
+      if (isTeam) {
+        sections.push({ id: "board-standings", label: "Board Standings" });
+        if (boardRankings.length > 0) {
+          sections.push({
+            id: "board-rankings",
+            label: "Board Rankings",
+            disabled: isViewingPastRound,
+            disabledReason: "Only available for the latest round",
+          });
+        }
+      }
+    }
+  }
+
+  // Default view: the Overview (tournament details + starting rank) for
+  // every tournament that has one; cage matches fall back to their first
+  // section. A URL naming a view that doesn't exist here (or that's
+  // unavailable for the round being viewed) falls back to the default.
+  const requestedId = searchParams.get("view");
+  const defaultSection =
+    sections.find((sec) => sec.id === "overview") ||
+    (data.status === "finished" &&
+      sections.find((sec) => sec.id === "standings")) ||
+    sections[0];
+  const activeSection =
+    sections.find((sec) => sec.id === requestedId && !sec.disabled) ||
+    defaultSection;
+  const activeId = activeSection.id;
+
+  const activeBoard =
+    boardSel === "all"
+      ? "all"
+      : boardRankings.some((b) => b.boardNum === boardSel)
+      ? boardSel
+      : boardRankings[0]?.boardNum ?? "all";
+
+  function selectSection(id) {
+    const next = new URLSearchParams(searchParams);
+    next.set("view", id);
+    setSearchParams(next, { replace: true });
+  }
+
+  // Round picker applies to everything except cage matches (no rounds) and
+  // brackets (no round-by-round pairings).
+  const showRoundPicker =
+    !isMatch && !isElimination && hasAnyRounds && activeId !== "overview";
+
+  const displayStandings = isViewingPastRound
+    ? standingsSnapshot?.standings
+    : data.standings;
+  const displayTeamStandings = isViewingPastRound
+    ? standingsSnapshot?.teamStandings
+    : data.teamStandings;
+  const displayCrossTable = isViewingPastRound
+    ? standingsSnapshot?.crossTable
+    : data.crossTable;
+
+  const pastBadge = isViewingPastRound ? (
+    <span className="pv-status" style={{ marginLeft: 10 }}>
+      as of Round {selectedRound}
+    </span>
+  ) : null;
+
+  const basePath = `/results/${token}`;
+  const needsStandingsData = [
+    "standings",
+    "cross-table",
+    "board-standings",
+    "board-rankings",
+  ].includes(activeId);
+
+  // The standings-backed views all wait on the same past-round fetch.
+  let standingsGate = null;
+  if (needsStandingsData && isViewingPastRound) {
+    if (standingsError && !standingsLoading) {
+      standingsGate = <p className="pv-empty">{standingsError}</p>;
+    } else if (!standingsTablesReady) {
+      standingsGate = (
+        <p className="pv-empty">
+          Loading standings after Round {selectedRound}…
+        </p>
+      );
+    }
+  }
+
+  function renderPane() {
+    switch (activeId) {
+      case "overview":
+        return (
+          <>
+            <TournamentDetailsCard t={data} />
+            <StartingRank t={data} basePath={basePath} />
+          </>
+        );
+
+      case "match":
+      case "history":
+      case "performance":
+        return data.cageMatch ? (
+          <CageMatchSection
+            cm={data.cageMatch}
+            history={cageHistory}
+            performance={cagePerformance}
+            extrasError={cageExtrasError}
+            view={activeId}
+          />
+        ) : (
+          <Panel title="Match">
+            <p className="pv-empty">
+              This match type isn't supported for public viewing yet.
+            </p>
+          </Panel>
+        );
+
+      case "bracket":
+        return data.bracket ? (
+          <div className="bx-page">
+            <BracketCanvas
+              bracket={data.bracket}
+              isDouble={data.system === "double_elimination"}
+              format={data.format}
+              onOpenMatch={() => {}}
+            />
+          </div>
+        ) : (
+          <Panel title="Bracket">
+            <p className="pv-empty">The bracket hasn't been drawn yet.</p>
+          </Panel>
+        );
+
+      case "chess960":
+        return <Chess960Section data={data} />;
+
+      case "pairings":
+        return hasAnyRounds ? (
+          <Panel
+            title="Pairings"
+            badge={
+              <span className="pv-status" style={{ marginLeft: 10 }}>
+                Round{" "}
+                {selectedRound === "current"
+                  ? data.currentRound
+                  : selectedRound}
+              </span>
+            }
+          >
+            {selectedRound === "current" ? (
+              <CurrentRoundPreview
+                format={data.format}
+                pairings={data.currentPairings}
+              />
+            ) : (
+              <RoundHistory
+                format={data.format}
+                round={data.rounds.find((r) => r.round === selectedRound)}
+              />
+            )}
+          </Panel>
+        ) : (
+          <Panel title="Pairings">
+            <p className="pv-empty">
+              Pairings will appear here once Round 1 is generated.
+            </p>
+          </Panel>
+        );
+
+      case "standings":
+        return (
+          <Panel
+            title={isTeam ? "Team Standings" : "Standings"}
+            badge={pastBadge}
+          >
+            {standingsGate ||
+              (isTeam && displayTeamStandings ? (
+                <TeamStandingsTable
+                  teamStandings={displayTeamStandings}
+                  basePath={basePath}
+                />
+              ) : (
+                <StandingsTable
+                  standings={displayStandings}
+                  basePath={basePath}
+                />
+              ))}
+          </Panel>
+        );
+
+      case "cross-table":
+        return (
+          <Panel title="Cross Table" badge={pastBadge}>
+            {standingsGate || (
+              <CrossTable
+                crossTable={displayCrossTable}
+                basePath={basePath}
+                isTeam={isTeam}
+              />
+            )}
+          </Panel>
+        );
+
+      case "board-standings":
+        return (
+          <Panel title="Individual Board Standings" badge={pastBadge}>
+            {standingsGate || (
+              <StandingsTable
+                standings={displayStandings}
+                showTiebreaks={false}
+                showTeam
+                basePath={basePath}
+              />
+            )}
+          </Panel>
+        );
+
+      case "board-rankings":
+        // Every player ranked against only the others who played the same
+        // board number, across all teams. Live view only: boardRankings
+        // isn't carried by the past-round snapshot endpoint.
+        return (
+          <Panel
+            title="Board Rankings"
+            note="Every player ranked against everyone else who played the same board number, across all teams."
+          >
+            <div className="pv-chips" role="tablist" aria-label="Board">
+              {boardRankings.map((board) => (
+                <button
+                  key={board.boardNum}
+                  type="button"
+                  role="tab"
+                  aria-selected={board.boardNum === activeBoard}
+                  className={`pv-chip${
+                    board.boardNum === activeBoard ? " is-active" : ""
+                  }`}
+                  onClick={() => setBoardSel(board.boardNum)}
+                >
+                  Board {board.boardNum}
+                </button>
+              ))}
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeBoard === "all"}
+                className={`pv-chip${
+                  activeBoard === "all" ? " is-active" : ""
+                }`}
+                onClick={() => setBoardSel("all")}
+              >
+                All boards
+              </button>
+            </div>
+            {boardRankings
+              .filter(
+                (board) =>
+                  activeBoard === "all" || board.boardNum === activeBoard,
+              )
+              .map((board, i) => (
+                <div
+                  key={board.boardNum}
+                  style={{ marginTop: i === 0 ? 0 : 28 }}
+                >
+                  {activeBoard === "all" && (
+                    <h3 className="pv-subhead">Board {board.boardNum}</h3>
+                  )}
+                  <StandingsTable
+                    standings={board.players}
+                    showTiebreaks={false}
+                    showTeam
+                    basePath={basePath}
+                  />
+                </div>
+              ))}
+          </Panel>
+        );
+
+      default:
+        return null;
+    }
+  }
 
   return (
-    <div className="pv-root">
-      <div className="pv-bg" aria-hidden="true">
-        <div className="pv-bg-scene" />
-        <div className="pv-bg-scene" />
-        <div className="pv-bg-scene" />
-      </div>
-
+    <div className="pv-root tp-theme" data-theme={theme}>
       <div className="pv-shell">
-        <Link to="/tournaments" className="pv-back-link">
-          ← Back to Past &amp; Live Tournaments
-        </Link>
-        <span className="pv-eyebrow">
-          {isMatch ? "Cage Match" : SYSTEM_LABEL[data.system] || data.system} ·
-          Live Results
-        </span>
-        <h1 className="pv-title">{data.name}</h1>
-        <p className="pv-meta">
-          {data.federation && <span>{data.federation}</span>}
-          {data.timeControl && <span>{data.timeControl}</span>}
-          {data.dateFrom && (
-            <span>
-              {data.dateFrom}
-              {data.dateTo && data.dateTo !== data.dateFrom
-                ? ` – ${data.dateTo}`
-                : ""}
-            </span>
-          )}
-          {!isMatch &&
-            (isElimination ? (
-              data.bracket && (
-                <span>
-                  Bracket size: {data.bracket.size}
-                  {data.bracket.champion ? "" : ` · Round ${data.currentRound}`}
-                </span>
-              )
-            ) : (
-              <span>
-                Round {data.currentRound} / {data.totalRounds}
-              </span>
-            ))}
-          <span className={`pv-status pv-status-${data.status}`}>
-            {data.status}
-          </span>
-        </p>
+        <div className="pv-topbar">
+          <Link to="/tournaments" className="pv-back-link">
+            ← Back to Past &amp; Live Tournaments
+          </Link>
+          <ThemePicker theme={theme} onChange={setTheme} />
+        </div>
 
-        {!isMatch && data.status === "finished" && data.winner && (
-          <div className="pv-champion-banner">
-            🏆 <strong>{data.winner}</strong> won this tournament
+        {/* Header — tournament identity. The full details live in the
+            Overview view below. */}
+        <header className="pv-header">
+          <span className="pv-eyebrow">
+            {isMatch ? "Cage Match" : SYSTEM_LABEL[data.system] || data.system}{" "}
+            · Live Results
+          </span>
+          <h1 className="pv-title">{data.name}</h1>
+          <p className="pv-meta">
+            {data.federation && <span>{data.federation}</span>}
+            {data.timeControl && <span>{data.timeControl}</span>}
+            {data.dateFrom && (
+              <span>
+                {data.dateFrom}
+                {data.dateTo && data.dateTo !== data.dateFrom
+                  ? ` – ${data.dateTo}`
+                  : ""}
+              </span>
+            )}
+            {!isMatch &&
+              (isElimination ? (
+                data.bracket && (
+                  <span>
+                    Bracket size: {data.bracket.size}
+                    {data.bracket.champion
+                      ? ""
+                      : ` · Round ${data.currentRound}`}
+                  </span>
+                )
+              ) : (
+                <span>
+                  Round {data.currentRound} / {data.totalRounds}
+                </span>
+              ))}
+            <span className={`pv-status pv-status-${data.status}`}>
+              {data.status}
+            </span>
+          </p>
+
+          {!isMatch && data.status === "finished" && data.winner && (
+            <div className="pv-champion-banner">
+              🏆 <strong>{data.winner}</strong> won this tournament
+            </div>
+          )}
+        </header>
+
+        {showRoundPicker && (
+          <div className="pv-toolbar">
+            <span className="pv-toolbar-label">Viewing</span>
+            <div className="pv-round-picker">
+              {data.currentPairings && (
+                <button
+                  type="button"
+                  className={`pv-round-pill${
+                    selectedRound === "current" ? " active" : ""
+                  }`}
+                  onClick={() => setSelectedRound("current")}
+                >
+                  <span className="pv-round-pill-label">Round</span>
+                  <span className="pv-round-pill-number">
+                    {data.currentRound}
+                  </span>
+                  <span className="pv-round-pill-tag">Live</span>
+                </button>
+              )}
+              {[...data.rounds].reverse().map((r) => (
+                <button
+                  key={r.round}
+                  type="button"
+                  className={`pv-round-pill${
+                    selectedRound === r.round ? " active" : ""
+                  }`}
+                  onClick={() => setSelectedRound(r.round)}
+                >
+                  <span className="pv-round-pill-label">Round</span>
+                  <span className="pv-round-pill-number">{r.round}</span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
-        {data.chess960 && !isElimination && <Chess960Section data={data} />}
+        <div className="pv-layout">
+          <nav className="pv-nav" aria-label="Results views">
+            {sections.map((sec) => (
+              <button
+                key={sec.id}
+                type="button"
+                disabled={sec.disabled}
+                title={sec.disabled ? sec.disabledReason : undefined}
+                aria-current={sec.id === activeId ? "page" : undefined}
+                className={`pv-nav-item${
+                  sec.id === activeId ? " is-active" : ""
+                }`}
+                onClick={() => selectSection(sec.id)}
+              >
+                <span>{sec.label}</span>
+                {sec.disabled && <span className="pv-nav-tag">Live</span>}
+              </button>
+            ))}
+          </nav>
 
-        {isMatch &&
-          (data.cageMatch ? (
-            <CageMatchSection
-              cm={data.cageMatch}
-              history={cageHistory}
-              performance={cagePerformance}
-              extrasError={cageExtrasError}
-            />
-          ) : (
-            <div className="pv-card">
-              <p className="pv-empty">
-                This match type isn't supported for public viewing yet.
-              </p>
-            </div>
-          ))}
-
-        {!isMatch &&
-          (isElimination ? (
-            data.bracket ? (
-              <div className="bx-page">
-                <BracketCanvas
-                  bracket={data.bracket}
-                  isDouble={data.system === "double_elimination"}
-                  format={data.format}
-                  onOpenMatch={() => {}}
-                />
-              </div>
-            ) : (
-              <div className="pv-card">
-                <p className="pv-empty">The bracket hasn't been drawn yet.</p>
-              </div>
-            )
-          ) : hasAnyRounds ? (
-            <div className="pv-card">
-              <div className="pv-round-picker">
-                {data.currentPairings && (
-                  <button
-                    type="button"
-                    className={`pv-round-pill${
-                      selectedRound === "current" ? " active" : ""
-                    }`}
-                    onClick={() => setSelectedRound("current")}
-                  >
-                    <span className="pv-round-pill-label">Round</span>
-                    <span className="pv-round-pill-number">
-                      {data.currentRound}
-                    </span>
-                    <span className="pv-round-pill-tag">Live</span>
-                  </button>
-                )}
-                {[...data.rounds].reverse().map((r) => (
-                  <button
-                    key={r.round}
-                    type="button"
-                    className={`pv-round-pill${
-                      selectedRound === r.round ? " active" : ""
-                    }`}
-                    onClick={() => setSelectedRound(r.round)}
-                  >
-                    <span className="pv-round-pill-label">Round</span>
-                    <span className="pv-round-pill-number">{r.round}</span>
-                  </button>
-                ))}
-              </div>
-
-              {selectedRound === "current" ? (
-                <CurrentRoundPreview
-                  format={data.format}
-                  pairings={data.currentPairings}
-                />
-              ) : (
-                <RoundHistory
-                  format={data.format}
-                  round={data.rounds.find((r) => r.round === selectedRound)}
-                />
-              )}
-            </div>
-          ) : (
-            <div className="pv-card">
-              <p className="pv-empty">
-                Pairings will appear here once Round 1 is generated.
-              </p>
-            </div>
-          ))}
-
-        {!isMatch &&
-          isViewingPastRound &&
-          !standingsError &&
-          !standingsMatchSelection && (
-            <div className="pv-card">
-              <p className="pv-empty">
-                Loading standings after Round {selectedRound}…
-              </p>
-            </div>
-          )}
-
-        {!isMatch &&
-          isViewingPastRound &&
-          !standingsLoading &&
-          standingsError && (
-            <div className="pv-card">
-              <p className="pv-empty">{standingsError}</p>
-            </div>
-          )}
-
-        {!isMatch &&
-          (data.standings?.length ?? 0) > 0 &&
-          standingsTablesReady && (
-            <>
-              <div className="pv-two-col">
-                <div className="pv-card">
-                  <h2>
-                    Standings
-                    {isViewingPastRound && (
-                      <span className="pv-status" style={{ marginLeft: 10 }}>
-                        as of Round {selectedRound}
-                      </span>
-                    )}
-                  </h2>
-                  {isTeam &&
-                  (isViewingPastRound
-                    ? standingsSnapshot?.teamStandings
-                    : data.teamStandings) ? (
-                    <TeamStandingsTable
-                      teamStandings={
-                        isViewingPastRound
-                          ? standingsSnapshot.teamStandings
-                          : data.teamStandings
-                      }
-                      basePath={`/results/${token}`}
-                    />
-                  ) : (
-                    <StandingsTable
-                      standings={
-                        isViewingPastRound
-                          ? standingsSnapshot?.standings
-                          : data.standings
-                      }
-                      basePath={`/results/${token}`}
-                    />
-                  )}
-                </div>
-                <div className="pv-card pv-cross-card">
-                  <h2>Cross Table</h2>
-                  <CrossTable
-                    crossTable={
-                      isViewingPastRound
-                        ? standingsSnapshot?.crossTable
-                        : data.crossTable
-                    }
-                    basePath={`/results/${token}`}
-                    isTeam={isTeam}
-                  />
-                </div>
-              </div>
-
-              {isTeam && (
-                <div className="pv-card">
-                  <h2>Individual Board Standings</h2>
-                  <StandingsTable
-                    standings={
-                      isViewingPastRound
-                        ? standingsSnapshot?.standings
-                        : data.standings
-                    }
-                    showTiebreaks={false}
-                    showTeam
-                    basePath={`/results/${token}`}
-                  />
-                </div>
-              )}
-
-              {/* Individual Board Performance — every player ranked against
-                  only the others who played the same board number, across
-                  all teams. Different from "Individual Board Standings"
-                  above, which mixes every board into one flat list. Live
-                  view only: boardRankings isn't carried by the past-round
-                  snapshot endpoint, same as Standings.jsx's admin-side
-                  equivalent. */}
-              {isTeam &&
-                !isViewingPastRound &&
-                (data.boardRankings || []).length > 0 && (
-                  <>
-                    <p
-                      style={{
-                        margin: "4px 0 0",
-                        color: "var(--pv-muted)",
-                        fontSize: "0.78rem",
-                      }}
-                    >
-                      Every player ranked against everyone else who played the
-                      same board number, across all teams.
-                    </p>
-                    {data.boardRankings.map((board) => (
-                      <div key={board.boardNum} className="pv-card">
-                        <h2>Board {board.boardNum}</h2>
-                        <StandingsTable
-                          standings={board.players}
-                          showTiebreaks={false}
-                          showTeam
-                          basePath={`/results/${token}`}
-                        />
-                      </div>
-                    ))}
-                  </>
-                )}
-            </>
-          )}
+          <main className="pv-pane">{renderPane()}</main>
+        </div>
 
         <p className="pv-footnote">Read-only view — shared by the organizer.</p>
       </div>
     </div>
+  );
+}
+
+// One titled card in the content pane. `badge` is the optional round pill
+// shown next to the title; `note` is a one-line explainer under it.
+function Panel({ title, badge, note, children }) {
+  return (
+    <section className="pv-card">
+      <h2>
+        {title}
+        {badge}
+      </h2>
+      {note && <p className="pv-note-lead">{note}</p>}
+      {children}
+    </section>
   );
 }

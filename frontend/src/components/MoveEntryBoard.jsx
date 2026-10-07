@@ -291,7 +291,7 @@ export default function MoveEntryBoard({
           style={{
             textAlign: "center",
             fontSize: 11,
-            color: "#8a8a9a",
+            color: "var(--tp-muted, #8a8a9a)",
             marginBottom: 8,
             letterSpacing: "0.08em",
           }}
@@ -399,9 +399,9 @@ export default function MoveEntryBoard({
             disabled={viewIndex === 0}
             aria-label="First move"
             style={{
-              background: "#1a1a24",
-              border: "1px solid #353545",
-              color: viewIndex === 0 ? "#4a4a5a" : "#e8e8e8",
+              background: "var(--tp-surface, #1a1a24)",
+              border: "1px solid var(--tp-border-strong, #353545)",
+              color: viewIndex === 0 ? "var(--tp-faint, #4a4a5a)" : "var(--tp-text, #e8e8e8)",
               borderRadius: 6,
               padding: "4px 8px",
               cursor: viewIndex === 0 ? "default" : "pointer",
@@ -417,9 +417,9 @@ export default function MoveEntryBoard({
             disabled={viewIndex === 0}
             aria-label="Previous move"
             style={{
-              background: "#1a1a24",
-              border: "1px solid #353545",
-              color: viewIndex === 0 ? "#4a4a5a" : "#e8e8e8",
+              background: "var(--tp-surface, #1a1a24)",
+              border: "1px solid var(--tp-border-strong, #353545)",
+              color: viewIndex === 0 ? "var(--tp-faint, #4a4a5a)" : "var(--tp-text, #e8e8e8)",
               borderRadius: 6,
               padding: "4px 8px",
               cursor: viewIndex === 0 ? "default" : "pointer",
@@ -432,7 +432,7 @@ export default function MoveEntryBoard({
           <span
             style={{
               fontSize: 11,
-              color: "#8a8a9a",
+              color: "var(--tp-muted, #8a8a9a)",
               minWidth: 92,
               textAlign: "center",
             }}
@@ -447,9 +447,9 @@ export default function MoveEntryBoard({
             disabled={isLatest}
             aria-label="Next move"
             style={{
-              background: "#1a1a24",
-              border: "1px solid #353545",
-              color: isLatest ? "#4a4a5a" : "#e8e8e8",
+              background: "var(--tp-surface, #1a1a24)",
+              border: "1px solid var(--tp-border-strong, #353545)",
+              color: isLatest ? "var(--tp-faint, #4a4a5a)" : "var(--tp-text, #e8e8e8)",
               borderRadius: 6,
               padding: "4px 8px",
               cursor: isLatest ? "default" : "pointer",
@@ -465,9 +465,9 @@ export default function MoveEntryBoard({
             disabled={isLatest}
             aria-label="Latest move"
             style={{
-              background: "#1a1a24",
-              border: "1px solid #353545",
-              color: isLatest ? "#4a4a5a" : "#e8e8e8",
+              background: "var(--tp-surface, #1a1a24)",
+              border: "1px solid var(--tp-border-strong, #353545)",
+              color: isLatest ? "var(--tp-faint, #4a4a5a)" : "var(--tp-text, #e8e8e8)",
               borderRadius: 6,
               padding: "4px 8px",
               cursor: isLatest ? "default" : "pointer",
@@ -526,9 +526,9 @@ export default function MoveEntryBoard({
             type="button"
             onClick={() => downloadPgn(game)}
             style={{
-              background: "#1a1a24",
-              border: "1px solid #353545",
-              color: "#e8e8e8",
+              background: "var(--tp-surface, #1a1a24)",
+              border: "1px solid var(--tp-border-strong, #353545)",
+              color: "var(--tp-text, #e8e8e8)",
               borderRadius: 6,
               padding: "4px 10px",
               cursor: "pointer",

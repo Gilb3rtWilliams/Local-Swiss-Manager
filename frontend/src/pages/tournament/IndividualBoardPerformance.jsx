@@ -18,12 +18,12 @@ export default function IndividualBoardPerformance() {
     return (
       <div
         style={{
-          background: "#13131a",
-          border: "1px solid #252532",
+          background: "var(--tp-bg, #13131a)",
+          border: "1px solid var(--tp-border, #252532)",
           borderRadius: 12,
           padding: 40,
           textAlign: "center",
-          color: "#8a8a9a",
+          color: "var(--tp-muted, #8a8a9a)",
           fontFamily: "'SF Mono', Monaco, monospace",
           fontSize: 14,
         }}
@@ -39,12 +39,12 @@ export default function IndividualBoardPerformance() {
     return (
       <div
         style={{
-          background: "#13131a",
-          border: "1px solid #252532",
+          background: "var(--tp-bg, #13131a)",
+          border: "1px solid var(--tp-border, #252532)",
           borderRadius: 12,
           padding: 40,
           textAlign: "center",
-          color: "#8a8a9a",
+          color: "var(--tp-muted, #8a8a9a)",
           fontFamily: "'SF Mono', Monaco, monospace",
           fontSize: 14,
         }}
@@ -63,11 +63,11 @@ export default function IndividualBoardPerformance() {
         flexDirection: "column",
         gap: "24px",
         fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
-        color: "#e8e8e8",
+        color: "var(--tp-text, #e8e8e8)",
         padding: "8px 0",
       }}
     >
-      <p style={{ margin: "0 0 4px", color: "#8a8a9a", fontSize: 12 }}>
+      <p style={{ margin: "0 0 4px", color: "var(--tp-muted, #8a8a9a)", fontSize: 12 }}>
         Every player ranked against everyone else who played the same board
         number, across all teams.
       </p>
@@ -76,8 +76,8 @@ export default function IndividualBoardPerformance() {
         <div
           key={board.boardNum}
           style={{
-            background: "#13131a",
-            border: "1px solid #252532",
+            background: "var(--tp-bg, #13131a)",
+            border: "1px solid var(--tp-border, #252532)",
             borderRadius: 12,
             padding: "24px",
             overflowX: "auto",
@@ -89,10 +89,10 @@ export default function IndividualBoardPerformance() {
               fontWeight: 700,
               letterSpacing: "0.08em",
               textTransform: "uppercase",
-              color: "#d4a853",
+              color: "var(--tp-brass, #d4a853)",
               marginTop: 0,
               marginBottom: 20,
-              borderBottom: "1px solid #252532",
+              borderBottom: "1px solid var(--tp-border, #252532)",
               paddingBottom: 12,
             }}
           >

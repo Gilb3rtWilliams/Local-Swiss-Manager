@@ -28,11 +28,11 @@ function CompetitorChip({ c, isTeam, onDragStart, dimmed }) {
         onDragStart?.(c.id);
       }}
       style={{
-        background: dimmed ? "#1a1a24" : "#252532",
-        border: "1px solid #353545",
+        background: dimmed ? "var(--tp-surface, #1a1a24)" : "var(--tp-border, #252532)",
+        border: "1px solid var(--tp-border-strong, #353545)",
         borderRadius: 8,
         padding: "10px 12px",
-        color: "#e8e8e8",
+        color: "var(--tp-text, #e8e8e8)",
         fontSize: 13,
         fontWeight: 600,
         cursor: "grab",
@@ -58,7 +58,7 @@ function Slot({ label, competitor, isTeam, onDrop, onClear, onDragStart }) {
           fontWeight: 700,
           letterSpacing: "0.1em",
           textTransform: "uppercase",
-          color: "#6b6b7b",
+          color: "var(--tp-dim, #6b6b7b)",
           marginBottom: 6,
         }}
       >
@@ -78,9 +78,9 @@ function Slot({ label, competitor, isTeam, onDrop, onClear, onDragStart }) {
         }}
         style={{
           minHeight: 46,
-          border: `1px dashed ${over ? "#d4a853" : "#353545"}`,
+          border: `1px dashed ${over ? "var(--tp-brass, #d4a853)" : "var(--tp-border-strong, #353545)"}`,
           borderRadius: 8,
-          background: over ? "rgba(212, 168, 83, 0.08)" : "transparent",
+          background: over ? "rgba(var(--tp-accent-rgb, 212, 168, 83), 0.08)" : "transparent",
           display: "flex",
           alignItems: "center",
           justifyContent: competitor ? "space-between" : "center",
@@ -105,7 +105,7 @@ function Slot({ label, competitor, isTeam, onDrop, onClear, onDragStart }) {
               style={{
                 background: "transparent",
                 border: "none",
-                color: "#6b6b7b",
+                color: "var(--tp-dim, #6b6b7b)",
                 cursor: "pointer",
                 fontSize: 14,
                 padding: 4,
@@ -116,7 +116,7 @@ function Slot({ label, competitor, isTeam, onDrop, onClear, onDragStart }) {
             </button>
           </>
         ) : (
-          <span style={{ color: "#4a4a5a", fontSize: 11 }}>Drop here</span>
+          <span style={{ color: "var(--tp-faint, #4a4a5a)", fontSize: 11 }}>Drop here</span>
         )}
       </div>
     </div>
@@ -247,13 +247,13 @@ export default function ManualPairing() {
         flexDirection: "column",
         gap: "24px",
         fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
-        color: "#e8e8e8",
+        color: "var(--tp-text, #e8e8e8)",
       }}
     >
       <div
         style={{
-          background: "#13131a",
-          border: "1px solid #252532",
+          background: "var(--tp-bg, #13131a)",
+          border: "1px solid var(--tp-border, #252532)",
           borderRadius: 12,
           padding: "24px",
         }}
@@ -266,7 +266,7 @@ export default function ManualPairing() {
             flexWrap: "wrap",
             gap: 12,
             marginBottom: 12,
-            borderBottom: "1px solid #252532",
+            borderBottom: "1px solid var(--tp-border, #252532)",
             paddingBottom: 12,
           }}
         >
@@ -286,8 +286,8 @@ export default function ManualPairing() {
             onClick={() => navigate(`/tournament/${t.id}/overview`)}
             style={{
               background: "transparent",
-              border: "1px solid #353545",
-              color: "#8a8a9a",
+              border: "1px solid var(--tp-border-strong, #353545)",
+              color: "var(--tp-muted, #8a8a9a)",
               fontSize: 11,
               fontWeight: 600,
               padding: "8px 14px",
@@ -301,7 +301,7 @@ export default function ManualPairing() {
         </div>
 
         <p
-          style={{ color: "#8a8a9a", fontSize: 12, lineHeight: 1.6, margin: 0 }}
+          style={{ color: "var(--tp-muted, #8a8a9a)", fontSize: 12, lineHeight: 1.6, margin: 0 }}
         >
           Drag {isTeam ? "teams" : "players"} from the pool into a White or
           Black slot to pair them.{" "}
@@ -315,7 +315,7 @@ export default function ManualPairing() {
           style={{
             background: "rgba(255, 107, 107, 0.1)",
             border: "1px solid rgba(255, 107, 107, 0.3)",
-            color: "#ff6b6b",
+            color: "var(--tp-danger, #ff6b6b)",
             padding: "12px 16px",
             borderRadius: 8,
             fontSize: 12,
@@ -338,8 +338,8 @@ export default function ManualPairing() {
           onDragOver={(e) => e.preventDefault()}
           onDrop={handlePoolDrop}
           style={{
-            background: "#13131a",
-            border: "1px solid #252532",
+            background: "var(--tp-bg, #13131a)",
+            border: "1px solid var(--tp-border, #252532)",
             borderRadius: 12,
             padding: 16,
             display: "flex",
@@ -356,13 +356,13 @@ export default function ManualPairing() {
               fontWeight: 700,
               letterSpacing: "0.1em",
               textTransform: "uppercase",
-              color: "#6b6b7b",
+              color: "var(--tp-dim, #6b6b7b)",
             }}
           >
             Unpaired ({unplaced.length})
           </div>
           {unplaced.length === 0 ? (
-            <p style={{ color: "#4a4a5a", fontSize: 11, margin: 0 }}>
+            <p style={{ color: "var(--tp-faint, #4a4a5a)", fontSize: 11, margin: 0 }}>
               Everyone's placed.
             </p>
           ) : (
@@ -374,11 +374,11 @@ export default function ManualPairing() {
             <div
               style={{
                 marginTop: 4,
-                background: "rgba(212, 168, 83, 0.1)",
-                border: "1px solid rgba(212, 168, 83, 0.3)",
+                background: "rgba(var(--tp-accent-rgb, 212, 168, 83), 0.1)",
+                border: "1px solid rgba(var(--tp-accent-rgb, 212, 168, 83), 0.3)",
                 borderRadius: 8,
                 padding: "10px 12px",
-                color: "#d4a853",
+                color: "var(--tp-brass, #d4a853)",
                 fontSize: 11,
                 fontWeight: 600,
                 lineHeight: 1.5,
@@ -395,8 +395,8 @@ export default function ManualPairing() {
             <div
               key={r.id}
               style={{
-                background: "#13131a",
-                border: "1px solid #252532",
+                background: "var(--tp-bg, #13131a)",
+                border: "1px solid var(--tp-border, #252532)",
                 borderRadius: 12,
                 padding: 16,
                 display: "flex",
@@ -410,7 +410,7 @@ export default function ManualPairing() {
                   fontWeight: 700,
                   letterSpacing: "0.08em",
                   textTransform: "uppercase",
-                  color: "#4a4a5a",
+                  color: "var(--tp-faint, #4a4a5a)",
                   marginBottom: 12,
                   whiteSpace: "nowrap",
                 }}
@@ -432,9 +432,9 @@ export default function ManualPairing() {
                 disabled={!r.whiteId && !r.blackId}
                 aria-label="Swap colors"
                 style={{
-                  background: "#1a1a24",
-                  border: "1px solid #353545",
-                  color: "#8a8a9a",
+                  background: "var(--tp-surface, #1a1a24)",
+                  border: "1px solid var(--tp-border-strong, #353545)",
+                  color: "var(--tp-muted, #8a8a9a)",
                   fontSize: 12,
                   padding: "8px 10px",
                   borderRadius: 6,
@@ -461,8 +461,8 @@ export default function ManualPairing() {
 
       <div
         style={{
-          background: "#13131a",
-          border: "1px solid #252532",
+          background: "var(--tp-bg, #13131a)",
+          border: "1px solid var(--tp-border, #252532)",
           borderRadius: 12,
           padding: "24px",
           display: "flex",
@@ -475,11 +475,11 @@ export default function ManualPairing() {
           disabled={!readyToFinish || busy}
           onClick={handleFinish}
           style={{
-            background: !readyToFinish || busy ? "#1a1a24" : "#252532",
+            background: !readyToFinish || busy ? "var(--tp-surface, #1a1a24)" : "var(--tp-border, #252532)",
             border: `1px solid ${
-              !readyToFinish || busy ? "#252532" : "#d4a853"
+              !readyToFinish || busy ? "var(--tp-border, #252532)" : "var(--tp-brass, #d4a853)"
             }`,
-            color: !readyToFinish || busy ? "#6b6b7b" : "#d4a853",
+            color: !readyToFinish || busy ? "var(--tp-dim, #6b6b7b)" : "var(--tp-brass, #d4a853)",
             fontSize: 11,
             fontWeight: 700,
             letterSpacing: "0.05em",
@@ -493,7 +493,7 @@ export default function ManualPairing() {
           {busy ? "Pairing…" : "Finish & Start Round"}
         </button>
         {!readyToFinish && (
-          <span style={{ color: "#6b6b7b", fontSize: 11 }}>
+          <span style={{ color: "var(--tp-dim, #6b6b7b)", fontSize: 11 }}>
             {unplaced.length} {isTeam ? "team" : "player"}
             {unplaced.length === 1 ? "" : "s"} still need
             {unplaced.length === 1 ? "s" : ""} a slot.

@@ -1,0 +1,381 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   Shared theme tokens for the tournament module.
+
+   Apply `className="tp-theme"` and `data-theme="<id>"` to the outermost
+   element of a view (TournamentLayout does this). Every page, component and
+   stylesheet inside reads colors from the --tp-* variables below, so
+   switching `data-theme` re-colors everything at once.
+
+   To add a theme: add a block at the bottom of this file and an entry in
+   themes.js. Only override the CORE tokens; the derived ones follow.
+
+   CORE tokens (set per theme)
+     --tp-bg           page / deepest background
+     --tp-card         translucent panel fill
+     --tp-card-solid   opaque panel fill
+     --tp-border       borders and dividers
+     --tp-text         primary text
+     --tp-muted        secondary text
+     --tp-brass        accent color (name kept for compatibility)
+     --tp-accent-rgb   accent as "r, g, b" for translucent tints
+     --tp-on-accent    text on top of the accent
+     --tp-input-bg     form control fill
+     --tp-fg-rgb       overlay tint "r, g, b" (white on dark, black on light)
+     --tp-shadow       panel shadow color (ready-made, with alpha)
+     --tp-shadow-color base color for shadows at custom alphas
+     --tp-heading      headings / emphasized text
+
+   DERIVED tokens (computed from the core ones — rarely overridden)
+     --tp-surface, --tp-surface-2, --tp-border-strong, --tp-input-border,
+     --tp-dim, --tp-faint, --tp-soft, --tp-brass-hover
+
+   STATUS tokens (win / loss / error — darker on light themes)
+     --tp-win, --tp-win-rgb, --tp-loss, --tp-loss-rgb, --tp-loss-soft,
+     --tp-loss-soft-rgb, --tp-danger, --tp-danger-rgb
+
+   Deliberately NOT themed: chessboard squares, piece colors, the blue
+   "team B" color, and the green/red/orange board-outcome accent lines.
+═══════════════════════════════════════════════════════════════════════ */
+
+.tp-root,
+.tp-theme {
+  /* Core — "midnight" (default) */
+  --tp-bg: #13131a;
+  --tp-card: rgba(25, 25, 36, 0.85);
+  --tp-card-solid: #191924;
+  --tp-border: #252532;
+  --tp-text: #e8e8e8;
+  --tp-muted: #8a8a9a;
+  --tp-brass: #d4a853;
+  --tp-accent-rgb: 212, 168, 83;
+  --tp-on-accent: #13131a;
+  --tp-input-bg: rgba(19, 19, 26, 0.85);
+  --tp-fg-rgb: 255, 255, 255;
+  --tp-shadow: rgba(0, 0, 0, 0.35);
+  --tp-shadow-color: #000000;
+  --tp-heading: #ffffff;
+
+  /* Status */
+  --tp-win: #4caf50;
+  --tp-win-rgb: 76, 175, 80;
+  --tp-loss: #f44336;
+  --tp-loss-rgb: 244, 67, 54;
+  --tp-loss-soft: #c25555;
+  --tp-loss-soft-rgb: 194, 85, 85;
+  --tp-danger: #ff8a80;
+  --tp-danger-rgb: 244, 67, 54;
+  --tp-felt: var(--tp-win);
+  --tp-maroon: var(--tp-loss);
+
+  /* Derived */
+  --tp-surface: var(--tp-card-solid);
+  --tp-surface-2: color-mix(in srgb, var(--tp-card-solid), var(--tp-text) 6%);
+  --tp-border-strong: color-mix(in srgb, var(--tp-border), var(--tp-text) 12%);
+  --tp-input-border: color-mix(in srgb, var(--tp-border), var(--tp-text) 8%);
+  --tp-dim: color-mix(in srgb, var(--tp-muted) 75%, var(--tp-bg));
+  --tp-faint: color-mix(in srgb, var(--tp-muted) 50%, var(--tp-bg));
+  --tp-soft: color-mix(in srgb, var(--tp-text) 80%, var(--tp-bg));
+  --tp-brass-hover: color-mix(in srgb, var(--tp-brass) 85%, white);
+}
+
+/* ── Theme picker ─────────────────────────────────────────────────────── */
+.tp-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tp-picker-swatch {
+  display: inline-flex;
+  width: 34px;
+  height: 22px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--tp-border-strong);
+  flex-shrink: 0;
+}
+
+.tp-picker-swatch i {
+  flex: 1;
+  display: block;
+}
+
+.tp-picker select {
+  background: var(--tp-card-solid);
+  color: var(--tp-text);
+  border: 1px solid var(--tp-border);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font-family: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.tp-picker select:focus {
+  outline: none;
+  border-color: var(--tp-brass);
+  box-shadow: 0 0 0 3px rgba(var(--tp-accent-rgb), 0.18);
+}
+
+/* ── Color bridge for globally-styled elements ────────────────────────────
+   Pages inside the layout use shared classes (.card, .btn-*, .muted, inputs,
+   tables…) that are styled in the app's global stylesheet with fixed dark
+   colors. These rules re-point ONLY the colors at the tokens — no sizes,
+   spacing or layout — so light themes don't leave dark patches. */
+.tp-theme .muted,
+.tp-theme .hint {
+  color: var(--tp-muted);
+}
+
+.tp-theme .card {
+  background: var(--tp-card);
+  border-color: var(--tp-border);
+  color: var(--tp-text);
+}
+
+.tp-theme .btn-secondary {
+  background: rgba(var(--tp-fg-rgb), 0.04);
+  border-color: var(--tp-border);
+  color: var(--tp-text);
+}
+
+.tp-theme .btn-secondary:hover:not(:disabled) {
+  background: rgba(var(--tp-fg-rgb), 0.08);
+  border-color: rgba(var(--tp-accent-rgb), 0.4);
+}
+
+.tp-theme .btn-primary {
+  background: var(--tp-brass);
+  border-color: var(--tp-brass);
+  color: var(--tp-on-accent);
+}
+
+.tp-theme .btn-primary:hover:not(:disabled) {
+  background: var(--tp-brass-hover);
+  border-color: var(--tp-brass-hover);
+}
+
+.tp-theme input,
+.tp-theme select,
+.tp-theme textarea {
+  background-color: var(--tp-input-bg);
+  border-color: var(--tp-input-border);
+  color: var(--tp-text);
+}
+
+.tp-theme select option {
+  background-color: var(--tp-card-solid);
+  color: var(--tp-text);
+}
+
+.tp-theme input::placeholder,
+.tp-theme textarea::placeholder {
+  color: rgba(var(--tp-fg-rgb), 0.35);
+}
+
+.tp-theme input:focus,
+.tp-theme select:focus,
+.tp-theme textarea:focus {
+  border-color: var(--tp-brass);
+}
+
+.tp-theme table {
+  color: var(--tp-text);
+}
+
+.tp-theme th {
+  color: var(--tp-brass);
+  border-color: var(--tp-border);
+}
+
+.tp-theme td {
+  border-color: color-mix(in srgb, var(--tp-border) 60%, transparent);
+}
+
+.tp-theme tbody tr:hover {
+  background: rgba(var(--tp-accent-rgb), 0.05);
+}
+
+.tp-theme .inline-error {
+  color: var(--tp-danger);
+}
+
+.tp-theme .banner-error {
+  background: rgba(var(--tp-danger-rgb), 0.12);
+  border-color: rgba(var(--tp-danger-rgb), 0.35);
+  color: var(--tp-danger);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   THEMES — each block overrides core tokens only.
+═══════════════════════════════════════════════════════════════════════ */
+
+:is(.tp-root, .tp-theme)[data-theme="forest"] {
+  --tp-bg: #0f1a14;
+  --tp-card: rgba(22, 36, 27, 0.85);
+  --tp-card-solid: #16241b;
+  --tp-border: #25392c;
+  --tp-text: #e4efe7;
+  --tp-muted: #84a08e;
+  --tp-brass: #4caf7a;
+  --tp-accent-rgb: 76, 175, 122;
+  --tp-on-accent: #0b140f;
+  --tp-input-bg: rgba(15, 26, 20, 0.85);
+}
+
+:is(.tp-root, .tp-theme)[data-theme="ocean"] {
+  --tp-bg: #0b1622;
+  --tp-card: rgba(17, 34, 51, 0.85);
+  --tp-card-solid: #112233;
+  --tp-border: #1e3550;
+  --tp-text: #e3eef8;
+  --tp-muted: #7f9bb5;
+  --tp-brass: #38a3f0;
+  --tp-accent-rgb: 56, 163, 240;
+  --tp-on-accent: #07111b;
+  --tp-input-bg: rgba(11, 22, 34, 0.85);
+}
+
+:is(.tp-root, .tp-theme)[data-theme="crimson"] {
+  --tp-bg: #1a1012;
+  --tp-card: rgba(38, 22, 25, 0.85);
+  --tp-card-solid: #261619;
+  --tp-border: #3d2327;
+  --tp-text: #f3e6e7;
+  --tp-muted: #a88b8e;
+  --tp-brass: #e5484d;
+  --tp-accent-rgb: 229, 72, 77;
+  --tp-on-accent: #ffffff;
+  --tp-input-bg: rgba(26, 16, 18, 0.85);
+}
+
+:is(.tp-root, .tp-theme)[data-theme="violet"] {
+  --tp-bg: #15111f;
+  --tp-card: rgba(31, 25, 46, 0.85);
+  --tp-card-solid: #1f192e;
+  --tp-border: #342b4a;
+  --tp-text: #ece8f6;
+  --tp-muted: #9a90b4;
+  --tp-brass: #a78bfa;
+  --tp-accent-rgb: 167, 139, 250;
+  --tp-on-accent: #15111f;
+  --tp-input-bg: rgba(21, 17, 31, 0.85);
+}
+
+:is(.tp-root, .tp-theme)[data-theme="sunset"] {
+  --tp-bg: #1c1410;
+  --tp-card: rgba(40, 28, 21, 0.85);
+  --tp-card-solid: #281c15;
+  --tp-border: #402d22;
+  --tp-text: #f5ebe3;
+  --tp-muted: #ad9484;
+  --tp-brass: #f08a3c;
+  --tp-accent-rgb: 240, 138, 60;
+  --tp-on-accent: #1c1410;
+  --tp-input-bg: rgba(28, 20, 16, 0.85);
+}
+
+:is(.tp-root, .tp-theme)[data-theme="rose"] {
+  --tp-bg: #1c1218;
+  --tp-card: rgba(40, 26, 35, 0.85);
+  --tp-card-solid: #281a23;
+  --tp-border: #402837;
+  --tp-text: #f6e8f0;
+  --tp-muted: #b08fa3;
+  --tp-brass: #ec6fa8;
+  --tp-accent-rgb: 236, 111, 168;
+  --tp-on-accent: #1c1218;
+  --tp-input-bg: rgba(28, 18, 24, 0.85);
+}
+
+:is(.tp-root, .tp-theme)[data-theme="lagoon"] {
+  --tp-bg: #0a1a1a;
+  --tp-card: rgba(16, 38, 38, 0.85);
+  --tp-card-solid: #102626;
+  --tp-border: #1b3d3d;
+  --tp-text: #e0f2f1;
+  --tp-muted: #7ea8a6;
+  --tp-brass: #2dd4bf;
+  --tp-accent-rgb: 45, 212, 191;
+  --tp-on-accent: #06201d;
+  --tp-input-bg: rgba(10, 26, 26, 0.85);
+}
+
+:is(.tp-root, .tp-theme)[data-theme="nord"] {
+  --tp-bg: #2e3440;
+  --tp-card: rgba(59, 66, 82, 0.85);
+  --tp-card-solid: #3b4252;
+  --tp-border: #4c566a;
+  --tp-text: #eceff4;
+  --tp-muted: #9aa5b8;
+  --tp-brass: #88c0d0;
+  --tp-accent-rgb: 136, 192, 208;
+  --tp-on-accent: #2e3440;
+  --tp-input-bg: rgba(46, 52, 64, 0.85);
+}
+
+:is(.tp-root, .tp-theme)[data-theme="graphite"] {
+  --tp-bg: #111111;
+  --tp-card: rgba(27, 27, 27, 0.85);
+  --tp-card-solid: #1b1b1b;
+  --tp-border: #2c2c2c;
+  --tp-text: #eeeeee;
+  --tp-muted: #8c8c8c;
+  --tp-brass: #e5e5e5;
+  --tp-accent-rgb: 229, 229, 229;
+  --tp-on-accent: #111111;
+  --tp-input-bg: rgba(17, 17, 17, 0.85);
+}
+
+/* Light themes: dark overlay tints, soft shadows, darker status colors. */
+:is(.tp-root, .tp-theme)[data-theme="paper"] {
+  --tp-bg: #f4f1ea;
+  --tp-card: rgba(255, 255, 255, 0.9);
+  --tp-card-solid: #ffffff;
+  --tp-border: #ddd6c7;
+  --tp-text: #26231d;
+  --tp-muted: #7a7466;
+  --tp-brass: #b7791f;
+  --tp-accent-rgb: 183, 121, 31;
+  --tp-on-accent: #ffffff;
+  --tp-input-bg: #ffffff;
+  --tp-fg-rgb: 0, 0, 0;
+  --tp-shadow: rgba(60, 45, 20, 0.12);
+  --tp-shadow-color: #8a7a5a;
+  --tp-heading: #141210;
+  --tp-win: #2e7d32;
+  --tp-win-rgb: 46, 125, 50;
+  --tp-loss: #c62828;
+  --tp-loss-rgb: 198, 40, 40;
+  --tp-loss-soft: #b23b3b;
+  --tp-loss-soft-rgb: 178, 59, 59;
+  --tp-danger: #c62828;
+  --tp-danger-rgb: 198, 40, 40;
+  --tp-brass-hover: color-mix(in srgb, var(--tp-brass) 85%, black);
+}
+
+:is(.tp-root, .tp-theme)[data-theme="daylight"] {
+  --tp-bg: #eef3f9;
+  --tp-card: rgba(255, 255, 255, 0.92);
+  --tp-card-solid: #ffffff;
+  --tp-border: #d3dde9;
+  --tp-text: #172433;
+  --tp-muted: #62758a;
+  --tp-brass: #2563eb;
+  --tp-accent-rgb: 37, 99, 235;
+  --tp-on-accent: #ffffff;
+  --tp-input-bg: #ffffff;
+  --tp-fg-rgb: 0, 0, 0;
+  --tp-shadow: rgba(30, 60, 100, 0.12);
+  --tp-shadow-color: #4a6a94;
+  --tp-heading: #0b1622;
+  --tp-win: #2e7d32;
+  --tp-win-rgb: 46, 125, 50;
+  --tp-loss: #c62828;
+  --tp-loss-rgb: 198, 40, 40;
+  --tp-loss-soft: #b23b3b;
+  --tp-loss-soft-rgb: 178, 59, 59;
+  --tp-danger: #c62828;
+  --tp-danger-rgb: 198, 40, 40;
+  --tp-brass-hover: color-mix(in srgb, var(--tp-brass) 85%, black);
+}

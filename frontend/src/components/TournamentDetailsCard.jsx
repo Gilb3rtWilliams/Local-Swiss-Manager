@@ -109,7 +109,7 @@ export default function TournamentDetailsCard({ t }) {
           <div
             style={{
               whiteSpace: "pre-wrap",
-              color: "#e8e8e8",
+              color: "var(--tp-text, #e8e8e8)",
               fontSize: "0.95rem",
               lineHeight: 1.6,
             }}

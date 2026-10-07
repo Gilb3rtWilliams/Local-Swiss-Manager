@@ -1,24 +1,40 @@
-/* ── Public Results page: token system ────────────────────────────────────
-   Dark slate glassmorphism canvas, glowing gold accents, high-contrast tables,
-   and clean monospaced layout. Self-contained scoped styles.
+/* ── Public Results page ───────────────────────────────────────────────────
+   Colours come from the shared --tp-* theme tokens (css/theme.css), exactly as
+   on the organizer's tournament pages, so the page follows the selected theme.
+   Every token keeps the original dark value as its fallback. Layout: header,
+   round toolbar, then a sidebar menu + content pane.
 ─────────────────────────────────────────────────────────────────────────── */
 
 @import url("https://fonts.googleapis.com/css2?family=Cascadia+Code:wght@400;500;600;700&display=swap");
 
 .pv-root {
-  --pv-bg: #13131a;
-  --pv-card: rgba(25, 25, 36, 0.85);
-  --pv-card-solid: #191924;
-  --pv-border: #252532;
-  --pv-text: #e8e8e8;
-  --pv-muted: #8a8a9a;
-  --pv-brass: #d4a853;
+  --pv-bg: var(--tp-bg, #13131a);
+  --pv-card: var(--tp-card-solid, #191924);
+  --pv-card-solid: var(--tp-card-solid, #191924);
+  --pv-border: var(--tp-border, #252532);
+  --pv-border-strong: var(--tp-border-strong, #353545);
+  --pv-text: var(--tp-text, #e8e8e8);
+  --pv-heading: var(--tp-heading, #ffffff);
+  --pv-muted: var(--tp-muted, #8a8a9a);
+  --pv-brass: var(--tp-brass, #d4a853);
+  --pv-accent-rgb: var(--tp-accent-rgb, 212, 168, 83);
+  --pv-maroon: var(--tp-loss, #f44336);
+  /* No theme token exists for "win" green, so it stays fixed. */
   --pv-felt: #4caf50;
-  --pv-maroon: #f44336;
 
-  position: relative;
-  isolation: isolate;
+  /* Neutral tints derived from the text colour: a faint wash on dark themes
+     and on light ones alike (replaces the old white-alpha overlays). */
+  --pv-tint-1: color-mix(in srgb, var(--pv-text) 4%, transparent);
+  --pv-tint-2: color-mix(in srgb, var(--pv-text) 7%, transparent);
+  --pv-tint-3: color-mix(in srgb, var(--pv-text) 11%, transparent);
+  --pv-shadow: color-mix(
+    in srgb,
+    var(--tp-shadow-color, #000) 35%,
+    transparent
+  );
+
   min-height: 100vh;
+  background: var(--pv-bg);
   color: var(--pv-text);
   font-family: var(--font-mono, "SF Mono", Monaco, "Cascadia Code", monospace);
   padding-bottom: 60px;
@@ -29,87 +45,6 @@
 .pv-root h3 {
   font-family: inherit;
   letter-spacing: -0.02em;
-}
-
-/* ── Ambient background ───────────────────────────────────────────────── */
-.pv-bg {
-  position: fixed;
-  inset: 0;
-  z-index: -2;
-  overflow: hidden;
-  background: var(--pv-bg);
-}
-
-.pv-bg-scene {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-}
-
-.pv-bg-scene:nth-child(1) {
-  background: radial-gradient(
-    120% 90% at 15% 10%,
-    #252536 0%,
-    #13131a 55%,
-    #0a0a0f 100%
-  );
-}
-
-.pv-bg-scene:nth-child(2) {
-  background: radial-gradient(
-    120% 90% at 85% 15%,
-    #322818 0%,
-    #13131a 55%,
-    #0a0a0f 100%
-  );
-}
-
-.pv-bg-scene:nth-child(3) {
-  background: radial-gradient(
-    120% 90% at 50% 90%,
-    #1a241f 0%,
-    #13131a 55%,
-    #0a0a0f 100%
-  );
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .pv-bg-scene {
-    animation: pvCycle 24s infinite;
-  }
-  .pv-bg-scene:nth-child(1) {
-    animation-delay: 0s;
-  }
-  .pv-bg-scene:nth-child(2) {
-    animation-delay: 8s;
-  }
-  .pv-bg-scene:nth-child(3) {
-    animation-delay: 16s;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .pv-bg-scene:nth-child(1) {
-    opacity: 1;
-  }
-}
-
-@keyframes pvCycle {
-  0% {
-    opacity: 0;
-  }
-  4% {
-    opacity: 1;
-  }
-  29% {
-    opacity: 1;
-  }
-  33% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 0;
-  }
 }
 
 /* ── Shell ────────────────────────────────────────────────────────────── */
@@ -126,8 +61,8 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--pv-brass);
-  background: rgba(212, 168, 83, 0.1);
-  border: 1px solid rgba(212, 168, 83, 0.3);
+  background: rgba(var(--pv-accent-rgb), 0.1);
+  border: 1px solid rgba(var(--pv-accent-rgb), 0.3);
   border-radius: 999px;
   padding: 4px 12px;
   margin-bottom: 12px;
@@ -159,28 +94,28 @@
   border: 1px solid var(--pv-border);
   color: var(--pv-muted);
   font-weight: 600;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--pv-tint-1);
 }
 
 .pv-status-finished {
   color: var(--pv-brass);
-  background: rgba(212, 168, 83, 0.12);
-  border-color: rgba(212, 168, 83, 0.4);
+  background: rgba(var(--pv-accent-rgb), 0.12);
+  border-color: rgba(var(--pv-accent-rgb), 0.4);
 }
 
 .pv-champion-banner {
   background: linear-gradient(
     135deg,
-    rgba(212, 168, 83, 0.15),
-    rgba(19, 19, 26, 0.95)
+    rgba(var(--pv-accent-rgb), 0.15),
+    var(--pv-bg)
   );
-  border: 1px solid rgba(212, 168, 83, 0.4);
+  border: 1px solid rgba(var(--pv-accent-rgb), 0.4);
   color: var(--pv-text);
   border-radius: 12px;
   padding: 16px 22px;
   margin-bottom: 24px;
   font-size: 1rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 24px var(--pv-shadow);
 }
 
 .pv-champion-banner strong {
@@ -208,10 +143,8 @@
 /* ── Card ─────────────────────────────────────────────────────────────── */
 .pv-card {
   background: var(--pv-card);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
   border: 1px solid var(--pv-border);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 12px 30px var(--pv-shadow);
   border-radius: 14px;
   padding: 22px 24px;
   margin-bottom: 22px;
@@ -262,7 +195,7 @@
   gap: 2px;
   flex: 0 0 auto;
   border: 1px solid var(--pv-border);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--pv-tint-1);
   color: var(--pv-muted);
   border-radius: 10px;
   padding: 8px 16px;
@@ -273,16 +206,16 @@
 }
 
 .pv-round-pill:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(212, 168, 83, 0.4);
+  background: var(--pv-tint-3);
+  border-color: rgba(var(--pv-accent-rgb), 0.4);
   color: var(--pv-text);
 }
 
 .pv-round-pill.active {
   background: var(--pv-brass);
   border-color: var(--pv-brass);
-  color: #13131a;
-  box-shadow: 0 0 12px rgba(212, 168, 83, 0.25);
+  color: var(--pv-bg);
+  box-shadow: 0 0 12px rgba(var(--pv-accent-rgb), 0.25);
 }
 
 .pv-round-pill-label {
@@ -307,7 +240,7 @@
   font-weight: 700;
   text-transform: uppercase;
   background: var(--pv-maroon);
-  color: #ffffff;
+  color: var(--pv-bg);
   padding: 1px 6px;
   border-radius: 999px;
   letter-spacing: 0.05em;
@@ -322,7 +255,7 @@
 }
 
 .pv-root .team-match-card {
-  background: rgba(19, 19, 26, 0.65);
+  background: var(--pv-bg);
   border: 1px solid var(--pv-border);
   border-radius: 12px;
   overflow: hidden;
@@ -333,7 +266,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  background: #13131a;
+  background: var(--pv-tint-2);
   border-bottom: 1px solid var(--pv-border);
   gap: 10px;
   flex-wrap: wrap;
@@ -356,14 +289,14 @@
 }
 
 .pv-root .team-tag.white {
-  background: #282836;
+  background: var(--pv-tint-3);
   color: var(--pv-text);
-  border: 1px solid #38384a;
+  border: 1px solid var(--pv-border-strong);
 }
 
 .pv-root .team-tag.black {
-  background: #0d0d12;
-  color: #c8c8d8;
+  background: var(--pv-bg);
+  color: var(--pv-text);
   border: 1px solid var(--pv-border);
 }
 
@@ -381,7 +314,7 @@
 }
 
 .pv-root .pairing-table thead {
-  background: rgba(0, 0, 0, 0.2);
+  background: color-mix(in srgb, var(--tp-shadow-color, #000) 20%, transparent);
 }
 
 .pv-root .pairing-table th {
@@ -441,7 +374,7 @@
   display: inline-block;
   padding: 3px 10px;
   border-radius: 999px;
-  background: rgba(76, 175, 80, 0.15);
+  background: color-mix(in srgb, var(--pv-felt) 15%, transparent);
   color: var(--pv-felt);
   font-weight: 700;
   font-size: 0.82rem;
@@ -452,7 +385,7 @@
   margin-left: 8px;
   padding: 3px 10px;
   border-radius: 999px;
-  background: rgba(212, 168, 83, 0.15);
+  background: rgba(var(--pv-accent-rgb), 0.15);
   color: var(--pv-brass);
   font-size: 0.78rem;
   font-weight: 600;
@@ -462,7 +395,7 @@
   display: inline-block;
   padding: 3px 10px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--pv-tint-2);
   color: var(--pv-muted);
   font-size: 0.78rem;
   font-style: italic;
@@ -528,7 +461,7 @@
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: var(--pv-muted);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--pv-tint-1);
   border: 1px solid var(--pv-border);
   border-radius: 999px;
   padding: 7px 16px 7px 14px;
@@ -540,8 +473,8 @@
 
 .pv-back-link:hover {
   color: var(--pv-brass);
-  background: rgba(212, 168, 83, 0.08);
-  border-color: rgba(212, 168, 83, 0.4);
+  background: rgba(var(--pv-accent-rgb), 0.08);
+  border-color: rgba(var(--pv-accent-rgb), 0.4);
   text-decoration: none;
   transform: translateX(-2px);
 }
@@ -558,7 +491,7 @@
 }
 
 .pv-stat {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--pv-tint-1);
   border: 1px solid var(--pv-border);
   border-radius: 10px;
   padding: 10px 18px;
@@ -567,8 +500,8 @@
 }
 
 .pv-stat.highlight {
-  background: rgba(212, 168, 83, 0.08);
-  border-color: rgba(212, 168, 83, 0.35);
+  background: rgba(var(--pv-accent-rgb), 0.08);
+  border-color: rgba(var(--pv-accent-rgb), 0.35);
 }
 
 .pv-stat-value {
@@ -604,7 +537,7 @@
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--pv-tint-1);
   border: 1px solid var(--pv-border);
   border-radius: 8px;
   padding: 10px 14px;
@@ -652,7 +585,7 @@
 
 /* ── Team profile: match history cards ──────────────────────────────── */
 .pv-match-card {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--pv-tint-1);
   border: 1px solid var(--pv-border);
   border-radius: 8px;
   padding: 14px 16px;
@@ -696,5 +629,206 @@
   .pv-root .team-match-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+/* ── Top bar, header, round toolbar ───────────────────────────────────── */
+.pv-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.pv-header {
+  margin-bottom: 20px;
+}
+
+.pv-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+  padding: 10px 14px;
+  background: var(--pv-card);
+  border: 1px solid var(--pv-border);
+  border-radius: 14px;
+}
+
+.pv-toolbar-label {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--pv-muted);
+}
+
+/* The picker's own bottom spacing is for its old in-card position. */
+.pv-toolbar .pv-round-picker {
+  margin-bottom: 0;
+  padding: 8px 6px 4px 0;
+  min-width: 0;
+}
+
+/* ── Sidebar + content pane ───────────────────────────────────────────── */
+.pv-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.pv-nav {
+  position: sticky;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  background: var(--pv-card);
+  border: 1px solid var(--pv-border);
+  border-radius: 14px;
+}
+
+.pv-nav-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--pv-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.pv-nav-item:hover:not(:disabled) {
+  background: var(--pv-tint-1);
+  color: var(--pv-text);
+}
+
+/* Active item mirrors the active tab on the organizer's tournament pages. */
+.pv-nav-item.is-active {
+  background: var(--pv-border);
+  border-color: var(--pv-border-strong);
+  color: var(--pv-heading);
+  box-shadow: inset 3px 0 0 var(--pv-brass);
+}
+
+.pv-nav-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pv-nav-item:focus-visible,
+.pv-chip:focus-visible,
+.pv-round-pill:focus-visible {
+  outline: 2px solid var(--pv-brass);
+  outline-offset: 2px;
+}
+
+.pv-nav-tag {
+  font-size: 0.56rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--pv-border);
+  color: var(--pv-muted);
+}
+
+.pv-pane {
+  min-width: 0; /* let wide tables scroll inside their card, not the page */
+}
+
+.pv-pane .pv-card {
+  overflow-x: auto;
+}
+
+.pv-pane > :last-child,
+.pv-pane .pv-card:last-child {
+  margin-bottom: 0;
+}
+
+.pv-note-lead {
+  margin: -8px 0 16px;
+  font-size: 0.78rem;
+  color: var(--pv-muted);
+}
+
+.pv-subhead {
+  margin: 0 0 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--pv-brass);
+}
+
+/* ── Board chips (Board Rankings) ─────────────────────────────────────── */
+.pv-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.pv-chip {
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--pv-muted);
+  background: var(--pv-tint-1);
+  border: 1px solid var(--pv-border);
+  border-radius: 999px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.pv-chip:hover {
+  color: var(--pv-text);
+  border-color: var(--pv-border-strong);
+}
+
+.pv-chip.is-active {
+  background: var(--pv-brass);
+  border-color: var(--pv-brass);
+  color: var(--pv-bg);
+}
+
+/* ── Narrow screens: the sidebar becomes a scrollable row of buttons ──── */
+@media (max-width: 860px) {
+  .pv-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .pv-nav {
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+    padding: 8px;
+  }
+  .pv-nav-item {
+    width: auto;
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+  .pv-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .pv-toolbar .pv-round-picker {
+    width: 100%;
   }
 }
