@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import RoundHistory from "../components/RoundHistory.jsx";
 import BracketCanvas from "../components/BracketCanvas.jsx";
@@ -874,6 +874,13 @@ export default function PublicResults() {
           <div className="pv-closed">
             <h2>Link not found</h2>
             <p>{loadError}</p>
+            <Link
+              to="/tournaments"
+              className="pv-back-link"
+              style={{ marginTop: 16 }}
+            >
+              ← Back to Past &amp; Live Tournaments
+            </Link>
           </div>
         </div>
       </div>
@@ -911,6 +918,9 @@ export default function PublicResults() {
       </div>
 
       <div className="pv-shell">
+        <Link to="/tournaments" className="pv-back-link">
+          ← Back to Past &amp; Live Tournaments
+        </Link>
         <span className="pv-eyebrow">
           {isMatch ? "Cage Match" : SYSTEM_LABEL[data.system] || data.system} ·
           Live Results
@@ -1104,6 +1114,7 @@ export default function PublicResults() {
                         : data.crossTable
                     }
                     basePath={`/results/${token}`}
+                    isTeam={isTeam}
                   />
                 </div>
               </div>

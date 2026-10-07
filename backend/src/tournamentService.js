@@ -64,6 +64,10 @@ function runLegacyMigrations() {
         t.cageMatch = null;
         migrated = true;
       }
+      // Team standings saved before match points were credited per TEAM
+      // (rather than per board color) are repaired here so existing
+      // tournaments are correct the moment the server starts.
+      if (repairTeamMatchPoints(t)) migrated = true;
       if (t.thirdPlaceMatch === undefined) {
         // Tournament predates this feature — its bracket (if already built)
         // has no thirdPlaceMatchId either, which every read site already
@@ -1913,6 +1917,21 @@ function applyGame(playersById, whiteId, blackId, result) {
   return { wScore, bScore };
 }
 
+// Team events: a board's White/Black score is NOT the same thing as the
+// teamWhite/teamBlack score. buildTeamBoards() gives teamWhite the White
+// pieces only on odd boards (1, 3, 5...) and swaps colors on even boards,
+// so on boards 2, 4... the "White" player belongs to teamBlack. Match
+// points must be credited to the player's TEAM, not summed by color.
+// Board parity is used (rather than player.teamId) because it is exactly
+// how the board was built and can't drift if a player's team changes later.
+function teamPointsForBoard(boardNum, wScore, bScore) {
+  const teamWhiteHasWhite = boardNum % 2 === 1;
+  return {
+    teamWhite: teamWhiteHasWhite ? wScore : bScore,
+    teamBlack: teamWhiteHasWhite ? bScore : wScore,
+  };
+}
+
 async function submitResults(id, resultsInput) {
   const t = assertTournament(id);
   assertNotCageMatch(t);
@@ -2030,8 +2049,9 @@ async function submitResults(id, resultsInput) {
           board.black.id,
           board.result,
         );
-        whitePoints += wScore;
-        blackPoints += bScore;
+        const tp = teamPointsForBoard(board.boardNum, wScore, bScore);
+        whitePoints += tp.teamWhite;
+        blackPoints += tp.teamBlack;
         boardResults.push({
           boardNum: board.boardNum,
           white: board.white.id,
@@ -2221,8 +2241,9 @@ function replayRoundsInto(format, variant, pById, tById, rounds) {
             board.black,
             board.result,
           );
-          whitePoints += wScore;
-          blackPoints += bScore;
+          const tp = teamPointsForBoard(board.boardNum, wScore, bScore);
+          whitePoints += tp.teamWhite;
+          blackPoints += tp.teamBlack;
         });
 
         if (variant === "bughouse") {
@@ -2279,6 +2300,77 @@ function recomputeStandingsFromRounds(t) {
   const tById = t.format === "team" ? byId(t.teams) : null;
 
   replayRoundsInto(t.format, t.variant, pById, tById, t.rounds);
+}
+
+// Repairs team-level match points for standard (non-bughouse) team events
+// from the board results already stored in t.rounds. Tournaments saved
+// before the per-team scoring fix hold match points that were summed by
+// board COLOR, which misattributes points on even boards where teamBlack
+// has White. This rebuilds ONLY team.score / team.results and each stored
+// pairing's whitePoints/blackPoints — it deliberately does not replay
+// players, because late-joiner bye credits are applied straight to
+// player.score and aren't recorded in t.rounds, so a full replay would
+// erase them. Idempotent: returns true only if something actually changed.
+function repairTeamMatchPoints(t) {
+  if (t.format !== "team" || t.variant === "bughouse") return false;
+  if (!Array.isArray(t.rounds) || !t.rounds.length) return false;
+  if (!Array.isArray(t.teams)) return false;
+
+  const fresh = new Map(t.teams.map((x) => [x.id, { score: 0, results: {} }]));
+  const matches = [];
+
+  t.rounds.forEach((rr) =>
+    rr.pairings.forEach((p) => {
+      if (p.type === "bye") {
+        const f = fresh.get(p.team);
+        if (f) f.score += 1;
+        return;
+      }
+      if (p.type !== "match" || !Array.isArray(p.boards)) return;
+      const tw = fresh.get(p.teamWhite);
+      const tb = fresh.get(p.teamBlack);
+      if (!tw || !tb) return;
+      let wp = 0;
+      let bp = 0;
+      p.boards.forEach((bd) => {
+        if (bd.sitOut || !bd.result) return;
+        const pts = teamPointsForBoard(
+          bd.boardNum,
+          scoreFromResult(bd.result, "white"),
+          scoreFromResult(bd.result, "black"),
+        );
+        wp += pts.teamWhite;
+        bp += pts.teamBlack;
+      });
+      tw.score += wp;
+      tb.score += bp;
+      tw.results[p.teamBlack] = wp;
+      tb.results[p.teamWhite] = bp;
+      matches.push([p, wp, bp]);
+    }),
+  );
+
+  let changed = false;
+  matches.forEach(([p, wp, bp]) => {
+    if (p.whitePoints !== wp || p.blackPoints !== bp) {
+      p.whitePoints = wp;
+      p.blackPoints = bp;
+      changed = true;
+    }
+  });
+  t.teams.forEach((team) => {
+    const f = fresh.get(team.id);
+    const cur = team.results || {};
+    const sameResults =
+      Object.keys(cur).length === Object.keys(f.results).length &&
+      Object.keys(f.results).every((k) => cur[k] === f.results[k]);
+    if (team.score !== f.score || !sameResults) {
+      team.score = f.score;
+      team.results = f.results;
+      changed = true;
+    }
+  });
+  return changed;
 }
 
 // ─── Edit a previously-submitted result ─────────────────────────────────────
@@ -3045,7 +3137,7 @@ function buildTeamProfile(t, teamId) {
     buchholzCut1: engine.buchholzCut1(thisComp, teamByIdMap).toFixed(1),
     buchholz: engine.buchholz(thisComp, teamByIdMap).toFixed(1),
     sb: engine.sonnenbornBerger(thisComp, teamByIdMap).toFixed(2),
-    wins: engine.numberOfWins(thisComp),
+    wins: engine.numberOfWins(thisComp, teamByIdMap),
     roster,
     matches: [...matches].reverse(), // most recent round first
   };
@@ -4855,7 +4947,7 @@ function computeStandingsBlock(format, players, teams, remainingRounds) {
         buchholzCut1: engine.buchholzCut1(c, byIdMap).toFixed(1),
         buchholz: engine.buchholz(c, byIdMap).toFixed(1),
         sb: engine.sonnenbornBerger(c, byIdMap).toFixed(2),
-        wins: engine.numberOfWins(c),
+        wins: engine.numberOfWins(c, byIdMap),
         playerCount: team.playerIds.length,
         players: resolvedPlayers,
       };
@@ -4876,6 +4968,7 @@ function computeStandingsBlock(format, players, teams, remainingRounds) {
       sortedTeams,
       teams.map((x) => x.id),
       teams,
+      { matchPoints: true },
     );
   } else {
     const sortedPlayers = engine.sortedStandings(players);
@@ -5305,7 +5398,16 @@ function serializeTournament(t) {
   };
 }
 
-function buildCrossTable(sortedComps, allIds, entities) {
+// matchPoints: true for team events, where a cell holds board points from a
+// match (e.g. 2.5) rather than a single game's 1 / ½ / 0. Those cells show
+// the actual points and carry an explicit win/loss/draw `outcome`, since
+// "result === 1" can't tell a 2.5-1.5 win from anything else.
+function buildCrossTable(
+  sortedComps,
+  allIds,
+  entities,
+  { matchPoints = false } = {},
+) {
   const nameOf = (id) => entities.find((e) => e.id === id)?.name || "???";
   return sortedComps.map((c, ri) => ({
     rank: ri + 1,
@@ -5316,6 +5418,16 @@ function buildCrossTable(sortedComps, allIds, entities) {
       if (opp.id === c.id) return { self: true };
       if (Object.prototype.hasOwnProperty.call(c.results, opp.id)) {
         const r = c.results[opp.id];
+        if (matchPoints) {
+          const theirs = opp.results[c.id];
+          const outcome =
+            theirs === undefined || r === theirs
+              ? "draw"
+              : r > theirs
+              ? "win"
+              : "loss";
+          return { value: engine.formatScore(r), raw: r, outcome };
+        }
         return { value: r === 1 ? "1" : r === 0 ? "0" : "½", raw: r };
       }
       return { value: "·" };

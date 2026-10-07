@@ -22,17 +22,13 @@
   position: relative;
   isolation: isolate;
   color: var(--text-main);
-  font-family:
-    "Inter",
-    system-ui,
-    -apple-system,
-    sans-serif;
+  font-family: "Georgia", "Times New Roman", serif;
 }
 
 .ov-root h1,
 .ov-root h2,
 .ov-root h3 {
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: "Georgia", "Times New Roman", serif;
   font-weight: 700;
   letter-spacing: -0.01em;
   color: #ffffff;
@@ -97,7 +93,7 @@
 }
 
 .ov-root .info-bar span {
-  font-family: var(--font-mono, "SF Mono", Monaco, "Cascadia Code", monospace);
+  font-family: var(--font-mono, "Georgia", "Times New Roman", serif);
   color: var(--accent-gold);
   font-weight: 600;
 }
@@ -113,7 +109,7 @@
   color: var(--text-main);
   border-radius: 8px;
   padding: 9px 12px;
-  font-family: "Inter", sans-serif;
+  font-family: "Georgia", "Times New Roman", serif;
   font-size: 0.9rem;
   transition: all 0.2s ease;
   width: 100%;
@@ -226,7 +222,7 @@
 
 .ov-root .share-link-row input {
   flex: 1;
-  font-family: var(--font-mono, "SF Mono", Monaco, "Cascadia Code", monospace);
+  font-family: var(--font-mono, "Georgia", "Times New Roman", serif);
   font-size: 0.85rem;
   color: var(--accent-gold);
   background: rgba(10, 10, 15, 0.6);
@@ -245,7 +241,7 @@
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-family: "Inter", sans-serif;
+  font-family: "Georgia", "Times New Roman", serif;
   box-shadow: 0 4px 12px rgba(212, 168, 83, 0.2);
 }
 
@@ -265,7 +261,7 @@
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-family: "Inter", sans-serif;
+  font-family: "Georgia", "Times New Roman", serif;
 }
 
 .ov-root .btn-secondary:hover:not(:disabled) {

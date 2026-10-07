@@ -317,22 +317,49 @@ function buchholzCut1(competitor, byId) {
 function headToHeadResult(a, b) {
   const r = a.results[b.id];
   if (r === undefined) return 0;
+  // Compare against what the opponent scored in the same encounter. For
+  // individual games (1 / ½ / 0) this is identical to the old "above or
+  // below 0.5" test, but team matches are decided on board points (e.g.
+  // 2.5-1.5, or 2-2), where a fixed 0.5 threshold would call a 2-2 draw a
+  // win for BOTH teams.
+  const theirs = b.results[a.id];
+  if (theirs !== undefined) {
+    if (r > theirs) return 1;
+    if (r < theirs) return -1;
+    return 0;
+  }
   if (r > 0.5) return 1;
   if (r < 0.5) return -1;
   return 0;
 }
 
-function numberOfWins(competitor) {
-  return Object.values(competitor.results).filter((r) => r === 1).length;
+// Number of encounters won. With `byId` supplied, a win means scoring more
+// than the opponent did in that encounter — which is what a team match win
+// is (team results are board-point totals, not 0/½/1). Without `byId` it
+// falls back to the original "result === 1" count, which is only correct
+// for individual games.
+function numberOfWins(competitor, byId) {
+  if (!byId) {
+    return Object.values(competitor.results).filter((r) => r === 1).length;
+  }
+  let wins = 0;
+  for (const [oppIdStr, r] of Object.entries(competitor.results)) {
+    const opp =
+      byId.get(isNaN(oppIdStr) ? oppIdStr : Number(oppIdStr)) ||
+      byId.get(oppIdStr);
+    const theirs = opp ? opp.results[competitor.id] : undefined;
+    if (theirs === undefined ? r === 1 : r > theirs) wins++;
+  }
+  return wins;
 }
 
 // Stable sort of result[start:end) by number of wins, descending. Stable so
 // that competitors still tied on wins too keep whatever relative order they
 // were already in — arbitrary at that point, but at least consistent.
-function orderByWins(result, start, end) {
+function orderByWins(result, start, end, byId) {
   const withWins = result
     .slice(start, end)
-    .map((c, idx) => ({ c, wins: numberOfWins(c), idx }));
+    .map((c, idx) => ({ c, wins: numberOfWins(c, byId), idx }));
   withWins.sort((x, y) => y.wins - x.wins || x.idx - y.idx);
   for (let k = 0; k < withWins.length; k++) result[start + k] = withWins[k].c;
 }
@@ -362,7 +389,7 @@ function topTieGroup(competitors) {
     cut1: buchholzCut1(leader, byId),
     bh: buchholz(leader, byId),
     sb: sonnenbornBerger(leader, byId),
-    wins: numberOfWins(leader),
+    wins: numberOfWins(leader, byId),
   };
 
   const tied = standings.filter((c) => {
@@ -371,7 +398,7 @@ function topTieGroup(competitors) {
       buchholzCut1(c, byId) === leaderKey.cut1 &&
       buchholz(c, byId) === leaderKey.bh &&
       sonnenbornBerger(c, byId) === leaderKey.sb &&
-      numberOfWins(c) === leaderKey.wins
+      numberOfWins(c, byId) === leaderKey.wins
     );
   });
 
@@ -443,11 +470,11 @@ function sortedStandings(competitors) {
         result[i] = result[i + 1];
         result[i + 1] = tmp;
       } else if (h2h === 0) {
-        orderByWins(result, i, j);
+        orderByWins(result, i, j, byId);
       }
       // h2h > 0: already in the right order, nothing to do.
     } else if (runSize > 2) {
-      orderByWins(result, i, j);
+      orderByWins(result, i, j, byId);
     }
 
     i = j;

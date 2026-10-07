@@ -46,7 +46,7 @@ export default function Pairings() {
           padding: 40,
           textAlign: "center",
           color: "#8a8a9a",
-          fontFamily: "'SF Mono', Monaco, monospace",
+          fontFamily: "Georgia, 'Times New Roman', Times, serif",
           fontSize: 14,
         }}
       >
@@ -59,13 +59,13 @@ export default function Pairings() {
             border: "1px solid #353545",
             color: "#e8e8e8",
             fontSize: 11,
+            fontFamily: "Georgia, 'Times New Roman', Times, serif",
             fontWeight: 600,
             letterSpacing: "0.05em",
             padding: "10px 18px",
             borderRadius: 8,
             cursor: "pointer",
             textTransform: "uppercase",
-            fontFamily: "inherit",
           }}
         >
           Go generate the next round →

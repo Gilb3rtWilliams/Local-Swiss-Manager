@@ -520,15 +520,34 @@
 }
 
 .pv-back-link {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 0.72rem;
+  font-weight: 600;
   letter-spacing: 0.05em;
+  text-transform: uppercase;
   color: var(--pv-muted);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--pv-border);
+  border-radius: 999px;
+  padding: 7px 16px 7px 14px;
   margin-bottom: 16px;
+  text-decoration: none;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease,
+    transform 0.15s ease;
 }
 
 .pv-back-link:hover {
   color: var(--pv-brass);
+  background: rgba(212, 168, 83, 0.08);
+  border-color: rgba(212, 168, 83, 0.4);
+  text-decoration: none;
+  transform: translateX(-2px);
+}
+
+.pv-back-link:active {
+  transform: translateX(-1px);
 }
 
 /* ── Player profile: stat strip ──────────────────────────────────────── */

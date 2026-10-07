@@ -45,15 +45,15 @@ function PlayerLink({ basePath, id, title, name, titleColor = "#c25555" }) {
   );
 }
 
-// Bughouse-specific: cross-color pairing means the team on, say, the left
-// side is White on board 1 but Black on board 2 — so generic color-labeled
+// Used by both bughouse and standard team events: colors alternate by board,
+// so the team on, say, the left side is White on board 1 but Black on board 2 — so generic color-labeled
 // buttons ("1-0"/"0-1") silently mean the opposite team on the second board
 // unless you re-read the color badge every single click. These buttons are
 // labeled by TEAM instead, and translate the click into the correct
 // color-coded result string internally based on teamAIsWhite for *this*
 // board — the person never has to reason about color at all, only "which
 // team's player won," which is what they actually mean to record.
-function BughouseResultButtons({
+function TeamResultButtons({
   results,
   matchKey,
   onSetResult,
@@ -113,16 +113,24 @@ function BughouseResultButtons({
   );
 }
 
-function BughouseMatch({
+function TeamBoardsMatch({
   p,
   results,
   onSetBoardResult,
+  onOpenMiniMatch,
+  isMatchPlay,
+  isBughouse,
   livePlayers,
   basePath,
 }) {
-  const decisiveBoard = p.boards.find(
-    (b) => !b.sitOut && DECISIVE_RESULTS.has(results[`${p.idx}-${b.boardNum}`]),
-  );
+  // Decisive-board locking is a bughouse rule only (one decisive board ends
+  // the whole match). Standard team events score every board.
+  const decisiveBoard = isBughouse
+    ? p.boards.find(
+        (b) =>
+          !b.sitOut && DECISIVE_RESULTS.has(results[`${p.idx}-${b.boardNum}`]),
+      )
+    : undefined;
 
   return (
     <div
@@ -291,6 +299,19 @@ function BughouseMatch({
                     title={teamAMeta.title}
                     name={teamAPlayer.name}
                   />
+                  {!isBughouse && teamAPlayer.rating != null && (
+                    <span
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 500,
+                        color: "#8a8a9a",
+                        marginLeft: 8,
+                        letterSpacing: 0,
+                      }}
+                    >
+                      ({teamAPlayer.rating})
+                    </span>
+                  )}
                 </div>
                 <div
                   style={{
@@ -384,7 +405,66 @@ function BughouseMatch({
                 }}
               />
 
-              {lockedByOtherBoard ? (
+              {isMatchPlay && !isBughouse && b.miniMatch ? (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 6,
+                    marginTop: 4,
+                  }}
+                >
+                  <span
+                    style={{ color: "#d4a853", fontWeight: 800, fontSize: 15 }}
+                  >
+                    {/* score.A / score.B follow White / Black, so flip them
+                        when the left-hand team is Black on this board */}
+                    {teamAIsWhite ? b.miniMatch.score.A : b.miniMatch.score.B}
+                    {" – "}
+                    {teamAIsWhite ? b.miniMatch.score.B : b.miniMatch.score.A}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 9,
+                      fontWeight: 700,
+                      letterSpacing: "0.06em",
+                      textTransform: "uppercase",
+                      textAlign: "center",
+                      color: b.result
+                        ? "#4caf50"
+                        : b.miniMatch.tieAlert
+                        ? "#f44336"
+                        : "#8a8a9a",
+                    }}
+                  >
+                    {b.result
+                      ? "Decided"
+                      : b.miniMatch.tieAlert
+                      ? "Level — needs a call"
+                      : "In progress"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onOpenMiniMatch(p.idx, b.boardNum)}
+                    style={{
+                      background: "#252532",
+                      border: "1px solid #353545",
+                      color: "#e8e8e8",
+                      fontSize: 10,
+                      fontWeight: 600,
+                      letterSpacing: "0.05em",
+                      padding: "5px 10px",
+                      borderRadius: 6,
+                      cursor: "pointer",
+                      textTransform: "uppercase",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    Open Mini-Match →
+                  </button>
+                </div>
+              ) : lockedByOtherBoard ? (
                 <div
                   style={{
                     fontSize: 9,
@@ -397,7 +477,7 @@ function BughouseMatch({
                   Decided on Board {decisiveBoard.boardNum}
                 </div>
               ) : (
-                <BughouseResultButtons
+                <TeamResultButtons
                   results={results}
                   matchKey={key}
                   onSetResult={(r) => onSetBoardResult(p.idx, b.boardNum, r)}
@@ -435,6 +515,19 @@ function BughouseMatch({
                     title={teamBMeta.title}
                     name={teamBPlayer.name}
                   />
+                  {!isBughouse && teamBPlayer.rating != null && (
+                    <span
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 500,
+                        color: "#8a8a9a",
+                        marginLeft: 8,
+                        letterSpacing: 0,
+                      }}
+                    >
+                      ({teamBPlayer.rating})
+                    </span>
+                  )}
                 </div>
                 <div
                   style={{
@@ -506,191 +599,11 @@ function BughouseMatch({
   );
 }
 
-function TeamMatch({
-  p,
-  results,
-  onSetBoardResult,
-  onOpenMiniMatch,
-  isMatchPlay,
-  isBughouse,
-  livePlayers,
-  basePath,
-}) {
-  if (isBughouse) {
-    return (
-      <BughouseMatch
-        p={p}
-        results={results}
-        onSetBoardResult={onSetBoardResult}
-        livePlayers={livePlayers}
-        basePath={basePath}
-      />
-    );
-  }
-
-  return (
-    <div className="team-match-card">
-      <div className="team-match-header">
-        <span className="team-tag white">{p.teamWhiteName}</span>
-        <span className="vs">vs</span>
-        <span className="team-tag black">{p.teamBlackName}</span>
-      </div>
-      <table className="pairing-table board-table">
-        <thead>
-          <tr>
-            <th className="board-num">Bd</th>
-            <th>White</th>
-            <th>Black</th>
-            <th>Result</th>
-          </tr>
-        </thead>
-        <tbody>
-          {p.boards.map((b) => {
-            const key = `${p.idx}-${b.boardNum}`;
-            const whiteMeta = resolvePlayerMeta(b.white, livePlayers);
-            const blackMeta = resolvePlayerMeta(b.black, livePlayers);
-            const sitOutPlayer = b.white || b.black;
-            const sitOutMeta = resolvePlayerMeta(sitOutPlayer, livePlayers);
-
-            return (
-              <tr key={b.boardNum}>
-                <td className="board-num">{b.boardNum}</td>
-                {b.sitOut ? (
-                  <td colSpan={3}>
-                    <span className="player-name">
-                      <PlayerLink
-                        basePath={basePath}
-                        id={sitOutMeta.id}
-                        title={sitOutMeta.title}
-                        name={sitOutPlayer?.name}
-                        titleColor="#c25555"
-                      />
-                    </span>
-                    <span className="bye-result"> sits out this round</span>
-                  </td>
-                ) : (
-                  <>
-                    <td>
-                      <span className="color-w" />
-                      <span className="player-name">
-                        <PlayerLink
-                          basePath={basePath}
-                          id={whiteMeta.id}
-                          title={whiteMeta.title}
-                          name={b.white.name}
-                        />
-                      </span>{" "}
-                      <span className="rating-tag">({b.white.rating})</span>
-                    </td>
-                    <td>
-                      <span className="color-b" />
-                      <span className="player-name">
-                        <PlayerLink
-                          basePath={basePath}
-                          id={blackMeta.id}
-                          title={blackMeta.title}
-                          name={b.black.name}
-                        />
-                      </span>{" "}
-                      <span className="rating-tag">({b.black.rating})</span>
-                    </td>
-                    <td>
-                      {isMatchPlay && b.miniMatch ? (
-                        <div
-                          style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "flex-start",
-                            gap: 6,
-                          }}
-                        >
-                          <span
-                            style={{
-                              color: "#d4a853",
-                              fontWeight: 800,
-                              fontSize: 15,
-                            }}
-                          >
-                            {b.miniMatch.score.A} – {b.miniMatch.score.B}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: 9,
-                              fontWeight: 700,
-                              letterSpacing: "0.06em",
-                              textTransform: "uppercase",
-                              color: b.result
-                                ? "#4caf50"
-                                : b.miniMatch.tieAlert
-                                ? "#f44336"
-                                : "#8a8a9a",
-                            }}
-                          >
-                            {b.result
-                              ? "Decided"
-                              : b.miniMatch.tieAlert
-                              ? "Level — needs a call"
-                              : "In progress"}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => onOpenMiniMatch(p.idx, b.boardNum)}
-                            style={{
-                              background: "#252532",
-                              border: "1px solid #353545",
-                              color: "#e8e8e8",
-                              fontSize: 10,
-                              fontWeight: 600,
-                              letterSpacing: "0.05em",
-                              padding: "5px 10px",
-                              borderRadius: 6,
-                              cursor: "pointer",
-                              textTransform: "uppercase",
-                              fontFamily: "inherit",
-                            }}
-                          >
-                            Open Mini-Match →
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="result-btns">
-                          {[
-                            "1-0",
-                            "1/2-1/2",
-                            "0-1",
-                            "1F-0F",
-                            "0F-0F",
-                            "0F-1F",
-                          ].map((r) => (
-                            <button
-                              type="button"
-                              key={r}
-                              className={`result-btn ${
-                                r === "1-0" || r === "1F-0F"
-                                  ? "white-wins"
-                                  : r === "0-1" || r === "0F-1F"
-                                  ? "black-wins"
-                                  : "draw"
-                              } ${results[key] === r ? "active" : ""}`}
-                              onClick={() =>
-                                onSetBoardResult(p.idx, b.boardNum, r)
-                              }
-                            >
-                              {r}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </td>
-                  </>
-                )}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
+function TeamMatch(props) {
+  // Both bughouse and standard team events share one layout now: each team
+  // is pinned to its own side for every board, and only the color badges
+  // swap. Bughouse-only behavior (decisive-board locking) is gated inside.
+  return <TeamBoardsMatch {...props} />;
 }
 
 export default function PairingsTeam({
@@ -714,48 +627,36 @@ export default function PairingsTeam({
           <div
             className="team-match-card bughouse-bye"
             key={p.idx}
-            style={
-              isBughouse
-                ? {
-                    background: "#13131a",
-                    border: "1px solid #252532",
-                    borderRadius: 12,
-                    padding: 24,
-                    textAlign: "center",
-                    marginBottom: 24,
-                    fontFamily: "'SF Mono', monospace",
-                    color: "#e8e8e8",
-                  }
-                : {}
-            }
+            style={{
+              background: "#13131a",
+              border: "1px solid #252532",
+              borderRadius: 12,
+              padding: 24,
+              textAlign: "center",
+              marginBottom: 24,
+              fontFamily: "'SF Mono', monospace",
+              color: "#e8e8e8",
+            }}
           >
             <div className="team-match-bye">
               <span
                 className="player-name"
-                style={
-                  isBughouse
-                    ? {
-                        color: "#d4a853",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.1em",
-                      }
-                    : {}
-                }
+                style={{
+                  color: "#d4a853",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                }}
               >
                 {p.teamName}
               </span>
               <span
                 className="bye-result"
-                style={
-                  isBughouse
-                    ? {
-                        display: "block",
-                        marginTop: 8,
-                        color: "#8a8a9a",
-                        fontSize: 12,
-                      }
-                    : {}
-                }
+                style={{
+                  display: "block",
+                  marginTop: 8,
+                  color: "#8a8a9a",
+                  fontSize: 12,
+                }}
               >
                 BYE — FULL TEAM RECEIVES +1
               </span>

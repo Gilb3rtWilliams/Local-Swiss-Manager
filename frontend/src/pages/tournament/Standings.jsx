@@ -363,7 +363,7 @@ export default function Standings() {
               >
                 Cross Table
               </h2>
-              <CrossTable crossTable={displayCrossTable} />
+              <CrossTable crossTable={displayCrossTable} isTeam={isTeam} />
             </div>
           </div>
 

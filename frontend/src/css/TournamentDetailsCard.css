@@ -13,8 +13,8 @@
   --text-main: #e8e8e8;
   --text-muted: #8a8a9a;
   --accent-gold: #d4a853;
-  --font-mono: "Cascadia Code", "SF Mono", Monaco, monospace;
-  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "Georgia", "Times New Roman", serif;
+  --font-sans: "Georgia", "Times New Roman", serif;
 
   background: var(--card-bg);
   backdrop-filter: blur(14px);

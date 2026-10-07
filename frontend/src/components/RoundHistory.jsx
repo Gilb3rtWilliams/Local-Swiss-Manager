@@ -13,6 +13,442 @@ function formatResult(result) {
   return result === "1/2-1/2" ? "½-½" : result;
 }
 
+const WHITE_WINS = new Set(["1-0", "1F-0F"]);
+const BLACK_WINS = new Set(["0-1", "0F-1F"]);
+
+// Team A = the pairing's teamWhite, which plays White on odd boards (this is
+// what buildTeamBoards() does on the server) and sits on the left. Same rule
+// as the live pairings view, so a round looks identical before and after it
+// is submitted.
+const teamAIsWhiteOn = (boardNum) => boardNum % 2 === 1;
+
+// Outcome from the left-hand team's point of view: "A" | "B" | "draw" |
+// "double" | null (no result yet).
+function outcomeFor(result, teamAIsWhite) {
+  if (!result) return null;
+  if (result === "0F-0F") return "double";
+  if (WHITE_WINS.has(result)) return teamAIsWhite ? "A" : "B";
+  if (BLACK_WINS.has(result)) return teamAIsWhite ? "B" : "A";
+  return "draw";
+}
+
+// Match score derived from the boards, per TEAM. The stored
+// p.whitePoints/p.blackPoints are summed per board *color* for standard
+// team events, which misattributes points on the boards where teamBlack
+// has White — so for those we recompute here. Bughouse's stored values are
+// match-level (win = 1) and already correct.
+function matchScore(p, isBughouse) {
+  if (isBughouse) return { a: p.whitePoints, b: p.blackPoints };
+  let a = 0;
+  let b = 0;
+  (p.boards || []).forEach((bd) => {
+    if (bd.sitOut || !bd.result) return;
+    const o = outcomeFor(bd.result, teamAIsWhiteOn(bd.boardNum));
+    if (o === "A") a += 1;
+    else if (o === "B") b += 1;
+    else if (o === "draw") {
+      a += 0.5;
+      b += 0.5;
+    }
+  });
+  return { a, b };
+}
+
+function teamResultOptions(teamAIsWhite, aName, bName) {
+  return [
+    { value: teamAIsWhite ? "1-0" : "0-1", label: `${aName} wins` },
+    { value: "1/2-1/2", label: "Draw" },
+    { value: teamAIsWhite ? "0-1" : "1-0", label: `${bName} wins` },
+    {
+      value: teamAIsWhite ? "1F-0F" : "0F-1F",
+      label: `${aName} wins (forfeit)`,
+    },
+    { value: "0F-0F", label: "Double forfeit" },
+    {
+      value: teamAIsWhite ? "0F-1F" : "1F-0F",
+      label: `${bName} wins (forfeit)`,
+    },
+  ];
+}
+
+const mono = "'SF Mono', Monaco, 'Cascadia Code', monospace";
+
+function PlayerSide({ name, isWhite, teamName, teamColor, align, winner }) {
+  const right = align === "right";
+  const badge = (
+    <div
+      style={{
+        width: 44,
+        height: 44,
+        borderRadius: 8,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: 24,
+        flexShrink: 0,
+        background: isWhite ? "#f0e6d2" : "#252532",
+        color: isWhite ? "#1a1a20" : "#e8e8e8",
+        border: `1px solid ${isWhite ? "#e0d5c0" : "#353545"}`,
+      }}
+    >
+      {isWhite ? "♔" : "♚"}
+    </div>
+  );
+  return (
+    <div
+      style={{
+        padding: "20px 24px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: right ? "flex-end" : "flex-start",
+        textAlign: right ? "right" : "left",
+        gap: 16,
+        boxShadow: winner ? `inset ${right ? "-" : ""}3px 0 0 #d4a853` : "none",
+      }}
+    >
+      {!right && badge}
+      <div>
+        <div
+          style={{
+            fontSize: 20,
+            fontWeight: 700,
+            color: "#e8e8e8",
+            letterSpacing: "-0.02em",
+            lineHeight: 1.2,
+          }}
+        >
+          {name}
+        </div>
+        <div
+          style={{
+            fontSize: 10,
+            color: teamColor,
+            fontWeight: 600,
+            letterSpacing: "0.1em",
+            textTransform: "uppercase",
+            marginTop: 4,
+          }}
+        >
+          {teamName}
+        </div>
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 6,
+            flexDirection: right ? "row-reverse" : "row",
+            marginTop: 10,
+            padding: "4px 10px",
+            borderRadius: 4,
+            border: "1px solid #353545",
+            fontSize: 9,
+            fontWeight: 600,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: "#8a8a9a",
+          }}
+        >
+          <span
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: 1,
+              display: "inline-block",
+              background: isWhite ? "#f0e6d2" : "#252532",
+              border: `1px solid ${isWhite ? "#e0d5c0" : "#454555"}`,
+            }}
+          />
+          {isWhite ? "WHITE" : "BLACK"}
+        </div>
+      </div>
+      {right && badge}
+    </div>
+  );
+}
+
+function TeamHistoryMatch({
+  p,
+  index,
+  isBughouse,
+  isEditing,
+  loading,
+  matchPlay,
+  onResultChange,
+  onOpenMiniMatch,
+}) {
+  // A bughouse board with no result whose sibling got a decisive one was
+  // never played — the match was already decided.
+  const decisiveBoard = isBughouse
+    ? p.boards?.find((b) => !b.sitOut && DECISIVE_RESULTS.has(b.result))
+    : null;
+  const score = matchScore(p, isBughouse);
+
+  return (
+    <div
+      style={{
+        background: "#13131a",
+        border: "1px solid #252532",
+        borderRadius: 12,
+        overflow: "hidden",
+        marginBottom: 24,
+        fontFamily: mono,
+        color: "#e8e8e8",
+      }}
+    >
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr auto 1fr",
+          alignItems: "center",
+          borderBottom: "1px solid #252532",
+        }}
+      >
+        <div style={{ padding: "16px 24px" }}>
+          <span
+            style={{
+              color: "#d4a853",
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+            }}
+          >
+            ● {p.teamWhiteName}
+          </span>
+        </div>
+        <div
+          style={{
+            padding: "6px 18px",
+            fontSize: 18,
+            fontWeight: 800,
+            color: "#d4a853",
+            background: "#1a1a24",
+            borderRadius: 8,
+            border: "1px solid #353545",
+          }}
+        >
+          {score.a} – {score.b}
+        </div>
+        <div style={{ padding: "16px 24px", textAlign: "right" }}>
+          <span
+            style={{
+              color: "#6b9df7",
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+            }}
+          >
+            {p.teamBlackName} ●
+          </span>
+        </div>
+      </div>
+
+      {p.boards.map((b, bi) => {
+        const last = bi === p.boards.length - 1;
+        const rowBorder = last ? "none" : "1px solid #252532";
+
+        if (b.sitOut) {
+          return (
+            <div
+              key={b.boardNum}
+              style={{
+                padding: 24,
+                textAlign: "center",
+                color: "#6b6b7b",
+                fontSize: 13,
+                borderBottom: rowBorder,
+              }}
+            >
+              <span style={{ color: "#a0a0b0" }}>{b.playerName}</span> sat out
+              this round
+            </div>
+          );
+        }
+
+        const teamAIsWhite = teamAIsWhiteOn(b.boardNum);
+        const aName = teamAIsWhite ? b.whiteName : b.blackName;
+        const bName = teamAIsWhite ? b.blackName : b.whiteName;
+        const outcome = outcomeFor(b.result, teamAIsWhite);
+        const lockedByOtherBoard =
+          decisiveBoard && decisiveBoard.boardNum !== b.boardNum && !b.result;
+        const showMiniMatch = matchPlay && !isBughouse && b.miniMatch;
+
+        const outcomeText =
+          outcome === "A"
+            ? `${aName} wins`
+            : outcome === "B"
+            ? `${bName} wins`
+            : outcome === "draw"
+            ? "Draw"
+            : outcome === "double"
+            ? "Double forfeit"
+            : "No result";
+
+        const mmScore = b.miniMatch?.score;
+
+        return (
+          <div
+            key={b.boardNum}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 160px 1fr",
+              borderBottom: rowBorder,
+              minHeight: 120,
+            }}
+          >
+            <PlayerSide
+              name={aName}
+              isWhite={teamAIsWhite}
+              teamName={p.teamWhiteName}
+              teamColor="#d4a853"
+              align="left"
+              winner={outcome === "A"}
+            />
+
+            <div
+              style={{
+                padding: "16px 12px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                borderLeft: "1px solid #252532",
+                borderRight: "1px solid #252532",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 9,
+                  fontWeight: 600,
+                  letterSpacing: "0.15em",
+                  textTransform: "uppercase",
+                  color: "#4a4a5a",
+                }}
+              >
+                Board {b.boardNum}
+              </div>
+
+              {lockedByOtherBoard ? (
+                <div
+                  style={{
+                    fontSize: 9,
+                    color: "#6b6b7b",
+                    textAlign: "center",
+                    lineHeight: 1.4,
+                    maxWidth: 120,
+                  }}
+                >
+                  Match decided on Board {decisiveBoard.boardNum}
+                </div>
+              ) : (
+                <>
+                  {showMiniMatch && mmScore && (
+                    <span
+                      style={{
+                        color: "#d4a853",
+                        fontWeight: 800,
+                        fontSize: 15,
+                      }}
+                    >
+                      {/* score.A follows White, so flip when the left team
+                          is Black on this board */}
+                      {teamAIsWhite ? mmScore.A : mmScore.B}
+                      {" – "}
+                      {teamAIsWhite ? mmScore.B : mmScore.A}
+                    </span>
+                  )}
+
+                  {isEditing && !showMiniMatch ? (
+                    <select
+                      className="result-select"
+                      value={b.result || ""}
+                      disabled={loading}
+                      onChange={(e) =>
+                        onResultChange?.(index, e.target.value, b.boardNum)
+                      }
+                      style={{ maxWidth: 140, fontSize: 11 }}
+                    >
+                      <option value="" disabled>
+                        Select
+                      </option>
+                      {teamResultOptions(teamAIsWhite, aName, bName).map(
+                        (opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  ) : (
+                    <>
+                      <div
+                        style={{
+                          padding: "4px 12px",
+                          borderRadius: 999,
+                          background: "rgba(184, 134, 58, 0.15)",
+                          color: "#e8e8e8",
+                          fontWeight: 700,
+                          fontSize: 13,
+                        }}
+                      >
+                        {b.result ? formatResult(b.result) : "—"}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 9,
+                          color: "#8a8a9a",
+                          textAlign: "center",
+                          lineHeight: 1.4,
+                          maxWidth: 130,
+                        }}
+                      >
+                        {outcomeText}
+                      </div>
+                    </>
+                  )}
+
+                  {b.derivedFromBoard && (
+                    <div
+                      style={{
+                        fontSize: 9,
+                        color: "#6b6b7b",
+                        textAlign: "center",
+                      }}
+                    >
+                      derived from Board {b.derivedFromBoard}
+                    </div>
+                  )}
+
+                  {showMiniMatch && (
+                    <button
+                      type="button"
+                      className="btn-secondary btn-sm"
+                      onClick={() => onOpenMiniMatch?.(index, b.boardNum)}
+                    >
+                      View Mini-Match →
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+
+            <PlayerSide
+              name={bName}
+              isWhite={!teamAIsWhite}
+              teamName={p.teamBlackName}
+              teamColor="#6b9df7"
+              align="right"
+              winner={outcome === "B"}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function RoundHistory({
   format,
   round,
@@ -30,144 +466,56 @@ export default function RoundHistory({
   if (format === "team") {
     return (
       <div className="team-matches">
-        {round.pairings.map((p, i) => {
-          // There's no "abandoned" flag stored on the board that bughouse
-          // didn't need — it just never got a result. So a board with no
-          // result whose sibling board *did* get a decisive one is read as
-          // "the match was already decided," not "someone forgot this one."
-          const decisiveBoard = isBughouse
-            ? p.boards?.find((b) => !b.sitOut && DECISIVE_RESULTS.has(b.result))
-            : null;
-
-          return (
-            <div className="team-match-card" key={i}>
-              {p.type === "bye" ? (
-                <div className="team-match-bye">
-                  <span className="player-name">{p.teamName}</span>
-                  <span className="bye-result">BYE — full team +1 each</span>
-                </div>
-              ) : (
-                <>
-                  <div className="team-match-header">
-                    <span className="team-tag white">{p.teamWhiteName}</span>
-                    <span className="vs">
-                      {p.whitePoints} – {p.blackPoints}
-                    </span>
-                    <span className="team-tag black">{p.teamBlackName}</span>
-                  </div>
-                  <table className="pairing-table board-table">
-                    <thead>
-                      <tr>
-                        <th className="board-num">Bd</th>
-                        <th>White</th>
-                        <th>Black</th>
-                        <th>Result</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {p.boards.map((b) => {
-                        const lockedByOtherBoard =
-                          decisiveBoard &&
-                          decisiveBoard.boardNum !== b.boardNum &&
-                          !b.result;
-
-                        return (
-                          <tr key={b.boardNum}>
-                            <td className="board-num">{b.boardNum}</td>
-                            {b.sitOut ? (
-                              <td colSpan={3}>
-                                <span className="player-name">
-                                  {b.playerName}
-                                </span>
-                                <span className="bye-result"> sat out</span>
-                              </td>
-                            ) : lockedByOtherBoard ? (
-                              <td colSpan={3}>
-                                <span className="player-name">
-                                  {b.whiteName} vs {b.blackName}
-                                </span>
-                                <span className="bughouse-decided">
-                                  {" "}
-                                  — match decided on Board{" "}
-                                  {decisiveBoard.boardNum}
-                                </span>
-                              </td>
-                            ) : (
-                              <>
-                                <td>
-                                  <span className="color-w" />
-                                  <span className="player-name">
-                                    {b.whiteName}
-                                  </span>
-                                </td>
-                                <td>
-                                  <span className="color-b" />
-                                  <span className="player-name">
-                                    {b.blackName}
-                                  </span>
-                                </td>
-                                <td>
-                                  {matchPlay && b.miniMatch ? (
-                                    <div
-                                      style={{
-                                        display: "flex",
-                                        flexDirection: "column",
-                                        alignItems: "flex-start",
-                                        gap: 4,
-                                      }}
-                                    >
-                                      <strong>{formatResult(b.result)}</strong>
-                                      <button
-                                        type="button"
-                                        className="btn-secondary btn-sm"
-                                        onClick={() =>
-                                          onOpenMiniMatch?.(i, b.boardNum)
-                                        }
-                                      >
-                                        View Mini-Match →
-                                      </button>
-                                    </div>
-                                  ) : isEditing ? (
-                                    <select
-                                      className="result-select"
-                                      value={b.result || ""}
-                                      disabled={loading}
-                                      onChange={(e) =>
-                                        onResultChange?.(
-                                          i,
-                                          e.target.value,
-                                          b.boardNum,
-                                        )
-                                      }
-                                    >
-                                      <option value="" disabled>
-                                        Select
-                                      </option>
-                                      {RESULT_OPTIONS.map((opt) => (
-                                        <option
-                                          key={opt.value}
-                                          value={opt.value}
-                                        >
-                                          {opt.label}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  ) : (
-                                    <strong>{formatResult(b.result)}</strong>
-                                  )}
-                                </td>
-                              </>
-                            )}
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </>
-              )}
+        {round.pairings.map((p, i) =>
+          p.type === "bye" ? (
+            <div
+              key={i}
+              style={{
+                background: "#13131a",
+                border: "1px solid #252532",
+                borderRadius: 12,
+                padding: 24,
+                textAlign: "center",
+                marginBottom: 24,
+                fontFamily: mono,
+                color: "#e8e8e8",
+              }}
+            >
+              <span
+                style={{
+                  color: "#d4a853",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.1em",
+                  fontWeight: 600,
+                }}
+              >
+                {p.teamName}
+              </span>
+              <span
+                style={{
+                  display: "block",
+                  marginTop: 8,
+                  color: "#8a8a9a",
+                  fontSize: 12,
+                }}
+              >
+                BYE — FULL TEAM RECEIVES +1
+              </span>
             </div>
-          );
-        })}
+          ) : (
+            <TeamHistoryMatch
+              key={i}
+              p={p}
+              index={i}
+              isBughouse={isBughouse}
+              isEditing={isEditing}
+              loading={loading}
+              matchPlay={matchPlay}
+              onResultChange={onResultChange}
+              onOpenMiniMatch={onOpenMiniMatch}
+            />
+          ),
+        )}
       </div>
     );
   }
