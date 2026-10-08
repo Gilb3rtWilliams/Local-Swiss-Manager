@@ -1,496 +1,243 @@
 import { useEffect, useState } from "react";
 import { Link, useOutletContext, useParams } from "react-router-dom";
 import { api } from "../../api.js";
+import "../../css/TeamProfile.css";
 
-const RESULT_STYLE = {
-  win: { label: "WIN", color: "#4ade80" },
-  draw: { label: "DRAW", color: "var(--tp-muted, #8a8a9a)" },
-  loss: { label: "LOSS", color: "var(--tp-danger, #ff6b6b)" },
-  bye: { label: "BYE", color: "var(--tp-brass, #d4a853)" },
-};
-
-// Team matches already carry an explicit "W"/"L"/"D"/"bye"/null result
-// (computed server-side from ourScore vs opponentScore) — no need to
-// re-derive it from points the way PlayerProfile's outcomeFor does for
-// individual games.
+// Team matches already carry an explicit "W"/"L"/"D"/"bye"/null result —
+// mirrors the admin TeamProfile.jsx's outcomeFor() exactly, mapped onto
+// tm- classes instead of inline colors.
 function outcomeFor(match) {
-  if (match.result === "bye") return RESULT_STYLE.bye;
-  if (match.result === "W") return RESULT_STYLE.win;
-  if (match.result === "D") return RESULT_STYLE.draw;
-  if (match.result === "L") return RESULT_STYLE.loss;
-  return { label: "PENDING", color: "var(--tp-dim, #6b6b7b)" };
+  if (match.result === "bye")
+    return { label: "BYE", className: "tm-outcome-bye" };
+  if (match.result === "W")
+    return { label: "WIN", className: "tm-outcome-win" };
+  if (match.result === "D")
+    return { label: "DRAW", className: "tm-outcome-draw" };
+  if (match.result === "L")
+    return { label: "LOSS", className: "tm-outcome-loss" };
+  return { label: "PENDING", className: "tm-outcome-pending" };
 }
 
-const cardStyle = {
-  background: "var(--tp-bg, #13131a)",
-  border: "1px solid var(--tp-border, #252532)",
-  borderRadius: 12,
-  padding: "24px",
-};
+function pointClass(points) {
+  if (points === 1) return "tm-point-win";
+  if (points === 0.5) return "tm-point-draw";
+  if (points === 0) return "tm-point-loss";
+  return "";
+}
 
-const sectionHeadingStyle = {
-  fontSize: 16,
-  fontWeight: 700,
-  letterSpacing: "0.08em",
-  textTransform: "uppercase",
-  color: "var(--tp-text, #e8e8e8)",
-  margin: 0,
-  marginBottom: 20,
-  borderBottom: "1px solid var(--tp-border, #252532)",
-  paddingBottom: 12,
-};
-
-const fideLinkStyle = {
-  color: "#8aa9d4",
-  textDecoration: "none",
-  fontFamily: "var(--tp-font-ui, Georgia, 'Times New Roman', serif)",
-  fontSize: 11,
-};
-
-function FideLink({ fideId }) {
-  if (!fideId)
-    return <span style={{ color: "var(--tp-faint, #4a4a55)" }}>—</span>;
+function StatBox({ label, value, highlight = false }) {
   return (
-    <a
-      href={`https://ratings.fide.com/profile/${fideId}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      style={fideLinkStyle}
-      onClick={(e) => e.stopPropagation()}
-      onMouseEnter={(e) => (e.currentTarget.style.textDecoration = "underline")}
-      onMouseLeave={(e) => (e.currentTarget.style.textDecoration = "none")}
-    >
-      {fideId}
-    </a>
+    <div className={`tm-stat ${highlight ? "tm-stat-highlight" : ""}`}>
+      <span className="tm-stat-label">{label}</span>
+      <span className="tm-stat-value">{value}</span>
+    </div>
   );
 }
 
-export default function TeamProfile() {
+export default function PublicTeamProfile() {
   // Nested under TournamentLayout like PlayerProfile — `t` comes from the
-  // same outlet context, no separate tournament-fetching pattern needed.
+  // same outlet context, and the layout already provides the theme.
   const { t } = useOutletContext();
   const { teamId } = useParams();
 
   const [profile, setProfile] = useState(null);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError("");
+    setProfile(null);
+    setLoadError("");
     api
       .getTeamProfile(t.id, teamId)
       .then((data) => {
         if (!cancelled) setProfile(data);
       })
       .catch((e) => {
-        if (!cancelled) setError(e.message);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setLoadError(e.message);
       });
     return () => {
       cancelled = true;
     };
   }, [t.id, teamId]);
 
-  const wrapperStyle = {
-    display: "flex",
-    flexDirection: "column",
-    gap: "24px",
-    fontFamily: "var(--tp-font-ui, Georgia, 'Times New Roman', serif)",
-    color: "var(--tp-text, #e8e8e8)",
-    background:
-      "radial-gradient(circle at 50% 0%, var(--tp-surface-2, #1f1f2e) 0%, transparent 70%)",
-    padding: "8px 0",
-    borderRadius: "16px",
-  };
-
-  if (loading) {
-    return (
-      <div style={wrapperStyle}>
-        <div
-          style={{
-            ...cardStyle,
-            textAlign: "center",
-            color: "var(--tp-muted, #8a8a9a)",
-          }}
-        >
-          Loading team profile…
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={wrapperStyle}>
-        <div style={{ ...cardStyle, textAlign: "center" }}>
-          <p
-            style={{ color: "var(--tp-danger, #ff6b6b)", margin: "0 0 16px 0" }}
-          >
-            {error}
-          </p>
-          <Link
-            to={`/tournament/${t.id}/standings`}
-            style={{ color: "var(--tp-muted, #8a8a9a)", fontSize: 12 }}
-          >
-            ← Back to standings
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  if (!profile) return null;
-
-  return (
-    <div style={wrapperStyle}>
-      <div>
-        <Link
-          to={`/tournament/${t.id}/standings`}
-          style={{
-            color: "var(--tp-muted, #8a8a9a)",
-            fontSize: 11,
-            textDecoration: "none",
-            letterSpacing: "0.05em",
-          }}
-        >
+  const shell = (children) => (
+    <div className="team-profile">
+      <div className="tm-topbar">
+        <Link to={`/tournament/${t.id}/standings`} className="tm-back-link">
           ← Back to tournament
         </Link>
       </div>
+      {children}
+    </div>
+  );
 
-      {/* Header card: identity + headline numbers */}
-      <div style={cardStyle}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: 20,
-          }}
-        >
-          <div>
-            <h2
-              style={{
-                fontSize: 22,
-                fontWeight: 700,
-                margin: 0,
-                letterSpacing: "-0.01em",
-              }}
-            >
-              {profile.name}
-            </h2>
-            <div
-              style={{
-                color: "var(--tp-muted, #8a8a9a)",
-                fontSize: 12,
-                marginTop: 6,
-              }}
-            >
-              {profile.rank
-                ? `Rank #${profile.rank} of ${profile.teamCount}`
-                : "Unranked"}
-              {" · "}
-              {profile.roster.length} player
-              {profile.roster.length === 1 ? "" : "s"}
-            </div>
-          </div>
+  if (loadError) {
+    return shell(
+      <div className="tm-card tm-error-card">
+        <h2 className="tm-error-title">Profile not found</h2>
+        <p className="tm-error-message">{loadError}</p>
+      </div>,
+    );
+  }
 
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <StatBox label="Score" value={profile.score} highlight />
-            <StatBox label="Wins" value={profile.wins} />
-            <StatBox label="Buchholz" value={profile.buchholz} />
-            <StatBox label="Sonneborn-Berger" value={profile.sb} />
-          </div>
+  if (!profile) {
+    return shell(
+      <div className="tm-card tm-loading">Loading team profile…</div>,
+    );
+  }
+
+  const playerCount = profile.roster.length;
+
+  return shell(
+    <>
+      {/* Header */}
+      <header className="tm-card tm-header-card">
+        <span className="tm-eyebrow">Team Profile</span>
+        <h1 className="tm-team-name">{profile.name}</h1>
+
+        <p className="tm-meta">
+          <span>
+            {profile.rank
+              ? `Rank #${profile.rank} of ${profile.teamCount}`
+              : "Unranked"}
+          </span>
+          <span>
+            {playerCount} player{playerCount === 1 ? "" : "s"}
+          </span>
+        </p>
+
+        <div className="tm-stats">
+          <StatBox label="Score" value={profile.score} highlight />
+          <StatBox label="Wins" value={profile.wins} />
+          <StatBox label="Buchholz" value={profile.buchholz} />
+          <StatBox label="Sonneborn-Berger" value={profile.sb} />
         </div>
-      </div>
+      </header>
 
       {/* Roster */}
-      <div style={cardStyle}>
-        <h3 style={sectionHeadingStyle}>Roster</h3>
-        {profile.roster.length === 0 ? (
-          <p
-            style={{
-              color: "var(--tp-muted, #8a8a9a)",
-              fontSize: 13,
-              margin: 0,
-            }}
-          >
-            No players on this team.
-          </p>
+      <section className="tm-card">
+        <h2 className="tm-section-heading">Roster</h2>
+
+        {playerCount === 0 ? (
+          <p className="tm-empty">No players on this team.</p>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                textAlign: "left",
-                fontSize: 13,
-              }}
-            >
+          <div className="tm-table-wrapper">
+            <table className="tm-table">
               <thead>
-                <tr
-                  style={{
-                    borderBottom: "1px solid var(--tp-border, #252532)",
-                    color: "var(--tp-dim, #6b6b7b)",
-                    fontSize: 10,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                  }}
-                >
-                  <th style={{ padding: "10px 12px" }}>Board</th>
-                  <th style={{ padding: "10px 12px" }}>Player</th>
-                  <th style={{ padding: "10px 12px" }}>FIDE ID</th>
-                  <th style={{ padding: "10px 12px", textAlign: "right" }}>
-                    Rating
-                  </th>
-                  <th style={{ padding: "10px 12px", textAlign: "right" }}>
-                    Score
-                  </th>
+                <tr>
+                  <th>Board</th>
+                  <th>Player</th>
+                  <th>FIDE ID</th>
+                  <th className="tm-align-right">Rating</th>
+                  <th className="tm-align-right">Score</th>
                 </tr>
               </thead>
               <tbody>
                 {profile.roster.map((p) => (
-                  <tr
-                    key={p.id}
-                    style={{
-                      borderBottom: "1px solid var(--tp-surface-2, #1f1f2a)",
-                    }}
-                  >
-                    <td
-                      style={{
-                        padding: "10px 12px",
-                        color: "var(--tp-dim, #6b6b7b)",
-                      }}
-                    >
-                      {p.boardNum ?? "—"}
-                    </td>
-                    <td style={{ padding: "10px 12px", fontWeight: 600 }}>
+                  <tr key={p.id}>
+                    <td className="tm-muted">{p.boardNum ?? "—"}</td>
+                    <td className="tm-player-cell">
                       {p.title && (
-                        <span
-                          style={{
-                            color: "var(--tp-loss-soft, #c25555)",
-                            marginRight: 6,
-                            fontWeight: 700,
-                          }}
-                        >
-                          {p.title}
-                        </span>
+                        <span className="tm-player-title">{p.title}</span>
                       )}
                       <Link
                         to={`/tournament/${t.id}/player/${p.id}`}
-                        style={{ color: "inherit", textDecoration: "none" }}
-                        onMouseEnter={(e) =>
-                          (e.currentTarget.style.textDecoration = "underline")
-                        }
-                        onMouseLeave={(e) =>
-                          (e.currentTarget.style.textDecoration = "none")
-                        }
+                        className="tm-link"
                       >
                         {p.name}
                       </Link>
                     </td>
-                    <td style={{ padding: "10px 12px" }}>
-                      <FideLink fideId={p.fideId} />
+                    <td className="tm-muted">
+                      {p.fideId ? (
+                        <a
+                          href={`https://ratings.fide.com/profile/${p.fideId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="tm-fide-link"
+                        >
+                          {p.fideId}
+                        </a>
+                      ) : (
+                        "—"
+                      )}
                     </td>
-                    <td
-                      style={{
-                        padding: "10px 12px",
-                        textAlign: "right",
-                        color: "var(--tp-muted, #8a8a9a)",
-                      }}
-                    >
+                    <td className="tm-align-right tm-muted">
                       {p.rating ?? "—"}
                     </td>
-                    <td
-                      style={{
-                        padding: "10px 12px",
-                        textAlign: "right",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {p.score}
-                    </td>
+                    <td className="tm-align-right tm-score">{p.score}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
-      </div>
+      </section>
 
-      {/* Match history, most recent round first */}
-      <div style={cardStyle}>
-        <h3 style={sectionHeadingStyle}>Match History</h3>
+      {/* Match history */}
+      <section className="tm-card">
+        <h2 className="tm-section-heading">Match History</h2>
+
         {profile.matches.length === 0 ? (
-          <p
-            style={{
-              color: "var(--tp-muted, #8a8a9a)",
-              fontSize: 13,
-              margin: 0,
-            }}
-          >
-            No matches recorded yet.
-          </p>
+          <p className="tm-empty">No matches recorded yet.</p>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div className="tm-matches">
             {profile.matches.map((m, i) => {
               const outcome = outcomeFor(m);
               return (
                 <div
                   key={`${m.round}-${m.opponentId || "bye"}-${i}`}
-                  style={{
-                    background: "var(--tp-surface-2, #181822)",
-                    border: "1px solid var(--tp-border, #252532)",
-                    borderRadius: 8,
-                    padding: "14px 16px",
-                  }}
+                  className="tm-match"
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 12,
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <div
-                      style={{ display: "flex", alignItems: "center", gap: 14 }}
-                    >
-                      <span
-                        style={{
-                          fontSize: 10,
-                          fontWeight: 700,
-                          color: "var(--tp-dim, #6b6b7b)",
-                          letterSpacing: "0.06em",
-                          minWidth: 56,
-                        }}
-                      >
-                        ROUND {m.round}
-                      </span>
+                  <div className="tm-match-summary">
+                    <div className="tm-match-info">
+                      <span className="tm-round">Round {m.round}</span>
                       {m.opponentId ? (
-                        <span style={{ fontWeight: 600 }}>
+                        <span className="tm-match-opponent">
                           <Link
                             to={`/tournament/${t.id}/team/${m.opponentId}`}
-                            style={{ color: "inherit", textDecoration: "none" }}
-                            onMouseEnter={(e) =>
-                              (e.currentTarget.style.textDecoration =
-                                "underline")
-                            }
-                            onMouseLeave={(e) =>
-                              (e.currentTarget.style.textDecoration = "none")
-                            }
+                            className="tm-link"
                           >
                             {m.opponentName}
                           </Link>
+                          <span className="tm-match-score">
+                            {m.ourScore} – {m.opponentScore}
+                          </span>
                         </span>
                       ) : (
-                        <span
-                          style={{
-                            color: "var(--tp-muted, #8a8a9a)",
-                            fontStyle: "italic",
-                          }}
-                        >
-                          No opponent — bye round
-                        </span>
-                      )}
-                      {m.opponentId && (
-                        <span
-                          style={{
-                            color: "var(--tp-muted, #8a8a9a)",
-                            fontSize: 12,
-                          }}
-                        >
-                          {m.ourScore} – {m.opponentScore}
-                        </span>
+                        <span className="tm-bye">No opponent — bye round</span>
                       )}
                     </div>
-                    <span
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        letterSpacing: "0.06em",
-                        color: outcome.color,
-                        minWidth: 60,
-                        textAlign: "right",
-                      }}
-                    >
+                    <span className={`tm-outcome ${outcome.className}`}>
                       {outcome.label}
                     </span>
                   </div>
 
                   {m.boards.length > 0 && (
-                    <div
-                      style={{
-                        marginTop: 10,
-                        paddingTop: 10,
-                        borderTop: "1px solid var(--tp-border, #252532)",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 6,
-                      }}
-                    >
+                    <div className="tm-boards">
                       {m.boards.map((b) => (
-                        <div
-                          key={b.boardNum}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "space-between",
-                            fontSize: 12,
-                            flexWrap: "wrap",
-                            gap: 8,
-                          }}
-                        >
-                          <span style={{ color: "var(--tp-muted, #8a8a9a)" }}>
-                            <span
-                              style={{
-                                color: "var(--tp-dim, #6b6b7b)",
-                                marginRight: 8,
-                              }}
-                            >
-                              Bd {b.boardNum}
+                        <div key={b.boardNum} className="tm-board-row">
+                          <span className="tm-board-num">Bd {b.boardNum}</span>
+                          <span className="tm-board-players">
+                            <span className="tm-board-ours">
+                              {b.ourPlayerName}
                             </span>
-                            {b.ourPlayerName}
                             {!b.sitOut && b.color && (
-                              <span style={{ color: "var(--tp-dim, #6b6b7b)" }}>
-                                {" "}
-                                ({b.color === "W" ? "White" : "Black"})
+                              <span className="tm-board-color">
+                                {b.color === "W" ? "White" : "Black"}
                               </span>
                             )}
                             {b.sitOut ? (
-                              <span
-                                style={{
-                                  color: "var(--tp-dim, #6b6b7b)",
-                                  fontStyle: "italic",
-                                }}
-                              >
-                                {" "}
-                                — sitting out
-                              </span>
+                              <span className="tm-board-note">sitting out</span>
                             ) : (
-                              <>
-                                {" vs "}
-                                {b.opponentPlayerName || "Unknown"}
-                              </>
+                              <span className="tm-board-vs">
+                                vs {b.opponentPlayerName || "Unknown"}
+                              </span>
                             )}
                           </span>
                           <span
-                            style={{
-                              fontWeight: 700,
-                              color:
-                                b.points === 1
-                                  ? "#4ade80"
-                                  : b.points === 0.5
-                                  ? "var(--tp-muted, #8a8a9a)"
-                                  : b.points === 0
-                                  ? "var(--tp-danger, #ff6b6b)"
-                                  : "var(--tp-dim, #6b6b7b)",
-                            }}
+                            className={`tm-board-result ${pointClass(
+                              b.points,
+                            )}`}
                           >
                             {b.sitOut ? "—" : b.result ? b.result : "pending"}
                           </span>
@@ -503,52 +250,9 @@ export default function TeamProfile() {
             })}
           </div>
         )}
-      </div>
-    </div>
-  );
-}
+      </section>
 
-function StatBox({ label, value, highlight }) {
-  return (
-    <div
-      style={{
-        background: highlight
-          ? "rgba(var(--tp-accent-rgb, 212, 168, 83), 0.08)"
-          : "var(--tp-surface-2, #181822)",
-        border: `1px solid ${
-          highlight
-            ? "rgba(var(--tp-accent-rgb, 212, 168, 83), 0.35)"
-            : "var(--tp-border, #252532)"
-        }`,
-        borderRadius: 8,
-        padding: "10px 16px",
-        minWidth: 90,
-        textAlign: "center",
-      }}
-    >
-      <div
-        style={{
-          fontSize: 18,
-          fontWeight: 700,
-          color: highlight
-            ? "var(--tp-brass, #d4a853)"
-            : "var(--tp-text, #e8e8e8)",
-        }}
-      >
-        {value}
-      </div>
-      <div
-        style={{
-          fontSize: 9,
-          fontWeight: 600,
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          color: "var(--tp-muted, #8a8a9a)",
-          marginTop: 2,
-        }}
-      >
-        {label}
-      </div>
-    </div>
+      <p className="tm-footer">Read-only view — shared by the organizer.</p>
+    </>,
   );
 }

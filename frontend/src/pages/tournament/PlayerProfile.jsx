@@ -1,18 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link, useOutletContext, useParams } from "react-router-dom";
 import { api } from "../../api.js";
+import "../../css/PlayerProfile.css";
 
 const RESULT_STYLE = {
-  win: { label: "WIN", color: "#4ade80" },
-  draw: { label: "DRAW", color: "var(--tp-muted, #8a8a9a)" },
-  loss: { label: "LOSS", color: "var(--tp-danger, #ff6b6b)" },
-  bye: { label: "BYE", color: "var(--tp-brass, #d4a853)" },
+  win: { label: "WIN", className: "pl-outcome-win" },
+  draw: { label: "DRAW", className: "pl-outcome-draw" },
+  loss: { label: "LOSS", className: "pl-outcome-loss" },
+  bye: { label: "BYE", className: "pl-outcome-bye" },
 };
 
-// Derived from points rather than re-parsing the raw result string — the
-// backend already did that work (scoreFromResult), and points is
-// unambiguous from the player's own perspective regardless of which side
-// of the board they were on.
 function outcomeFor(game) {
   if (game.result === "bye") return RESULT_STYLE.bye;
   if (game.points === 1) return RESULT_STYLE.win;
@@ -20,440 +17,213 @@ function outcomeFor(game) {
   return RESULT_STYLE.loss;
 }
 
-const cardStyle = {
-  background: "var(--tp-bg, #13131a)",
-  border: "1px solid var(--tp-border, #252532)",
-  borderRadius: 12,
-  padding: "24px",
-};
-
-const sectionHeadingStyle = {
-  fontSize: 16,
-  fontWeight: 700,
-  letterSpacing: "0.08em",
-  textTransform: "uppercase",
-  color: "var(--tp-text, #e8e8e8)",
-  margin: 0,
-  marginBottom: 20,
-  borderBottom: "1px solid var(--tp-border, #252532)",
-  paddingBottom: 12,
-};
-
-export default function PlayerProfile() {
+export default function PublicPlayerProfile() {
   // Nested under TournamentLayout like every other tournament page, so `t`
   // (and refresh) come from the same outlet context — this page doesn't
   // introduce a new data-fetching pattern for the tournament itself, only
-  // for the profile data layered on top of it.
+  // for the profile data layered on top of it. The layout also provides the
+  // theme, so no theme wiring is needed here.
   const { t } = useOutletContext();
   const { playerId } = useParams();
 
   const [profile, setProfile] = useState(null);
-  const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
+
+    setProfile(null);
+    setLoadError("");
     setLoading(true);
-    setError("");
+
     api
       .getPlayerProfile(t.id, playerId)
       .then((data) => {
         if (!cancelled) setProfile(data);
       })
       .catch((e) => {
-        if (!cancelled) setError(e.message);
+        if (!cancelled) setLoadError(e.message);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
+
     return () => {
       cancelled = true;
     };
   }, [t.id, playerId]);
 
-  const wrapperStyle = {
-    display: "flex",
-    flexDirection: "column",
-    gap: "24px",
-    fontFamily: "var(--tp-font-ui, Georgia, 'Times New Roman', serif)",
-    color: "var(--tp-text, #e8e8e8)",
-    background:
-      "radial-gradient(circle at 50% 0%, var(--tp-surface-2, #1f1f2e) 0%, transparent 70%)",
-    padding: "8px 0",
-    borderRadius: "16px",
-  };
+  const shell = (children) => (
+    <div className="player-profile">
+      <div className="pl-topbar">
+        <Link to={`/tournament/${t.id}/standings`} className="pl-back-link">
+          ← Back to tournament
+        </Link>
+      </div>
+      {children}
+    </div>
+  );
 
   if (loading) {
-    return (
-      <div style={wrapperStyle}>
-        <div
-          style={{
-            ...cardStyle,
-            textAlign: "center",
-            color: "var(--tp-muted, #8a8a9a)",
-          }}
-        >
-          Loading player profile…
-        </div>
-      </div>
+    return shell(
+      <div className="pl-card pl-loading">Loading player profile…</div>,
     );
   }
 
-  if (error) {
-    return (
-      <div style={wrapperStyle}>
-        <div style={{ ...cardStyle, textAlign: "center" }}>
-          <p
-            style={{ color: "var(--tp-danger, #ff6b6b)", margin: "0 0 16px 0" }}
-          >
-            {error}
-          </p>
-          <Link
-            to={`/tournament/${t.id}/standings`}
-            style={{ color: "var(--tp-muted, #8a8a9a)", fontSize: 12 }}
-          >
-            ← Back to standings
-          </Link>
-        </div>
-      </div>
+  if (loadError) {
+    return shell(
+      <div className="pl-card pl-error-card">
+        <p className="pl-error-message">{loadError}</p>
+      </div>,
     );
   }
 
   if (!profile) return null;
 
-  return (
-    <div style={wrapperStyle}>
-      <div>
-        <Link
-          to={`/tournament/${t.id}/standings`}
-          style={{
-            color: "var(--tp-muted, #8a8a9a)",
-            fontSize: 11,
-            textDecoration: "none",
-            letterSpacing: "0.05em",
-          }}
-        >
-          ← Back to tournament
-        </Link>
-      </div>
+  return shell(
+    <>
+      {/* Header */}
+      <header className="pl-card pl-header-card">
+        <span className="pl-eyebrow">Player Profile</span>
+        <h1 className="pl-player-name">
+          {profile.title && (
+            <span className="pl-player-title">{profile.title}</span>
+          )}
+          {profile.name}
+        </h1>
 
-      {/* Header card: identity + headline numbers */}
-      <div style={cardStyle}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            flexWrap: "wrap",
-            gap: 20,
-          }}
-        >
-          <div>
-            <h2
-              style={{
-                fontSize: 22,
-                fontWeight: 700,
-                margin: 0,
-                letterSpacing: "-0.01em",
-              }}
-            >
-              {profile.title && (
-                <span
-                  style={{
-                    color: "var(--tp-loss-soft, #c25555)",
-                    marginRight: 8,
-                    fontWeight: 700,
-                  }}
-                >
-                  {profile.title}
-                </span>
-              )}
-              {profile.name}
-            </h2>
-            <div
-              style={{
-                color: "var(--tp-muted, #8a8a9a)",
-                fontSize: 12,
-                marginTop: 6,
-              }}
-            >
-              Rating {profile.rating ?? "Unrated"}
-              {profile.fideId && (
-                <>
-                  {" · "}
-                  <a
-                    href={`https://ratings.fide.com/profile/${profile.fideId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{ color: "#8aa9d4", textDecoration: "none" }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.textDecoration = "underline")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.textDecoration = "none")
-                    }
-                  >
-                    FIDE {profile.fideId}
-                  </a>
-                </>
-              )}
-              {" · This tournament only"}
-            </div>
-          </div>
+        <p className="pl-rating">
+          <span>Rating {profile.rating ?? "Unrated"}</span>
+          {profile.fideId && (
+            <span>
+              <a
+                href={`https://ratings.fide.com/profile/${profile.fideId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="pl-fide-link"
+              >
+                FIDE {profile.fideId}
+              </a>
+            </span>
+          )}
+          <span>This tournament only</span>
+        </p>
 
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <StatBox label="Score" value={profile.score} />
-            <StatBox label="Games" value={profile.gamesPlayed} />
-            <StatBox label="Byes" value={profile.byes} />
-            <StatBox
-              label="Performance"
-              value={profile.performanceRating ?? "—"}
-              highlight
-            />
-          </div>
+        <div className="pl-stats">
+          <StatBox label="Score" value={profile.score} />
+          <StatBox label="Games" value={profile.gamesPlayed} />
+          <StatBox label="Byes" value={profile.byes} />
+          <StatBox
+            label="Performance"
+            value={profile.performanceRating ?? "—"}
+            highlight
+          />
         </div>
+
         {profile.performanceRating != null && (
-          <p
-            style={{
-              color: "var(--tp-dim, #6b6b7b)",
-              fontSize: 11,
-              marginTop: 16,
-              marginBottom: 0,
-              lineHeight: 1.5,
-            }}
-          >
+          <p className="pl-performance-note">
             Performance rating is an estimate from games in this tournament only
             (avg. opponent rating adjusted for score) — not an official FIDE
             norm calculation.
           </p>
         )}
-      </div>
+      </header>
 
-      {/* Opponents summary — the "score against them" view */}
-      <div style={cardStyle}>
-        <h3 style={sectionHeadingStyle}>Opponents Faced</h3>
+      {/* Opponents */}
+      <section className="pl-card">
+        <h2 className="pl-section-heading">Opponents Faced</h2>
+
         {profile.opponents.length === 0 ? (
-          <p
-            style={{
-              color: "var(--tp-muted, #8a8a9a)",
-              fontSize: 13,
-              margin: 0,
-            }}
-          >
-            No games played yet.
-          </p>
+          <p className="pl-empty">No games played yet.</p>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                textAlign: "left",
-                fontSize: 13,
-              }}
-            >
+          <div className="pl-table-wrapper">
+            <table className="pl-table">
               <thead>
-                <tr
-                  style={{
-                    borderBottom: "1px solid var(--tp-border, #252532)",
-                    color: "var(--tp-dim, #6b6b7b)",
-                    fontSize: 10,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                  }}
-                >
-                  <th style={{ padding: "10px 12px" }}>Opponent</th>
-                  <th style={{ padding: "10px 12px", textAlign: "right" }}>
-                    FIDE ID
-                  </th>
-                  <th style={{ padding: "10px 12px", textAlign: "right" }}>
-                    Rating
-                  </th>
-                  <th style={{ padding: "10px 12px", textAlign: "right" }}>
-                    Games
-                  </th>
-                  <th style={{ padding: "10px 12px", textAlign: "right" }}>
-                    Score
-                  </th>
+                <tr>
+                  <th>Opponent</th>
+                  <th className="pl-align-right">FIDE ID</th>
+                  <th className="pl-align-right">Rating</th>
+                  <th className="pl-align-right">Games</th>
+                  <th className="pl-align-right">Score</th>
                 </tr>
               </thead>
+
               <tbody>
                 {profile.opponents.map((o) => (
-                  <tr
-                    key={o.opponentId}
-                    style={{
-                      borderBottom: "1px solid var(--tp-surface-2, #1f1f2a)",
-                    }}
-                  >
-                    <td style={{ padding: "10px 12px", fontWeight: 600 }}>
+                  <tr key={o.opponentId}>
+                    <td className="pl-opponent-name">
                       {o.title && (
-                        <span
-                          style={{
-                            color: "var(--tp-loss-soft, #c25555)",
-                            marginRight: 6,
-                            fontWeight: 700,
-                          }}
-                        >
-                          {o.title}
-                        </span>
+                        <span className="pl-opponent-title">{o.title}</span>
                       )}
                       <Link
                         to={`/tournament/${t.id}/player/${o.opponentId}`}
-                        style={{ color: "inherit", textDecoration: "none" }}
-                        onMouseEnter={(e) =>
-                          (e.currentTarget.style.textDecoration = "underline")
-                        }
-                        onMouseLeave={(e) =>
-                          (e.currentTarget.style.textDecoration = "none")
-                        }
+                        className="pl-player-link"
                       >
                         {o.name}
                       </Link>
                     </td>
-                    <td
-                      style={{
-                        padding: "10px 12px",
-                        textAlign: "right",
-                        fontSize: 11,
-                        fontFamily:
-                          "var(--tp-font-ui, Georgia, 'Times New Roman', serif)",
-                      }}
-                    >
+                    <td className="pl-align-right">
                       {o.fideId ? (
                         <a
                           href={`https://ratings.fide.com/profile/${o.fideId}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          style={{ color: "#8aa9d4", textDecoration: "none" }}
-                          onClick={(e) => e.stopPropagation()}
-                          onMouseEnter={(e) =>
-                            (e.currentTarget.style.textDecoration = "underline")
-                          }
-                          onMouseLeave={(e) =>
-                            (e.currentTarget.style.textDecoration = "none")
-                          }
+                          className="pl-fide-link pl-fide-small"
                         >
                           {o.fideId}
                         </a>
                       ) : (
-                        <span style={{ color: "var(--tp-faint, #4a4a55)" }}>
-                          —
-                        </span>
+                        <span className="pl-faint">—</span>
                       )}
                     </td>
-                    <td
-                      style={{
-                        padding: "10px 12px",
-                        textAlign: "right",
-                        color: "var(--tp-muted, #8a8a9a)",
-                      }}
-                    >
+                    <td className="pl-align-right pl-muted">
                       {o.rating ?? "—"}
                     </td>
-                    <td
-                      style={{
-                        padding: "10px 12px",
-                        textAlign: "right",
-                        color: "var(--tp-muted, #8a8a9a)",
-                      }}
-                    >
-                      {o.gamesPlayed}
-                    </td>
-                    <td
-                      style={{
-                        padding: "10px 12px",
-                        textAlign: "right",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {o.points}
-                    </td>
+                    <td className="pl-align-right pl-muted">{o.gamesPlayed}</td>
+                    <td className="pl-align-right pl-score">{o.points}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
-      </div>
+      </section>
 
-      {/* Chronological game log, most recent round first */}
-      <div style={cardStyle}>
-        <h3 style={sectionHeadingStyle}>Game History</h3>
+      {/* Game History */}
+      <section className="pl-card">
+        <h2 className="pl-section-heading">Game History</h2>
+
         {profile.games.length === 0 ? (
-          <p
-            style={{
-              color: "var(--tp-muted, #8a8a9a)",
-              fontSize: 13,
-              margin: 0,
-            }}
-          >
-            No games recorded yet.
-          </p>
+          <p className="pl-empty">No games recorded yet.</p>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div className="pl-games-list">
             {profile.games.map((g, i) => {
               const outcome = outcomeFor(g);
+
               return (
                 <div
                   key={`${g.round}-${g.opponentId || "bye"}-${i}`}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 12,
-                    background: "var(--tp-surface-2, #181822)",
-                    border: "1px solid var(--tp-border, #252532)",
-                    borderRadius: 8,
-                    padding: "12px 16px",
-                    flexWrap: "wrap",
-                  }}
+                  className="pl-game-row"
                 >
-                  <div
-                    style={{ display: "flex", alignItems: "center", gap: 14 }}
-                  >
-                    <span
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: "var(--tp-dim, #6b6b7b)",
-                        letterSpacing: "0.06em",
-                        minWidth: 56,
-                      }}
-                    >
-                      ROUND {g.round}
-                    </span>
+                  <div className="pl-game-info">
+                    <span className="pl-round">Round {g.round}</span>
+
                     {g.opponentId ? (
-                      <span style={{ fontWeight: 600 }}>
+                      <span className="pl-game-opponent">
                         {g.opponentTitle && (
-                          <span
-                            style={{
-                              color: "var(--tp-loss-soft, #c25555)",
-                              marginRight: 6,
-                              fontWeight: 700,
-                            }}
-                          >
+                          <span className="pl-opponent-title">
                             {g.opponentTitle}
                           </span>
                         )}
                         <Link
                           to={`/tournament/${t.id}/player/${g.opponentId}`}
-                          style={{ color: "inherit", textDecoration: "none" }}
-                          onMouseEnter={(e) =>
-                            (e.currentTarget.style.textDecoration = "underline")
-                          }
-                          onMouseLeave={(e) =>
-                            (e.currentTarget.style.textDecoration = "none")
-                          }
+                          className="pl-player-link"
                         >
                           {g.opponentName}
                         </Link>
                         {g.opponentRating != null && (
-                          <span
-                            style={{
-                              color: "var(--tp-muted, #8a8a9a)",
-                              fontWeight: 400,
-                            }}
-                          >
+                          <span className="pl-opponent-rating">
                             {" "}
                             ({g.opponentRating})
                           </span>
@@ -463,56 +233,21 @@ export default function PlayerProfile() {
                             href={`https://ratings.fide.com/profile/${g.opponentFideId}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            style={{
-                              color: "#8aa9d4",
-                              fontWeight: 400,
-                              fontSize: 11,
-                              marginLeft: 8,
-                              textDecoration: "none",
-                            }}
-                            onMouseEnter={(e) =>
-                              (e.currentTarget.style.textDecoration =
-                                "underline")
-                            }
-                            onMouseLeave={(e) =>
-                              (e.currentTarget.style.textDecoration = "none")
-                            }
+                            className="pl-fide-link pl-fide-small pl-game-fide"
                           >
                             FIDE {g.opponentFideId}
                           </a>
                         )}
-                        <span
-                          style={{
-                            color: "var(--tp-dim, #6b6b7b)",
-                            fontWeight: 400,
-                            marginLeft: 8,
-                            fontSize: 11,
-                          }}
-                        >
+                        <span className="pl-color">
                           {g.color === "W" ? "as White" : "as Black"}
                         </span>
                       </span>
                     ) : (
-                      <span
-                        style={{
-                          color: "var(--tp-muted, #8a8a9a)",
-                          fontStyle: "italic",
-                        }}
-                      >
-                        No opponent — bye round
-                      </span>
+                      <span className="pl-bye">No opponent — bye round</span>
                     )}
                   </div>
-                  <span
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      letterSpacing: "0.06em",
-                      color: outcome.color,
-                      minWidth: 44,
-                      textAlign: "right",
-                    }}
-                  >
+
+                  <span className={`pl-outcome ${outcome.className}`}>
                     {outcome.label}
                   </span>
                 </div>
@@ -520,52 +255,18 @@ export default function PlayerProfile() {
             })}
           </div>
         )}
-      </div>
-    </div>
+      </section>
+
+      <p className="pl-footer">Read-only view — shared by the organizer.</p>
+    </>,
   );
 }
 
-function StatBox({ label, value, highlight }) {
+function StatBox({ label, value, highlight = false }) {
   return (
-    <div
-      style={{
-        background: highlight
-          ? "rgba(var(--tp-accent-rgb, 212, 168, 83), 0.08)"
-          : "var(--tp-surface-2, #181822)",
-        border: `1px solid ${
-          highlight
-            ? "rgba(var(--tp-accent-rgb, 212, 168, 83), 0.35)"
-            : "var(--tp-border, #252532)"
-        }`,
-        borderRadius: 8,
-        padding: "10px 16px",
-        minWidth: 90,
-        textAlign: "center",
-      }}
-    >
-      <div
-        style={{
-          fontSize: 18,
-          fontWeight: 700,
-          color: highlight
-            ? "var(--tp-brass, #d4a853)"
-            : "var(--tp-text, #e8e8e8)",
-        }}
-      >
-        {value}
-      </div>
-      <div
-        style={{
-          fontSize: 9,
-          fontWeight: 600,
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          color: "var(--tp-muted, #8a8a9a)",
-          marginTop: 2,
-        }}
-      >
-        {label}
-      </div>
+    <div className={`pl-stat ${highlight ? "pl-stat-highlight" : ""}`}>
+      <span className="pl-stat-label">{label}</span>
+      <span className="pl-stat-value">{value}</span>
     </div>
   );
 }

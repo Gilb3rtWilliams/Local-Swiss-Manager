@@ -1,0 +1,533 @@
+/* =========================================================
+   TEAM PROFILE (admin)
+   The twin of PublicTeamProfile.css, and of PlayerProfile.css. This page
+   renders inside TournamentLayout, which already provides the theme, so the
+   --tp-* tokens are inherited and there is no page shell or theme picker.
+   ========================================================= */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+.team-profile {
+  --tm-surface: var(--tp-card-solid, #191924);
+  --tm-line: var(--tp-border, #252532);
+  --tm-line-strong: var(--tp-border-strong, #353545);
+  --tm-text: var(--tp-text, #e8e8e8);
+  --tm-heading: var(--tp-heading, #ffffff);
+  --tm-muted: var(--tp-muted, #8a8a9a);
+  --tm-accent: var(--tp-brass, #d4a853);
+  --tm-danger: var(--tp-danger, #ff6b6b);
+  --tm-title: #c25555;
+  --tm-serif: "Georgia", "Times New Roman", serif;
+  --tm-sans: "Inter", system-ui, sans-serif;
+
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  color: var(--tm-text);
+  font-family: var(--tm-sans);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.team-profile *,
+.team-profile *::before,
+.team-profile *::after {
+  box-sizing: border-box;
+}
+
+.team-profile h1,
+.team-profile h2 {
+  margin: 0;
+  font-family: var(--tm-serif);
+  color: var(--tm-heading);
+}
+
+/* =========================================================
+   TOP BAR + BACK LINK
+   ========================================================= */
+
+.tm-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.tm-back-link {
+  display: inline-block;
+  padding: 8px 16px;
+  border: 1px solid var(--tm-line);
+  border-radius: 999px;
+  background: var(--tm-surface);
+  color: var(--tm-muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.tm-back-link:hover {
+  color: var(--tm-heading);
+  border-color: var(--tm-line-strong);
+}
+
+/* =========================================================
+   CARDS
+   ========================================================= */
+
+.tm-card {
+  padding: 32px 36px;
+  background: var(--tm-surface);
+  border: 1px solid var(--tm-line);
+  border-radius: 16px;
+}
+
+.tm-loading {
+  text-align: center;
+  color: var(--tm-muted);
+}
+
+.tm-error-card {
+  text-align: center;
+}
+
+.tm-error-title {
+  margin-bottom: 8px;
+  font-size: 1.4rem;
+}
+
+.tm-error-message {
+  margin: 0;
+  color: var(--tm-danger);
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.tm-eyebrow {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tm-accent);
+}
+
+.tm-team-name {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
+}
+
+.tm-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 0;
+  margin: 12px 0 0;
+  font-size: 0.92rem;
+  color: var(--tm-muted);
+}
+
+.tm-meta > span + span::before {
+  content: "•";
+  margin: 0 12px;
+  opacity: 0.5;
+}
+
+/* Stat strip: hairline dividers instead of boxes */
+.tm-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 28px;
+  padding: 22px 0;
+  border-top: 1px solid var(--tm-line);
+  border-bottom: 1px solid var(--tm-line);
+}
+
+.tm-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 24px;
+  border-left: 1px solid var(--tm-line);
+}
+
+.tm-stat:first-child {
+  padding-left: 0;
+  border-left: none;
+}
+
+.tm-stat-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tm-muted);
+}
+
+.tm-stat-value {
+  font-family: var(--tm-serif);
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--tm-heading);
+}
+
+.tm-stat-highlight .tm-stat-value {
+  color: var(--tm-accent);
+}
+
+/* =========================================================
+   SECTION HEADINGS
+   ========================================================= */
+
+.tm-section-heading {
+  position: relative;
+  margin-bottom: 8px;
+  padding-bottom: 14px;
+  font-family: var(--tm-sans);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tm-accent);
+}
+
+.tm-section-heading::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 28px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--tm-accent);
+}
+
+.tm-empty {
+  margin: 16px 0 0;
+  color: var(--tm-muted);
+}
+
+/* =========================================================
+   LINKS & SHARED TEXT
+   ========================================================= */
+
+.tm-link {
+  color: var(--tm-heading);
+  text-decoration: none;
+}
+
+.tm-link:hover {
+  color: var(--tm-accent);
+  text-decoration: underline;
+}
+
+.tm-fide-link {
+  color: var(--tm-accent);
+  text-decoration: none;
+}
+
+.tm-fide-link:hover {
+  text-decoration: underline;
+}
+
+.tm-muted {
+  color: var(--tm-muted);
+}
+
+/* =========================================================
+   ROSTER TABLE
+   ========================================================= */
+
+.tm-table-wrapper {
+  overflow-x: auto;
+}
+
+.tm-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.92rem;
+}
+
+.tm-table th {
+  padding: 14px 12px 10px;
+  border-bottom: 1px solid var(--tm-line);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--tm-muted);
+}
+
+.tm-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--tm-line);
+}
+
+.tm-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.tm-table th:first-child,
+.tm-table td:first-child {
+  padding-left: 0;
+}
+
+.tm-table th:last-child,
+.tm-table td:last-child {
+  padding-right: 0;
+}
+
+.tm-align-right {
+  text-align: right;
+}
+
+.tm-player-cell {
+  font-weight: 600;
+}
+
+.tm-player-title {
+  margin-right: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--tm-title);
+}
+
+.tm-score {
+  font-weight: 700;
+  color: var(--tm-heading);
+}
+
+/* =========================================================
+   MATCH HISTORY
+   ========================================================= */
+
+.tm-matches {
+  display: flex;
+  flex-direction: column;
+}
+
+.tm-match {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--tm-line);
+}
+
+.tm-match:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.tm-match-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.tm-match-info {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-width: 0;
+}
+
+.tm-round {
+  flex-shrink: 0;
+  min-width: 70px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--tm-muted);
+}
+
+.tm-match-opponent {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.tm-match-score {
+  margin-left: 12px;
+  font-family: var(--tm-serif);
+  font-weight: 700;
+  color: var(--tm-accent);
+}
+
+.tm-bye {
+  font-style: italic;
+  color: var(--tm-muted);
+}
+
+/* Outcome pill */
+.tm-outcome {
+  flex-shrink: 0;
+  min-width: 72px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+.tm-outcome-win {
+  background: rgba(74, 222, 128, 0.12);
+  border-color: rgba(74, 222, 128, 0.35);
+  color: color-mix(in srgb, #4ade80 70%, var(--tm-text));
+}
+
+.tm-outcome-draw,
+.tm-outcome-pending {
+  background: color-mix(in srgb, var(--tm-muted) 12%, transparent);
+  border-color: color-mix(in srgb, var(--tm-muted) 30%, transparent);
+  color: var(--tm-muted);
+}
+
+.tm-outcome-loss {
+  background: color-mix(in srgb, var(--tm-danger) 12%, transparent);
+  border-color: color-mix(in srgb, var(--tm-danger) 35%, transparent);
+  color: var(--tm-danger);
+}
+
+.tm-outcome-bye {
+  background: color-mix(in srgb, var(--tm-accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--tm-accent) 38%, transparent);
+  color: var(--tm-accent);
+}
+
+/* Board-by-board breakdown, indented under its match */
+.tm-boards {
+  display: flex;
+  flex-direction: column;
+  margin: 16px 0 0 4px;
+  padding-left: 18px;
+  border-left: 2px solid var(--tm-line);
+}
+
+.tm-board-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 12px;
+  padding: 9px 0;
+  font-size: 0.88rem;
+}
+
+.tm-board-num {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tm-muted);
+}
+
+.tm-board-players {
+  overflow-wrap: anywhere;
+}
+
+.tm-board-ours {
+  font-weight: 600;
+  color: var(--tm-heading);
+}
+
+.tm-board-color {
+  margin-left: 8px;
+  font-size: 0.75rem;
+  color: var(--tm-muted);
+}
+
+.tm-board-vs,
+.tm-board-note {
+  margin-left: 8px;
+  color: var(--tm-muted);
+}
+
+.tm-board-note {
+  font-style: italic;
+}
+
+.tm-board-result {
+  font-weight: 700;
+  color: var(--tm-muted);
+}
+
+.tm-point-win {
+  color: color-mix(in srgb, #4ade80 70%, var(--tm-text));
+}
+
+.tm-point-draw {
+  color: var(--tm-muted);
+}
+
+.tm-point-loss {
+  color: var(--tm-danger);
+}
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.tm-footer {
+  margin: 0;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--tm-muted);
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 700px) {
+  .team-profile {
+    gap: 16px;
+  }
+
+  .tm-card {
+    padding: 24px 20px;
+  }
+
+  .tm-team-name {
+    font-size: 1.6rem;
+  }
+
+  .tm-stats {
+    grid-template-columns: 1fr 1fr;
+    gap: 22px 0;
+  }
+
+  .tm-stat,
+  .tm-stat:first-child {
+    padding: 0 16px 0 0;
+    border-left: none;
+  }
+
+  .tm-match-summary {
+    align-items: flex-start;
+  }
+
+  .tm-match-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .tm-boards {
+    margin-left: 0;
+    padding-left: 14px;
+  }
+
+  .tm-board-row {
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+}

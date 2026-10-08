@@ -3,27 +3,31 @@
    Theme-aware, same calm card language as the rest of the app.
    Tokens come from css/theme.css on `.tp-theme[data-theme]`, which is the
    root element below; the dark values are only fallbacks.
+
+   Classes use the unique `ppp-` prefix and every selector is scoped under
+   `.public-player-profile`, so no other stylesheet's short class names (this
+   app keeps all imported CSS loaded at once) can leak onto this page.
    ========================================================= */
 
 .public-player-profile {
-  --pp-bg: var(--tp-bg, #13131a);
-  --pp-surface: var(--tp-card-solid, #191924);
-  --pp-line: var(--tp-border, #252532);
-  --pp-line-strong: var(--tp-border-strong, #353545);
-  --pp-text: var(--tp-text, #e8e8e8);
-  --pp-heading: var(--tp-heading, #ffffff);
-  --pp-muted: var(--tp-muted, #8a8a9a);
-  --pp-accent: var(--tp-brass, #d4a853);
-  --pp-danger: var(--tp-danger, #ff6b6b);
-  --pp-title: #c25555;
-  --pp-serif: "Georgia", "Times New Roman", serif;
-  --pp-sans: "Inter", system-ui, sans-serif;
+  --ppp-bg: var(--tp-bg, #13131a);
+  --ppp-surface: var(--tp-card-solid, #191924);
+  --ppp-line: var(--tp-border, #252532);
+  --ppp-line-strong: var(--tp-border-strong, #353545);
+  --ppp-text: var(--tp-text, #e8e8e8);
+  --ppp-heading: var(--tp-heading, #ffffff);
+  --ppp-muted: var(--tp-muted, #8a8a9a);
+  --ppp-accent: var(--tp-brass, #d4a853);
+  --ppp-danger: var(--tp-danger, #ff6b6b);
+  --ppp-title: #c25555;
+  --ppp-serif: "Georgia", "Times New Roman", serif;
+  --ppp-sans: "Inter", system-ui, sans-serif;
 
   min-height: 100vh;
   padding: 36px 20px 72px;
-  background: var(--pp-bg);
-  color: var(--pp-text);
-  font-family: var(--pp-sans);
+  background: var(--ppp-bg);
+  color: var(--ppp-text);
+  font-family: var(--ppp-sans);
   font-size: 0.95rem;
   line-height: 1.5;
 }
@@ -37,15 +41,15 @@
 .public-player-profile h1,
 .public-player-profile h2 {
   margin: 0;
-  font-family: var(--pp-serif);
-  color: var(--pp-heading);
+  font-family: var(--ppp-serif);
+  color: var(--ppp-heading);
 }
 
-.pp-shell {
+.public-player-profile .ppp-shell {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  max-width: 900px;
+  max-width: var(--ppp-max-width, 1200px);
   margin: 0 auto;
 }
 
@@ -53,7 +57,7 @@
    TOP BAR + BACK LINK
    ========================================================= */
 
-.pp-topbar {
+.public-player-profile .ppp-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -61,166 +65,166 @@
   flex-wrap: wrap;
 }
 
-.pp-back-link {
+.public-player-profile .ppp-back-link {
   display: inline-block;
   padding: 8px 16px;
-  border: 1px solid var(--pp-line);
+  border: 1px solid var(--ppp-line);
   border-radius: 999px;
-  background: var(--pp-surface);
-  color: var(--pp-muted);
+  background: var(--ppp-surface);
+  color: var(--ppp-muted);
   font-size: 0.82rem;
   font-weight: 500;
   text-decoration: none;
   transition: all 0.2s ease;
 }
 
-.pp-back-link:hover {
-  color: var(--pp-heading);
-  border-color: var(--pp-line-strong);
+.public-player-profile .ppp-back-link:hover {
+  color: var(--ppp-heading);
+  border-color: var(--ppp-line-strong);
 }
 
 /* =========================================================
    CARDS
    ========================================================= */
 
-.pp-card {
+.public-player-profile .ppp-card {
   padding: 32px 36px;
-  background: var(--pp-surface);
-  border: 1px solid var(--pp-line);
+  background: var(--ppp-surface);
+  border: 1px solid var(--ppp-line);
   border-radius: 16px;
 }
 
-.pp-loading {
+.public-player-profile .ppp-loading {
   text-align: center;
-  color: var(--pp-muted);
+  color: var(--ppp-muted);
 }
 
-.pp-error-card {
+.public-player-profile .ppp-error-card {
   text-align: center;
 }
 
-.pp-error-message {
+.public-player-profile .ppp-error-message {
   margin: 0;
-  color: var(--pp-danger);
+  color: var(--ppp-danger);
 }
 
 /* =========================================================
    HEADER
    ========================================================= */
 
-.pp-eyebrow {
+.public-player-profile .ppp-eyebrow {
   display: block;
   margin-bottom: 10px;
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--pp-accent);
+  color: var(--ppp-accent);
 }
 
-.pp-player-name {
+.public-player-profile .ppp-player-name {
   font-size: 2rem;
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: -0.015em;
 }
 
-.pp-player-title {
+.public-player-profile .ppp-player-title {
   margin-right: 12px;
-  color: var(--pp-title);
+  color: var(--ppp-title);
 }
 
-.pp-rating {
+.public-player-profile .ppp-rating {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 0;
   margin: 12px 0 0;
   font-size: 0.92rem;
-  color: var(--pp-muted);
+  color: var(--ppp-muted);
 }
 
-.pp-rating > span + span::before {
+.public-player-profile .ppp-rating > span + span::before {
   content: "•";
   margin: 0 12px;
   opacity: 0.5;
 }
 
-.pp-fide-link {
-  color: var(--pp-accent);
+.public-player-profile .ppp-fide-link {
+  color: var(--ppp-accent);
   text-decoration: none;
 }
 
-.pp-fide-link:hover {
+.public-player-profile .ppp-fide-link:hover {
   text-decoration: underline;
 }
 
 /* Stat strip: hairline dividers instead of boxes */
-.pp-stats {
+.public-player-profile .ppp-stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   margin-top: 28px;
   padding: 22px 0;
-  border-top: 1px solid var(--pp-line);
-  border-bottom: 1px solid var(--pp-line);
+  border-top: 1px solid var(--ppp-line);
+  border-bottom: 1px solid var(--ppp-line);
 }
 
-.pp-stat {
+.public-player-profile .ppp-stat {
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 0 24px;
-  border-left: 1px solid var(--pp-line);
+  border-left: 1px solid var(--ppp-line);
 }
 
-.pp-stat:first-child {
+.public-player-profile .ppp-stat:first-child {
   padding-left: 0;
   border-left: none;
 }
 
-.pp-stat-label {
+.public-player-profile .ppp-stat-label {
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--pp-muted);
+  color: var(--ppp-muted);
 }
 
-.pp-stat-value {
-  font-family: var(--pp-serif);
+.public-player-profile .ppp-stat-value {
+  font-family: var(--ppp-serif);
   font-size: 1.6rem;
   font-weight: 700;
   line-height: 1.2;
-  color: var(--pp-heading);
+  color: var(--ppp-heading);
 }
 
-.pp-stat-highlight .pp-stat-value {
-  color: var(--pp-accent);
+.public-player-profile .ppp-stat-highlight .ppp-stat-value {
+  color: var(--ppp-accent);
 }
 
-.pp-performance-note {
+.public-player-profile .ppp-performance-note {
   margin: 18px 0 0;
   font-size: 0.8rem;
   line-height: 1.6;
-  color: var(--pp-muted);
+  color: var(--ppp-muted);
 }
 
 /* =========================================================
    SECTION HEADINGS
    ========================================================= */
 
-.pp-section-heading {
+.public-player-profile .ppp-section-heading {
   position: relative;
   margin-bottom: 8px;
   padding-bottom: 14px;
-  font-family: var(--pp-sans);
+  font-family: var(--ppp-sans);
   font-size: 0.74rem;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--pp-accent);
+  color: var(--ppp-accent);
 }
 
-.pp-section-heading::after {
+.public-player-profile .ppp-section-heading::after {
   content: "";
   position: absolute;
   left: 0;
@@ -228,155 +232,155 @@
   width: 28px;
   height: 2px;
   border-radius: 2px;
-  background: var(--pp-accent);
+  background: var(--ppp-accent);
 }
 
-.pp-empty {
+.public-player-profile .ppp-empty {
   margin: 16px 0 0;
-  color: var(--pp-muted);
+  color: var(--ppp-muted);
 }
 
 /* =========================================================
    TABLE
    ========================================================= */
 
-.pp-table-wrapper {
+.public-player-profile .ppp-table-wrapper {
   overflow-x: auto;
 }
 
-.pp-table {
+.public-player-profile .ppp-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
   font-size: 0.92rem;
 }
 
-.pp-table th {
+.public-player-profile .ppp-table th {
   padding: 14px 12px 10px;
-  border-bottom: 1px solid var(--pp-line);
+  border-bottom: 1px solid var(--ppp-line);
   font-size: 0.7rem;
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--pp-muted);
+  color: var(--ppp-muted);
 }
 
-.pp-table td {
+.public-player-profile .ppp-table td {
   padding: 14px 12px;
-  border-bottom: 1px solid var(--pp-line);
+  border-bottom: 1px solid var(--ppp-line);
 }
 
-.pp-table tbody tr:last-child td {
+.public-player-profile .ppp-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-.pp-table th:first-child,
-.pp-table td:first-child {
+.public-player-profile .ppp-table th:first-child,
+.public-player-profile .ppp-table td:first-child {
   padding-left: 0;
 }
 
-.pp-table th:last-child,
-.pp-table td:last-child {
+.public-player-profile .ppp-table th:last-child,
+.public-player-profile .ppp-table td:last-child {
   padding-right: 0;
 }
 
-.pp-align-right {
+.public-player-profile .ppp-align-right {
   text-align: right;
 }
 
-.pp-opponent-name {
+.public-player-profile .ppp-opponent-name {
   font-weight: 600;
 }
 
-.pp-opponent-title {
+.public-player-profile .ppp-opponent-title {
   margin-right: 8px;
   font-size: 0.82rem;
   font-weight: 700;
-  color: var(--pp-title);
+  color: var(--ppp-title);
 }
 
-.pp-player-link {
-  color: var(--pp-heading);
+.public-player-profile .ppp-player-link {
+  color: var(--ppp-heading);
   text-decoration: none;
 }
 
-.pp-player-link:hover {
-  color: var(--pp-accent);
+.public-player-profile .ppp-player-link:hover {
+  color: var(--ppp-accent);
   text-decoration: underline;
 }
 
-.pp-muted {
-  color: var(--pp-muted);
+.public-player-profile .ppp-muted {
+  color: var(--ppp-muted);
 }
 
-.pp-score {
+.public-player-profile .ppp-score {
   font-weight: 700;
-  color: var(--pp-heading);
+  color: var(--ppp-heading);
 }
 
 /* =========================================================
    GAME HISTORY
    ========================================================= */
 
-.pp-games-list {
+.public-player-profile .ppp-games-list {
   display: flex;
   flex-direction: column;
 }
 
-.pp-game-row {
+.public-player-profile .ppp-game-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   padding: 16px 0;
-  border-bottom: 1px solid var(--pp-line);
+  border-bottom: 1px solid var(--ppp-line);
 }
 
-.pp-game-row:last-child {
+.public-player-profile .ppp-game-row:last-child {
   border-bottom: none;
   padding-bottom: 0;
 }
 
-.pp-game-info {
+.public-player-profile .ppp-game-info {
   display: flex;
   align-items: center;
   gap: 20px;
   min-width: 0;
 }
 
-.pp-round {
+.public-player-profile .ppp-round {
   flex-shrink: 0;
   min-width: 70px;
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--pp-muted);
+  color: var(--ppp-muted);
 }
 
-.pp-game-opponent {
+.public-player-profile .ppp-game-opponent {
   font-weight: 600;
   overflow-wrap: anywhere;
 }
 
-.pp-opponent-rating {
+.public-player-profile .ppp-opponent-rating {
   font-weight: 400;
-  color: var(--pp-muted);
+  color: var(--ppp-muted);
 }
 
-.pp-color {
+.public-player-profile .ppp-color {
   margin-left: 10px;
   font-size: 0.8rem;
   font-weight: 400;
-  color: var(--pp-muted);
+  color: var(--ppp-muted);
 }
 
-.pp-bye {
+.public-player-profile .ppp-bye {
   font-style: italic;
-  color: var(--pp-muted);
+  color: var(--ppp-muted);
 }
 
-.pp-outcome {
+.public-player-profile .ppp-outcome {
   flex-shrink: 0;
   min-width: 64px;
   padding: 4px 12px;
@@ -388,39 +392,39 @@
   text-align: center;
 }
 
-.pp-outcome-win {
+.public-player-profile .ppp-outcome-win {
   background: rgba(74, 222, 128, 0.12);
   border-color: rgba(74, 222, 128, 0.35);
-  color: color-mix(in srgb, #4ade80 70%, var(--pp-text));
+  color: color-mix(in srgb, #4ade80 70%, var(--ppp-text));
 }
 
-.pp-outcome-draw {
-  background: color-mix(in srgb, var(--pp-muted) 12%, transparent);
-  border-color: color-mix(in srgb, var(--pp-muted) 30%, transparent);
-  color: var(--pp-muted);
+.public-player-profile .ppp-outcome-draw {
+  background: color-mix(in srgb, var(--ppp-muted) 12%, transparent);
+  border-color: color-mix(in srgb, var(--ppp-muted) 30%, transparent);
+  color: var(--ppp-muted);
 }
 
-.pp-outcome-loss {
-  background: color-mix(in srgb, var(--pp-danger) 12%, transparent);
-  border-color: color-mix(in srgb, var(--pp-danger) 35%, transparent);
-  color: var(--pp-danger);
+.public-player-profile .ppp-outcome-loss {
+  background: color-mix(in srgb, var(--ppp-danger) 12%, transparent);
+  border-color: color-mix(in srgb, var(--ppp-danger) 35%, transparent);
+  color: var(--ppp-danger);
 }
 
-.pp-outcome-bye {
-  background: color-mix(in srgb, var(--pp-accent) 12%, transparent);
-  border-color: color-mix(in srgb, var(--pp-accent) 38%, transparent);
-  color: var(--pp-accent);
+.public-player-profile .ppp-outcome-bye {
+  background: color-mix(in srgb, var(--ppp-accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--ppp-accent) 38%, transparent);
+  color: var(--ppp-accent);
 }
 
 /* =========================================================
    FOOTER
    ========================================================= */
 
-.pp-footer {
+.public-player-profile .ppp-footer {
   margin: 0;
   text-align: center;
   font-size: 0.78rem;
-  color: var(--pp-muted);
+  color: var(--ppp-muted);
 }
 
 /* =========================================================
@@ -432,34 +436,34 @@
     padding: 22px 12px 56px;
   }
 
-  .pp-shell {
+  .public-player-profile .ppp-shell {
     gap: 16px;
   }
 
-  .pp-card {
+  .public-player-profile .ppp-card {
     padding: 24px 20px;
   }
 
-  .pp-player-name {
+  .public-player-profile .ppp-player-name {
     font-size: 1.6rem;
   }
 
-  .pp-stats {
+  .public-player-profile .ppp-stats {
     grid-template-columns: 1fr 1fr;
     gap: 22px 0;
   }
 
-  .pp-stat,
-  .pp-stat:first-child {
+  .public-player-profile .ppp-stat,
+  .public-player-profile .ppp-stat:first-child {
     padding: 0 16px 0 0;
     border-left: none;
   }
 
-  .pp-game-row {
+  .public-player-profile .ppp-game-row {
     align-items: flex-start;
   }
 
-  .pp-game-info {
+  .public-player-profile .ppp-game-info {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
