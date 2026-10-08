@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api.js";
+import ThemePicker from "../components/ThemePicker.jsx";
+import { useTheme } from "../themes.js";
+import "../css/theme.css";
 import "../css/PublicResults.css";
 
 // Team matches already carry an explicit "W"/"L"/"D"/"bye"/null result —
@@ -25,18 +28,11 @@ function pointColor(points) {
   return "";
 }
 
-function BgScenes() {
-  return (
-    <div className="pv-bg" aria-hidden="true">
-      <div className="pv-bg-scene" />
-      <div className="pv-bg-scene" />
-      <div className="pv-bg-scene" />
-    </div>
-  );
-}
-
 export default function PublicTeamProfile() {
   const { token, teamId } = useParams();
+  // Same mechanism as the other pages: the --tp-* tokens only exist inside an
+  // element carrying `tp-theme` + data-theme.
+  const [theme, setTheme] = useTheme();
 
   const [profile, setProfile] = useState(null);
   const [loadError, setLoadError] = useState("");
@@ -60,15 +56,17 @@ export default function PublicTeamProfile() {
 
   if (loadError) {
     return (
-      <div className="pv-root">
-        <BgScenes />
+      <div className="pv-root tp-theme" data-theme={theme}>
         <div className="pv-shell">
+          <div className="pv-topbar">
+            <Link to={`/results/${token}`} className="pv-back-link">
+              ← Back to results
+            </Link>
+            <ThemePicker theme={theme} onChange={setTheme} />
+          </div>
           <div className="pv-closed">
             <h2>Profile not found</h2>
             <p>{loadError}</p>
-            <p style={{ marginTop: 16 }}>
-              <Link to={`/results/${token}`}>← Back to results</Link>
-            </p>
           </div>
         </div>
       </div>
@@ -77,9 +75,14 @@ export default function PublicTeamProfile() {
 
   if (!profile) {
     return (
-      <div className="pv-root">
-        <BgScenes />
+      <div className="pv-root tp-theme" data-theme={theme}>
         <div className="pv-shell">
+          <div className="pv-topbar">
+            <Link to={`/results/${token}`} className="pv-back-link">
+              ← Back to results
+            </Link>
+            <ThemePicker theme={theme} onChange={setTheme} />
+          </div>
           <p className="pv-meta">Loading…</p>
         </div>
       </div>
@@ -87,12 +90,14 @@ export default function PublicTeamProfile() {
   }
 
   return (
-    <div className="pv-root">
-      <BgScenes />
+    <div className="pv-root tp-theme" data-theme={theme}>
       <div className="pv-shell">
-        <Link to={`/results/${token}`} className="pv-back-link">
-          ← Back to results
-        </Link>
+        <div className="pv-topbar">
+          <Link to={`/results/${token}`} className="pv-back-link">
+            ← Back to results
+          </Link>
+          <ThemePicker theme={theme} onChange={setTheme} />
+        </div>
 
         <span className="pv-eyebrow">Team Profile</span>
         <h1 className="pv-title">{profile.name}</h1>

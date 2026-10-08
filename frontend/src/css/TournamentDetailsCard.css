@@ -1,220 +1,329 @@
 /* ==========================================================================
-   TOURNAMENT DETAILS CARD (Dark Slate & Gold Theme)
-   Cohesive glassmorphic surfaces, crisp typography, and responsive panels.
+   TOURNAMENT DETAILS CARD
+   One calm surface: a title block, a strip of headline numbers, then two
+   quiet lists separated by hairlines instead of nested boxes. Colours come
+   from the shared --tp-* theme tokens, with the original dark slate & gold
+   values as fallbacks.
    ========================================================================== */
 
-@import url("https://fonts.googleapis.com/css2?family=Cascadia+Code:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 
 .tdc-card {
-  --bg-dark: var(--tp-bg, #13131a);
-  --card-bg: color-mix(in srgb, var(--tp-card-solid, #191924) 75%, transparent);
-  --card-border: var(--tp-border, #252532);
-  --panel-bg: color-mix(
+  --tdc-surface: color-mix(
     in srgb,
-    var(--tp-card-solid, #191924) 60%,
+    var(--tp-card-solid, #191924) 70%,
     transparent
   );
-  --text-main: var(--tp-text, #e8e8e8);
-  --text-muted: var(--tp-muted, #8a8a9a);
-  --accent-gold: var(--tp-brass, #d4a853);
-  --font-mono: "Georgia", "Times New Roman", serif;
-  --font-sans: "Georgia", "Times New Roman", serif;
+  --tdc-line: var(--tp-border, #252532);
+  --tdc-text: var(--tp-text, #e8e8e8);
+  --tdc-heading: var(--tp-heading, #ffffff);
+  --tdc-muted: var(--tp-muted, #8a8a9a);
+  --tdc-gold: var(--tp-brass, #d4a853);
+  --tdc-serif: "Georgia", "Times New Roman", serif;
+  --tdc-sans: "Inter", system-ui, sans-serif;
 
-  background: var(--card-bg);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid var(--card-border);
-  border-radius: 14px;
-  padding: 24px;
-  color: var(--text-main);
-  font-family: var(--font-sans);
+  box-sizing: border-box;
   margin-bottom: 24px;
-  box-shadow: 0 12px 30px
-    color-mix(in srgb, var(--tp-shadow-color, #000) 35%, transparent);
+  padding: 40px 44px 36px;
+  background: var(--tdc-surface);
+  border: 1px solid var(--tdc-line);
+  border-radius: 16px;
+  color: var(--tdc-text);
+  font-family: var(--tdc-sans);
+  line-height: 1.5;
+}
+
+.tdc-card *,
+.tdc-card *::before,
+.tdc-card *::after {
   box-sizing: border-box;
 }
 
-/* ── Header Area ──────────────────────────────────────────────────────── */
-.tdc-header {
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--card-border);
-}
+/* ── Header ───────────────────────────────────────────────────────────── */
 
 .tdc-header-top {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.tdc-eyebrow {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tdc-gold);
 }
 
 .tdc-name {
-  font-family: var(--font-sans);
-  font-size: 1.35rem;
-  font-weight: 700;
   margin: 0;
-  color: var(--tp-heading, #ffffff);
-  letter-spacing: -0.01em;
+  font-family: var(--tdc-serif);
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  color: var(--tdc-heading);
 }
 
-/* ── Status Pill ──────────────────────────────────────────────────────── */
+/* ── Status pill ──────────────────────────────────────────────────────── */
+
 .tdc-status {
-  font-family: var(--font-mono);
+  flex-shrink: 0;
+  margin-top: 2px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--tdc-line);
   font-size: 0.72rem;
   font-weight: 600;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 4px 10px;
-  border-radius: 6px;
-  background: rgba(var(--tp-fg-rgb, 255, 255, 255), 0.05);
-  border: 1px solid var(--card-border);
-  color: var(--text-muted);
   white-space: nowrap;
+  color: var(--tdc-muted);
 }
 
 .tdc-status-setup {
-  background: rgba(var(--tp-accent-rgb, 212, 168, 83), 0.12);
-  border-color: rgba(var(--tp-accent-rgb, 212, 168, 83), 0.35);
-  color: var(--accent-gold);
+  background: color-mix(in srgb, var(--tdc-gold) 12%, transparent);
+  border-color: color-mix(in srgb, var(--tdc-gold) 38%, transparent);
+  color: var(--tdc-gold);
 }
 
 .tdc-status-active,
 .tdc-status-in_progress {
   background: rgba(74, 222, 128, 0.12);
   border-color: rgba(74, 222, 128, 0.35);
-  color: color-mix(in srgb, #4ade80 70%, var(--tp-text, #e8e8e8));
+  color: color-mix(in srgb, #4ade80 70%, var(--tdc-text));
 }
 
 .tdc-status-finished {
-  background: color-mix(in srgb, var(--tp-muted, #8a8a9a) 12%, transparent);
-  border-color: color-mix(in srgb, var(--tp-muted, #8a8a9a) 30%, transparent);
-  color: var(--text-muted);
+  background: color-mix(in srgb, var(--tdc-muted) 12%, transparent);
+  border-color: color-mix(in srgb, var(--tdc-muted) 30%, transparent);
+  color: var(--tdc-muted);
 }
 
 /* ── Badges ───────────────────────────────────────────────────────────── */
+
 .tdc-badges {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin-top: 18px;
 }
 
 .tdc-badge {
-  font-family: var(--font-mono);
+  padding: 3px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--tdc-line);
   font-size: 0.7rem;
   font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 3px 9px;
-  border-radius: 6px;
-  background: rgba(var(--tp-fg-rgb, 255, 255, 255), 0.04);
-  border: 1px solid var(--card-border);
-  color: var(--text-main);
+  color: var(--tdc-text);
 }
 
 .tdc-badge-fide {
   background: rgba(96, 165, 250, 0.12);
   border-color: rgba(96, 165, 250, 0.35);
-  color: color-mix(in srgb, #60a5fa 70%, var(--tp-text, #e8e8e8));
+  color: color-mix(in srgb, #60a5fa 70%, var(--tdc-text));
 }
 
 .tdc-badge-960 {
   background: rgba(192, 132, 252, 0.12);
   border-color: rgba(192, 132, 252, 0.35);
-  color: color-mix(in srgb, #c084fc 70%, var(--tp-text, #e8e8e8));
+  color: color-mix(in srgb, #c084fc 70%, var(--tdc-text));
 }
 
 .tdc-badge-test {
   background: rgba(248, 113, 113, 0.12);
   border-color: rgba(248, 113, 113, 0.35);
-  color: color-mix(in srgb, #f87171 70%, var(--tp-text, #e8e8e8));
+  color: color-mix(in srgb, #f87171 70%, var(--tdc-text));
 }
 
-/* ── Grid Layout for Panels ───────────────────────────────────────────── */
-.tdc-panels {
+/* ── Description ──────────────────────────────────────────────────────── */
+
+.tdc-description {
+  max-width: 64ch;
+  margin: 28px 0 0;
+  padding-left: 18px;
+  border-left: 2px solid color-mix(in srgb, var(--tdc-gold) 45%, transparent);
+}
+
+.tdc-description-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tdc-muted);
+}
+
+.tdc-description-text {
+  margin: 0;
+  font-family: var(--tdc-serif);
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--tdc-text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* ── Headline numbers ─────────────────────────────────────────────────── */
+
+.tdc-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  margin: 32px 0;
+  padding: 24px 0;
+  border-top: 1px solid var(--tdc-line);
+  border-bottom: 1px solid var(--tdc-line);
 }
 
-.tdc-panel {
-  background: var(--panel-bg);
-  border: 1px solid var(--card-border);
-  border-radius: 10px;
-  overflow: hidden;
+.tdc-stat {
   display: flex;
   flex-direction: column;
+  gap: 6px;
+  padding: 0 28px;
+  border-left: 1px solid var(--tdc-line);
 }
 
-.tdc-panel-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  background: color-mix(in srgb, var(--tp-bg, #13131a) 70%, transparent);
-  border-bottom: 1px solid var(--card-border);
+.tdc-stat:first-child {
+  padding-left: 0;
+  border-left: none;
 }
 
-.tdc-panel-title {
-  font-family: var(--font-mono);
+.tdc-stat-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tdc-muted);
+}
+
+.tdc-stat-value {
+  font-family: var(--tdc-serif);
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--tdc-heading);
+  overflow-wrap: anywhere;
+}
+
+/* ── Lists ────────────────────────────────────────────────────────────── */
+
+.tdc-sections {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 36px 56px;
+}
+
+.tdc-sections:first-child,
+.tdc-header + .tdc-sections {
+  margin-top: 32px;
+}
+
+.tdc-section-title {
+  margin: 0 0 6px;
+  padding-bottom: 12px;
+  position: relative;
+  font-family: var(--tdc-sans);
   font-size: 0.72rem;
   font-weight: 700;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--accent-gold);
+  color: var(--tdc-gold);
 }
 
-.tdc-reserved-tag {
-  font-family: var(--font-mono);
-  font-size: 0.62rem;
+.tdc-section-title::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 28px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--tdc-gold);
+}
+
+.tdc-section-tag {
+  margin-left: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--tdc-gold) 35%, transparent);
+  background: color-mix(in srgb, var(--tdc-gold) 10%, transparent);
+  font-size: 0.6rem;
   font-weight: 600;
-  text-transform: uppercase;
-  background: rgba(var(--tp-accent-rgb, 212, 168, 83), 0.12);
-  color: var(--accent-gold);
-  padding: 2px 7px;
-  border-radius: 4px;
-  border: 1px solid rgba(var(--tp-accent-rgb, 212, 168, 83), 0.3);
+  letter-spacing: 0.08em;
+  vertical-align: 1px;
+  color: var(--tdc-gold);
 }
 
-.tdc-panel-body {
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+.tdc-facts {
+  margin: 0;
 }
 
-/* ── Field Labels & Values ────────────────────────────────────────────── */
-.tdc-field {
+.tdc-fact {
   display: flex;
+  align-items: baseline;
   justify-content: space-between;
-  align-items: flex-start;
-  font-size: 0.85rem;
-  gap: 12px;
+  gap: 24px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--tdc-line);
+  font-size: 0.9rem;
 }
 
-.tdc-field-label {
-  color: var(--text-muted);
+.tdc-fact:last-child {
+  border-bottom: none;
+}
+
+.tdc-fact dt {
   flex: 0 0 auto;
+  color: var(--tdc-muted);
 }
 
-.tdc-field-value {
-  color: var(--tp-heading, #ffffff);
-  font-weight: 500;
+.tdc-fact dd {
+  margin: 0;
   text-align: right;
-  word-break: break-word;
+  font-weight: 500;
+  color: var(--tdc-heading);
+  overflow-wrap: anywhere;
 }
 
-/* ── Responsive Stacking ──────────────────────────────────────────────── */
-@media (max-width: 560px) {
+/* ── Small screens ────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
   .tdc-card {
-    padding: 18px 16px;
+    padding: 26px 20px 22px;
   }
-  .tdc-field {
+
+  .tdc-header-top {
+    flex-direction: column-reverse;
+    gap: 14px;
+  }
+
+  .tdc-name {
+    font-size: 1.6rem;
+  }
+
+  .tdc-stats {
+    grid-template-columns: 1fr 1fr;
+    gap: 22px 0;
+  }
+
+  .tdc-stat,
+  .tdc-stat:first-child {
+    padding: 0 16px 0 0;
+    border-left: none;
+  }
+
+  .tdc-fact {
     flex-direction: column;
     gap: 2px;
   }
-  .tdc-field-value {
+
+  .tdc-fact dd {
     text-align: left;
   }
 }

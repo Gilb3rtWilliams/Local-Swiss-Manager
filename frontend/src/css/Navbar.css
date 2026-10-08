@@ -11,7 +11,7 @@
      ones the public pages use) and falls back to the original dark slate &
      teal values when no theme has set it. Tints/glows are derived from the
      accent with color-mix, so they follow the theme too. */
-  --nav-accent: var(--tp-accent, var(--tp-brass, #00d4a8));
+  --nav-accent: var(--tp-brass, #00d4a8);
   --nav-accent-hover: color-mix(in srgb, var(--nav-accent) 78%, white);
   --nav-bg: color-mix(in srgb, var(--tp-bg, #0c0c12) 85%, transparent);
   --nav-border: var(--tp-border, #252532);

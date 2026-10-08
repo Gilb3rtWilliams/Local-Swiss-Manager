@@ -42,30 +42,28 @@ function formatDateRange(from, to) {
   return f || tt;
 }
 
-function Field({ label, value }) {
-  if (value === null || value === undefined || value === "") return null;
-  return (
-    <div className="tdc-field">
-      <span className="tdc-field-label">{label}</span>
-      <span className="tdc-field-value">{value}</span>
-    </div>
-  );
-}
+const hasValue = (v) => v !== null && v !== undefined && v !== "";
 
-function Panel({ title, reserved, children, visible = true }) {
-  if (!visible) return null;
-  const kids = Array.isArray(children)
-    ? children.filter(Boolean)
-    : [children].filter(Boolean);
-  if (kids.length === 0) return null;
+// A quiet definition list. Rows without a value are left out entirely, so a
+// section with nothing to show disappears instead of rendering an empty box.
+function Section({ title, tag, rows }) {
+  const shown = rows.filter(([, value]) => hasValue(value));
+  if (shown.length === 0) return null;
   return (
-    <div className="tdc-panel">
-      <div className="tdc-panel-head">
-        <span className="tdc-panel-title">{title}</span>
-        {reserved && <span className="tdc-reserved-tag">Reserved</span>}
-      </div>
-      <div className="tdc-panel-body">{kids}</div>
-    </div>
+    <section className="tdc-section">
+      <h3 className="tdc-section-title">
+        {title}
+        {tag && <span className="tdc-section-tag">{tag}</span>}
+      </h3>
+      <dl className="tdc-facts">
+        {shown.map(([label, value]) => (
+          <div className="tdc-fact" key={label}>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
   );
 }
 
@@ -74,120 +72,125 @@ export default function TournamentDetailsCard({ t }) {
   const isElimination =
     t.system === "single_elimination" || t.system === "double_elimination";
   const dateRange = formatDateRange(t.dateFrom, t.dateTo);
-  const hasOfficials =
-    t.organizerName ||
-    t.organizerContact ||
-    t.chiefArbiter ||
-    t.deputyChiefArbiter;
+
+  // Headline numbers shown in the strip under the title.
+  const stats = [
+    ["System", SYSTEM_LABEL[t.system] || t.system],
+    ...(isElimination
+      ? [
+          ["Bracket size", t.bracket?.size],
+          ["Champion", t.bracket?.champion?.name],
+        ]
+      : [["Rounds", `${t.currentRound} / ${t.totalRounds}`]]),
+    ["Time control", t.timeControl],
+  ].filter(([, value]) => hasValue(value));
+
+  const organizer =
+    t.organizerName && t.organizerContact
+      ? `${t.organizerName} (${t.organizerContact})`
+      : t.organizerName || t.organizerContact;
+
+  const tiebreaks = (t.tiebreaks || [])
+    .map((tb) => TIEBREAK_LABEL[tb] || tb)
+    .join(" → ");
 
   return (
-    <div className="tdc-card">
-      <div className="tdc-header">
+    <article className="tdc-card">
+      <header className="tdc-header">
         <div className="tdc-header-top">
-          <h2 className="tdc-name">{t.name}</h2>
+          <div className="tdc-title-block">
+            {t.category && <span className="tdc-eyebrow">{t.category}</span>}
+            <h2 className="tdc-name">{t.name}</h2>
+          </div>
           <span className={`tdc-status tdc-status-${t.status}`}>
-            {t.status}
+            {String(t.status || "").replace(/_/g, " ")}
           </span>
         </div>
-        <div className="tdc-badges">
-          {t.category && <span className="tdc-badge">{t.category}</span>}
-          {t.fideRated && (
-            <span className="tdc-badge tdc-badge-fide">FIDE Rated</span>
-          )}
-          {t.chess960 && (
-            <span className="tdc-badge tdc-badge-960">Chess960</span>
-          )}
-          {t.isTest && (
-            <span className="tdc-badge tdc-badge-test">Test Event</span>
-          )}
-        </div>
-      </div>
 
-      <div className="tdc-panels">
-        {/* Description Panel */}
-        <Panel title="Rules & Announcements" visible={!!t.description}>
-          <div
-            style={{
-              whiteSpace: "pre-wrap",
-              color: "var(--tp-text, #e8e8e8)",
-              fontSize: "0.95rem",
-              lineHeight: 1.6,
-            }}
-          >
-            {t.description}
+        {(t.fideRated || t.chess960 || t.isTest) && (
+          <div className="tdc-badges">
+            {t.fideRated && (
+              <span className="tdc-badge tdc-badge-fide">FIDE Rated</span>
+            )}
+            {t.chess960 && (
+              <span className="tdc-badge tdc-badge-960">Chess960</span>
+            )}
+            {t.isTest && (
+              <span className="tdc-badge tdc-badge-test">Test Event</span>
+            )}
           </div>
-        </Panel>
+        )}
+      </header>
 
-        <Panel title="Event">
-          <Field label="Federation" value={t.federation} />
-          <Field label="Venue" value={t.venue} />
-          <Field label="Time Control" value={t.timeControl} />
-          <Field label="Dates" value={dateRange} />
-        </Panel>
+      {t.description && (
+        <div className="tdc-description">
+          <span className="tdc-description-label">
+            Rules &amp; Announcements
+          </span>
+          <p className="tdc-description-text">{t.description}</p>
+        </div>
+      )}
 
-        <Panel title="Format & System">
-          <Field label="Format" value={isTeam ? "Team" : "Individual"} />
-          {isTeam && (
-            <Field
-              label="Variant"
-              value={VARIANT_LABEL[t.variant] || t.variant}
-            />
-          )}
-          <Field label="System" value={SYSTEM_LABEL[t.system] || t.system} />
-          {isElimination ? (
-            <>
-              <Field label="Bracket Size" value={t.bracket?.size} />
-              <Field label="Champion" value={t.bracket?.champion?.name} />
-            </>
-          ) : (
-            <Field
-              label="Rounds"
-              value={`${t.currentRound} / ${t.totalRounds}`}
-            />
-          )}
-        </Panel>
+      {stats.length > 0 && (
+        <div className="tdc-stats">
+          {stats.map(([label, value]) => (
+            <div className="tdc-stat" key={label}>
+              <span className="tdc-stat-label">{label}</span>
+              <span className="tdc-stat-value">{value}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
-        <Panel title="Officials" visible={!!hasOfficials}>
-          <Field
-            label="Organizer"
-            value={
-              t.organizerName && t.organizerContact
-                ? `${t.organizerName} (${t.organizerContact})`
-                : t.organizerName || t.organizerContact
-            }
-          />
-          <Field label="Chief Arbiter" value={t.chiefArbiter} />
-          <Field label="Deputy Chief Arbiter" value={t.deputyChiefArbiter} />
-        </Panel>
-
-        <Panel title="Rules & Ratings" reserved>
-          {t.fideRated && (
-            <Field
-              label="Rating Type"
-              value={RATING_TYPE_LABEL[t.ratingType] || t.ratingType}
-            />
-          )}
-          <Field
-            label="Scoring System"
-            value={SCORING_LABEL[t.scoringSystem] || t.scoringSystem}
-          />
-          <Field
-            label="Tiebreak Order"
-            value={(t.tiebreaks || [])
-              .map((tb) => TIEBREAK_LABEL[tb] || tb)
-              .join(" → ")}
-          />
-          <Field label="Max Half-Point Byes" value={t.maxHalfPointByes} />
-          <Field
-            label="Bye Cutoff Round"
-            value={
+      <div className="tdc-sections">
+        <Section
+          title="Event"
+          rows={[
+            ["Federation", t.federation],
+            ["Venue", t.venue],
+            ["Dates", dateRange],
+          ]}
+        />
+        <Section
+          title="Format"
+          rows={[
+            ["Format", isTeam ? "Team" : "Individual"],
+            ["Variant", isTeam ? VARIANT_LABEL[t.variant] || t.variant : null],
+          ]}
+        />
+        <Section
+          title="Officials"
+          rows={[
+            ["Organizer", organizer],
+            ["Chief Arbiter", t.chiefArbiter],
+            ["Deputy Chief Arbiter", t.deputyChiefArbiter],
+          ]}
+        />
+        <Section
+          title="Rules & Ratings"
+          tag="Reserved"
+          rows={[
+            [
+              "Rating Type",
+              t.fideRated
+                ? RATING_TYPE_LABEL[t.ratingType] || t.ratingType
+                : null,
+            ],
+            [
+              "Scoring System",
+              SCORING_LABEL[t.scoringSystem] || t.scoringSystem,
+            ],
+            ["Tiebreak Order", tiebreaks],
+            ["Max Half-Point Byes", t.maxHalfPointByes],
+            [
+              "Bye Cutoff Round",
               t.byeCutoffRound
                 ? `No byes from Round ${t.byeCutoffRound} on`
-                : null
-            }
-          />
-        </Panel>
+                : null,
+            ],
+          ]}
+        />
       </div>
-    </div>
+    </article>
   );
 }

@@ -1,12 +1,15 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext.jsx";
 import AuthWidget from "../auth/AuthWidget.jsx";
+import { useTheme } from "../themes.js";
+import "../css/theme.css";
 import "../css/Navbar.css";
 
 export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { authenticated, logout } = useAuth();
+  const [theme] = useTheme();
 
   // Organizer-only chrome: render nothing for visitors who aren't logged in
   // (authenticated is null while the session check is still pending, false
@@ -25,7 +28,7 @@ export default function Navbar() {
   }
 
   return (
-    <header className="navbar">
+    <header className="navbar tp-theme" data-theme={theme}>
       <div className="navbar-inner">
         <Link to="/" className="navbar-brand">
           <span className="navbar-glyph">♟</span> Local Swiss Manager
