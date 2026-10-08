@@ -1,0 +1,555 @@
+/* =========================================================
+   PUBLIC TEAM PROFILE
+   Theme-aware, and deliberately the twin of PublicPlayerProfile.css so the
+   two profile pages read as one system. Tokens come from css/theme.css on
+   `.tp-theme[data-theme]` (the root element); dark values are fallbacks.
+
+   IMPORTANT:
+   All `.pt-*` selectors are scoped under `.public-team-profile` so they
+   cannot collide with PastTournaments.css or other pages using the same
+   short class names.
+   ========================================================= */
+
+.public-team-profile {
+  --pt-bg: var(--tp-bg, #13131a);
+  --pt-surface: var(--tp-card-solid, #191924);
+  --pt-line: var(--tp-border, #252532);
+  --pt-line-strong: var(--tp-border-strong, #353545);
+  --pt-text: var(--tp-text, #e8e8e8);
+  --pt-heading: var(--tp-heading, #ffffff);
+  --pt-muted: var(--tp-muted, #8a8a9a);
+  --pt-accent: var(--tp-brass, #d4a853);
+  --pt-danger: var(--tp-danger, #ff6b6b);
+  --pt-title: #c25555;
+  --pt-serif: "Georgia", "Times New Roman", serif;
+  --pt-sans: "Inter", system-ui, sans-serif;
+
+  min-height: 100vh;
+  padding: 36px 20px 72px;
+  background: var(--pt-bg);
+  color: var(--pt-text);
+  font-family: var(--pt-sans);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.public-team-profile *,
+.public-team-profile *::before,
+.public-team-profile *::after {
+  box-sizing: border-box;
+}
+
+.public-team-profile h1,
+.public-team-profile h2 {
+  margin: 0;
+  font-family: var(--pt-serif);
+  color: var(--pt-heading);
+}
+
+/* =========================================================
+   SHELL
+   ========================================================= */
+
+.public-team-profile .pt-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* =========================================================
+   TOP BAR + BACK LINK
+   ========================================================= */
+
+.public-team-profile .pt-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.public-team-profile .pt-back-link {
+  display: inline-block;
+  padding: 8px 16px;
+  border: 1px solid var(--pt-line);
+  border-radius: 999px;
+  background: var(--pt-surface);
+  color: var(--pt-muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.public-team-profile .pt-back-link:hover {
+  color: var(--pt-heading);
+  border-color: var(--pt-line-strong);
+}
+
+/* =========================================================
+   CARDS
+   ========================================================= */
+
+.public-team-profile .pt-card {
+  padding: 32px 36px;
+  background: var(--pt-surface);
+  border: 1px solid var(--pt-line);
+  border-radius: 16px;
+}
+
+.public-team-profile .pt-loading {
+  text-align: center;
+  color: var(--pt-muted);
+}
+
+.public-team-profile .pt-error-card {
+  text-align: center;
+}
+
+.public-team-profile .pt-error-title {
+  margin-bottom: 8px;
+  font-size: 1.4rem;
+}
+
+.public-team-profile .pt-error-message {
+  margin: 0;
+  color: var(--pt-danger);
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.public-team-profile .pt-eyebrow {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pt-accent);
+}
+
+.public-team-profile .pt-team-name {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
+}
+
+.public-team-profile .pt-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 0;
+  margin: 12px 0 0;
+  font-size: 0.92rem;
+  color: var(--pt-muted);
+}
+
+.public-team-profile .pt-meta > span + span::before {
+  content: "•";
+  margin: 0 12px;
+  opacity: 0.5;
+}
+
+/* Stat strip: hairline dividers instead of boxes */
+.public-team-profile .pt-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 28px;
+  padding: 22px 0;
+  border-top: 1px solid var(--pt-line);
+  border-bottom: 1px solid var(--pt-line);
+}
+
+.public-team-profile .pt-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 24px;
+  border-left: 1px solid var(--pt-line);
+}
+
+.public-team-profile .pt-stat:first-child {
+  padding-left: 0;
+  border-left: none;
+}
+
+.public-team-profile .pt-stat-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--pt-muted);
+}
+
+.public-team-profile .pt-stat-value {
+  font-family: var(--pt-serif);
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--pt-heading);
+}
+
+.public-team-profile .pt-stat-highlight .pt-stat-value {
+  color: var(--pt-accent);
+}
+
+/* =========================================================
+   SECTION HEADINGS
+   ========================================================= */
+
+.public-team-profile .pt-section-heading {
+  position: relative;
+  margin-bottom: 8px;
+  padding-bottom: 14px;
+  font-family: var(--pt-sans);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pt-accent);
+}
+
+.public-team-profile .pt-section-heading::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 28px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--pt-accent);
+}
+
+.public-team-profile .pt-empty {
+  margin: 16px 0 0;
+  color: var(--pt-muted);
+}
+
+/* =========================================================
+   LINKS & SHARED TEXT
+   ========================================================= */
+
+.public-team-profile .pt-link {
+  color: var(--pt-heading);
+  text-decoration: none;
+}
+
+.public-team-profile .pt-link:hover {
+  color: var(--pt-accent);
+  text-decoration: underline;
+}
+
+.public-team-profile .pt-fide-link {
+  color: var(--pt-accent);
+  text-decoration: none;
+}
+
+.public-team-profile .pt-fide-link:hover {
+  text-decoration: underline;
+}
+
+.public-team-profile .pt-muted {
+  color: var(--pt-muted);
+}
+
+/* =========================================================
+   ROSTER TABLE
+   ========================================================= */
+
+.public-team-profile .pt-table-wrapper {
+  overflow-x: auto;
+}
+
+.public-team-profile .pt-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.92rem;
+}
+
+.public-team-profile .pt-table th {
+  padding: 14px 12px 10px;
+  border-bottom: 1px solid var(--pt-line);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--pt-muted);
+}
+
+.public-team-profile .pt-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--pt-line);
+}
+
+.public-team-profile .pt-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.public-team-profile .pt-table th:first-child,
+.public-team-profile .pt-table td:first-child {
+  padding-left: 0;
+}
+
+.public-team-profile .pt-table th:last-child,
+.public-team-profile .pt-table td:last-child {
+  padding-right: 0;
+}
+
+.public-team-profile .pt-align-right {
+  text-align: right;
+}
+
+.public-team-profile .pt-player-cell {
+  font-weight: 600;
+}
+
+.public-team-profile .pt-player-title {
+  margin-right: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--pt-title);
+}
+
+.public-team-profile .pt-score {
+  font-weight: 700;
+  color: var(--pt-heading);
+}
+
+/* =========================================================
+   MATCH HISTORY
+   ========================================================= */
+
+.public-team-profile .pt-matches {
+  display: flex;
+  flex-direction: column;
+}
+
+.public-team-profile .pt-match {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--pt-line);
+}
+
+.public-team-profile .pt-match:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.public-team-profile .pt-match-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.public-team-profile .pt-match-info {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-width: 0;
+}
+
+.public-team-profile .pt-round {
+  flex-shrink: 0;
+  min-width: 70px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pt-muted);
+}
+
+.public-team-profile .pt-match-opponent {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.public-team-profile .pt-match-score {
+  margin-left: 12px;
+  font-family: var(--pt-serif);
+  font-weight: 700;
+  color: var(--pt-accent);
+}
+
+.public-team-profile .pt-bye {
+  font-style: italic;
+  color: var(--pt-muted);
+}
+
+/* Outcome pill */
+
+.public-team-profile .pt-outcome {
+  flex-shrink: 0;
+  min-width: 72px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+.public-team-profile .pt-outcome-win {
+  background: rgba(74, 222, 128, 0.12);
+  border-color: rgba(74, 222, 128, 0.35);
+  color: color-mix(in srgb, #4ade80 70%, var(--pt-text));
+}
+
+.public-team-profile .pt-outcome-draw,
+.public-team-profile .pt-outcome-pending {
+  background: color-mix(in srgb, var(--pt-muted) 12%, transparent);
+  border-color: color-mix(in srgb, var(--pt-muted) 30%, transparent);
+  color: var(--pt-muted);
+}
+
+.public-team-profile .pt-outcome-loss {
+  background: color-mix(in srgb, var(--pt-danger) 12%, transparent);
+  border-color: color-mix(in srgb, var(--pt-danger) 35%, transparent);
+  color: var(--pt-danger);
+}
+
+.public-team-profile .pt-outcome-bye {
+  background: color-mix(in srgb, var(--pt-accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--pt-accent) 38%, transparent);
+  color: var(--pt-accent);
+}
+
+/* Board-by-board breakdown, indented under its match */
+
+.public-team-profile .pt-boards {
+  display: flex;
+  flex-direction: column;
+  margin: 16px 0 0 4px;
+  padding-left: 18px;
+  border-left: 2px solid var(--pt-line);
+}
+
+.public-team-profile .pt-board-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 12px;
+  padding: 9px 0;
+  font-size: 0.88rem;
+}
+
+.public-team-profile .pt-board-num {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pt-muted);
+}
+
+.public-team-profile .pt-board-players {
+  overflow-wrap: anywhere;
+}
+
+.public-team-profile .pt-board-ours {
+  font-weight: 600;
+  color: var(--pt-heading);
+}
+
+.public-team-profile .pt-board-color {
+  margin-left: 8px;
+  font-size: 0.75rem;
+  color: var(--pt-muted);
+}
+
+.public-team-profile .pt-board-vs,
+.public-team-profile .pt-board-note {
+  margin-left: 8px;
+  color: var(--pt-muted);
+}
+
+.public-team-profile .pt-board-note {
+  font-style: italic;
+}
+
+.public-team-profile .pt-board-result {
+  font-weight: 700;
+  color: var(--pt-muted);
+}
+
+.public-team-profile .pt-point-win {
+  color: color-mix(in srgb, #4ade80 70%, var(--pt-text));
+}
+
+.public-team-profile .pt-point-draw {
+  color: var(--pt-muted);
+}
+
+.public-team-profile .pt-point-loss {
+  color: var(--pt-danger);
+}
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
+.public-team-profile .pt-footer {
+  margin: 0;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--pt-muted);
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 700px) {
+  .public-team-profile {
+    padding: 22px 12px 56px;
+  }
+
+  .public-team-profile .pt-shell {
+    gap: 16px;
+  }
+
+  .public-team-profile .pt-card {
+    padding: 24px 20px;
+  }
+
+  .public-team-profile .pt-team-name {
+    font-size: 1.6rem;
+  }
+
+  .public-team-profile .pt-stats {
+    grid-template-columns: 1fr 1fr;
+    gap: 22px 0;
+  }
+
+  .public-team-profile .pt-stat,
+  .public-team-profile .pt-stat:first-child {
+    padding: 0 16px 0 0;
+    border-left: none;
+  }
+
+  .public-team-profile .pt-match-summary {
+    align-items: flex-start;
+  }
+
+  .public-team-profile .pt-match-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .public-team-profile .pt-boards {
+    margin-left: 0;
+    padding-left: 14px;
+  }
+
+  .public-team-profile .pt-board-row {
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+}
