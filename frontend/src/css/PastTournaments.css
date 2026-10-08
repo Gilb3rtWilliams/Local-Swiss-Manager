@@ -5,8 +5,12 @@
    ThemePicker restyles this page too.
 
    No ambient background: flat theme background, panels separated by borders.
-   Self-contained — it no longer borrows classes from Dashboard.css.
+   Layout mirrors the dashboard: a left sidebar (brand + filters with counts)
+   and a content pane (welcome guide, stat strip, tournament list).
+   Self-contained — it doesn't borrow classes from Dashboard.css.
 ─────────────────────────────────────────────────────────────────────────── */
+
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap");
 
 .pt-root {
   --p-bg: var(--tp-bg, #13131a);
@@ -20,8 +24,23 @@
   --p-tint: color-mix(in srgb, var(--p-text) 5%, transparent);
   --p-tint-strong: color-mix(in srgb, var(--p-text) 10%, transparent);
 
+  /* Typography: Georgia for text and headings. Georgia's digits are
+     old-style (3, 4, 5, 7, 9 hang below the line), so figures that must
+     line up use a lining-figure face. Both can be overridden once, in
+     theme.css, via --tp-font-ui / --tp-font-num. */
+  --p-font: var(--tp-font-ui, "Georgia", "Times New Roman", serif);
+  --p-font-num: var(
+    --tp-font-num,
+    "IBM Plex Mono",
+    ui-monospace,
+    "SF Mono",
+    Consolas,
+    monospace
+  );
+
   /* Theme's own accent if it defines one, otherwise brass */
-  --p-accent: var(--tp-accent, #d4a853);
+  --p-accent: var(--tp-accent, var(--tp-brass, #d4a853));
+  --p-side: color-mix(in srgb, var(--p-text) 3%, var(--p-bg));
 
   /* Status colors mixed toward the text color so they stay legible on both
      light and dark themes */
@@ -33,7 +52,7 @@
   min-height: 100vh;
   background: var(--p-bg);
   color: var(--p-text);
-  font-family: "SF Mono", Monaco, "Cascadia Code", monospace;
+  font-family: var(--p-font);
   box-sizing: border-box;
 }
 
@@ -50,52 +69,117 @@
   margin: 0;
 }
 
+/* ── Shell: sidebar + content pane ────────────────────────────────────── */
 .pt-shell {
-  width: 100%;
-  max-width: 100%;
-  margin: 0 auto;
-  padding: 40px 20px 60px;
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  min-height: 100vh;
 }
 
-/* ── Top bar ──────────────────────────────────────────────────────────── */
-.pt-topbar {
+.pt-side {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  overflow-y: auto;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 20px;
+  flex-direction: column;
+  gap: 24px;
+  padding: 28px 16px;
+  background: var(--p-side);
+  border-right: 1px solid var(--p-border);
 }
 
 .pt-brand {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 8px;
+  padding: 0 8px;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+  color: var(--p-heading);
+}
+
+.pt-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pt-filter-title {
+  padding: 0 12px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
   color: var(--p-muted);
 }
 
-/* ── Header ───────────────────────────────────────────────────────────── */
-.pt-root .pt-header {
+.pt-filter-item {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   align-items: center;
-  justify-content: flex-start;
+  gap: 8px;
   width: 100%;
-  margin: 0 0 32px;
-  padding: 0;
-  float: none;
-  text-align: center;
-  gap: 16px;
+  text-align: left;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--p-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 9px 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
-.pt-root .pt-header > * {
-  margin-left: 0;
-  margin-right: 0;
-  align-self: center;
+.pt-filter-item:hover {
+  background: var(--p-tint);
+  color: var(--p-text);
+}
+
+/* Active item mirrors the active tab on the tournament pages. */
+.pt-filter-item.is-active {
+  background: var(--p-border);
+  border-color: var(--p-border-strong);
+  color: var(--p-heading);
+  box-shadow: inset 3px 0 0 var(--p-accent);
+}
+
+.pt-filter-count {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--p-muted);
+}
+
+.pt-root :focus-visible {
+  outline: 2px solid var(--p-accent);
+  outline-offset: 2px;
+}
+
+.pt-main {
+  min-width: 0;
+  padding: 28px 36px 60px;
+}
+
+/* ── Top bar / heading ────────────────────────────────────────────────── */
+.pt-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.pt-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
 }
 
 .pt-eyebrow {
@@ -111,8 +195,7 @@
 }
 
 .pt-root .pt-title {
-  text-align: center;
-  font-size: 32px;
+  font-size: 30px;
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -120,10 +203,129 @@
 }
 
 .pt-root .pt-sub {
-  text-align: center;
   max-width: 560px;
   font-size: 13px;
   line-height: 1.6;
+  color: var(--p-muted);
+}
+
+.pt-top-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.pt-link-btn {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--p-muted);
+  background: transparent;
+  border: none;
+  padding: 6px 4px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.pt-link-btn:hover {
+  color: var(--p-accent);
+}
+
+/* ── Welcome guide ────────────────────────────────────────────────────── */
+.pt-welcome {
+  margin-bottom: 24px;
+  padding: 20px 22px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--p-accent) 7%, var(--p-bg));
+  border: 1px solid color-mix(in srgb, var(--p-accent) 30%, transparent);
+}
+
+.pt-welcome-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.pt-welcome h2 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--p-heading);
+  margin-bottom: 6px;
+}
+
+.pt-welcome-head p {
+  max-width: 640px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--p-text);
+}
+
+.pt-welcome-close {
+  flex: 0 0 auto;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--p-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 7px 9px;
+  cursor: pointer;
+}
+
+.pt-welcome-close:hover {
+  color: var(--p-heading);
+  border-color: var(--p-border-strong);
+}
+
+.pt-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.pt-steps li {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.pt-step-num {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid var(--p-accent);
+  color: var(--p-accent);
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pt-steps li > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pt-steps strong {
+  font-size: 12px;
+  color: var(--p-heading);
+}
+
+.pt-steps li > div > span {
+  font-size: 12px;
+  line-height: 1.5;
   color: var(--p-muted);
 }
 
@@ -235,46 +437,6 @@
 
 .pt-center {
   text-align: center;
-}
-
-/* ── Filters: segmented controls ──────────────────────────────────────── */
-.pt-filters {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.pt-segmented {
-  display: inline-flex;
-  padding: 3px;
-  gap: 2px;
-  border: 1px solid var(--p-border);
-  border-radius: 10px;
-}
-
-.pt-segmented button {
-  font-family: inherit;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--p-muted);
-  padding: 6px 12px;
-  border-radius: 7px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.pt-segmented button:hover {
-  color: var(--p-text);
-}
-
-.pt-segmented button.active {
-  background: var(--p-border);
-  border-color: var(--p-border-strong);
-  color: var(--p-heading);
 }
 
 /* ── Tournament list ──────────────────────────────────────────────────── */
@@ -482,6 +644,45 @@
 }
 
 /* ── Responsive ───────────────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .pt-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 860px) {
+  /* The sidebar becomes a top block; each filter group a scrollable row. */
+  .pt-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pt-side {
+    position: static;
+    height: auto;
+    gap: 12px;
+    padding: 14px 16px;
+    border-right: none;
+    border-bottom: 1px solid var(--p-border);
+  }
+  .pt-filter-group {
+    flex-direction: row;
+    align-items: center;
+    overflow-x: auto;
+  }
+  .pt-filter-title {
+    flex: 0 0 auto;
+    padding: 0 6px 0 0;
+  }
+  .pt-filter-item {
+    width: auto;
+    flex: 0 0 auto;
+    white-space: nowrap;
+    gap: 10px;
+  }
+  .pt-main {
+    padding: 20px 16px 40px;
+  }
+}
+
 @media (max-width: 760px) {
   .pt-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -510,6 +711,19 @@
 
 @media (max-width: 640px) {
   .pt-root .pt-title {
-    font-size: 26px;
+    font-size: 24px;
   }
+  .pt-steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ── Figures: lining numerals so columns and counts read evenly ──────── */
+.pt-stat-body strong,
+.pt-row-count strong,
+.pt-filter-count,
+.pt-row-progress > span,
+.pt-panel-head .pt-note,
+.pt-step-num {
+  font-family: var(--p-font-num);
 }

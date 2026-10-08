@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
+import useTypingEffect from "/hooks/useTypingEffect.js";
 import ThemePicker from "../components/ThemePicker.jsx";
 import { useTheme } from "../themes.js";
 import "../css/theme.css";
 import "../css/Dashboard.css";
 
-const FORMAT_LABEL = { individual: "Individual", team: "Team", match: "Match" };
+const FORMAT_LABEL = { individual: "Individual", team: "Team" };
 const VARIANT_LABEL = {
   standard: "Standard",
   bughouse: "Bughouse",
@@ -44,9 +45,7 @@ const NEWS_ITEMS = [
   },
 ];
 
-const REVIEWS_COLLAPSED_COUNT = 3;
-
-// Small outline icons for the stats bar — hand-rolled inline so the
+// Small outline icons for the stat strip — hand-rolled inline so the
 // dashboard doesn't pull in an icon library just for four glyphs.
 function IconFlag() {
   return (
@@ -106,15 +105,18 @@ function IconPawn() {
 function Stars({ value, onChange }) {
   if (onChange) {
     return (
-      <div className="dash-star-picker">
+      <div className="dash-star-picker" role="group" aria-label="Rating">
         {[1, 2, 3, 4, 5].map((n) => (
-          <span
+          <button
             key={n}
+            type="button"
             className={n <= value ? "filled" : ""}
+            aria-label={`${n} star${n > 1 ? "s" : ""}`}
+            aria-pressed={n === value}
             onClick={() => onChange(n)}
           >
             ★
-          </span>
+          </button>
         ))}
       </div>
     );
@@ -127,26 +129,23 @@ function Stars({ value, onChange }) {
   );
 }
 
-// ACTIVE gets the green treatment; anything still in setup gets the amber
-// "not started" treatment; everything else (finished) reads as neutral.
+// In progress gets the accent treatment; anything still in setup gets a
+// dashed "not started" outline; finished reads as neutral.
 function statusPillClass(status) {
   if (status === "finished") return "dash-pill dash-pill-finished";
   if (status === "setup") return "dash-pill dash-pill-setup";
   return "dash-pill dash-pill-active";
 }
 
+// Progress for one tournament: bracket events count matches, everything else
+// counts rounds. A finished tournament is always 100% done — that's the
+// ground-truth signal, so it wins over whatever either fraction computed.
 function progressFor(t) {
   const isElimination =
     t.system === "single_elimination" || t.system === "double_elimination";
-
   let percent;
   let label;
-  if (t.currentRound == null || t.totalRounds == null) {
-    // Cage matches (and anything else without a round structure) have no
-    // round counter to show.
-    percent = 0;
-    label = t.format === "match" ? "Cage match" : "—";
-  } else if (isElimination && t.bracketProgress) {
+  if (isElimination && t.bracketProgress) {
     const { completed, total } = t.bracketProgress;
     percent = total > 0 ? Math.min(100, (completed / total) * 100) : 0;
     label = `${completed} / ${total} matches`;
@@ -155,10 +154,115 @@ function progressFor(t) {
     percent = Math.min(100, Math.max(0, (t.currentRound / totalRounds) * 100));
     label = `Round ${t.currentRound} / ${t.totalRounds}`;
   }
-  // A finished tournament is always 100% done — this is the ground-truth
-  // signal, so it wins regardless of what either fraction above computed.
   if (t.status === "finished") percent = 100;
   return { percent, label };
+}
+
+const VIEWS = [
+  { id: "tournaments", label: "Tournaments" },
+  { id: "news", label: "News" },
+  { id: "reviews", label: "Reviews" },
+];
+
+function PaneHeading({ children, note }) {
+  return (
+    <div className="dash-pane-head">
+      <h2>
+        <span className="dash-accent-bar" aria-hidden="true" />
+        {children}
+      </h2>
+      {note && <span className="dash-note">{note}</span>}
+    </div>
+  );
+}
+
+function TournamentRow({ t, onOpen, onDelete }) {
+  const { percent, label } = progressFor(t);
+  return (
+    <div
+      className="dash-row"
+      role="link"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(e) => {
+        // Only react to keys pressed on the row itself, not on the delete
+        // button nested inside it.
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
+    >
+      <span
+        className={statusPillClass(t.status)}
+        style={{ gridArea: "status" }}
+      >
+        {t.status}
+      </span>
+
+      <div className="dash-row-main">
+        <h3 className="dash-row-title">{t.name}</h3>
+        <div className="dash-row-tags">
+          <span className="dash-chip-tag">{FORMAT_LABEL[t.format]}</span>
+          {t.variant && t.variant !== "standard" && (
+            <span className="dash-chip-tag dash-chip-tag-accent">
+              {VARIANT_LABEL[t.variant] || t.variant}
+            </span>
+          )}
+          {t.timeControl && (
+            <span className="dash-chip-tag dash-chip-tag-outline">
+              {t.timeControl}
+            </span>
+          )}
+          {t.source === "desktop" && (
+            <span className="dash-chip-tag dash-chip-tag-accent">
+              Published from Desktop
+            </span>
+          )}
+          {t.federation && (
+            <span className="dash-row-federation">{t.federation}</span>
+          )}
+        </div>
+        {t.status === "finished" && t.winner && (
+          <div className="dash-row-winner">🏆 {t.winner}</div>
+        )}
+      </div>
+
+      <div className="dash-row-progress">
+        <span>{label}</span>
+        <div
+          className="dash-progress"
+          role="progressbar"
+          aria-label="Progress"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(percent)}
+        >
+          <div
+            className={`dash-progress-fill${
+              t.status === "finished" ? " is-muted" : ""
+            }`}
+            style={{ width: `${percent}%` }}
+          />
+        </div>
+      </div>
+
+      <span className="dash-row-count">
+        {t.competitorCount} {t.format === "team" ? "teams" : "players"}
+      </span>
+
+      <button
+        type="button"
+        className="dash-row-delete"
+        onClick={onDelete}
+        title="Delete"
+        aria-label={`Delete ${t.name}`}
+      >
+        ✕
+      </button>
+    </div>
+  );
 }
 
 export default function Dashboard() {
@@ -167,11 +271,24 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [theme, setTheme] = useTheme();
 
+  // Which section the sidebar is showing, kept in the URL (?view=…) so a
+  // refresh or a shared link opens the same one.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedView = searchParams.get("view");
+  const view = VIEWS.some((v) => v.id === requestedView)
+    ? requestedView
+    : "tournaments";
+
+  function selectView(id) {
+    const next = new URLSearchParams(searchParams);
+    next.set("view", id);
+    setSearchParams(next, { replace: true });
+  }
+
   const [formatFilter, setFormatFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
   const [reviews, setReviews] = useState(null);
-  const [showAllReviews, setShowAllReviews] = useState(false);
   const [reviewFormOpen, setReviewFormOpen] = useState(false);
   const [reviewName, setReviewName] = useState("");
   const [reviewQuote, setReviewQuote] = useState("");
@@ -179,6 +296,8 @@ export default function Dashboard() {
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const [reviewError, setReviewError] = useState("");
   const [reviewBusy, setReviewBusy] = useState(false);
+
+  const heroTitle = useTypingEffect("Tournament Manager Dashboard", 60);
 
   useEffect(() => {
     refresh();
@@ -234,6 +353,12 @@ export default function Dashboard() {
       ]
     : [];
 
+  const navCounts = {
+    tournaments: tournaments ? tournaments.length : null,
+    news: NEWS_ITEMS.length,
+    reviews: reviews ? reviews.length : null,
+  };
+
   async function submitReview(e) {
     e.preventDefault();
     if (!reviewName.trim() || !reviewQuote.trim()) return;
@@ -261,102 +386,113 @@ export default function Dashboard() {
     }
   }
 
-  const visibleReviews =
-    reviews && !showAllReviews
-      ? reviews.slice(0, REVIEWS_COLLAPSED_COUNT)
-      : reviews;
-
   return (
     <div className="dash-root tp-theme" data-theme={theme}>
-      <div className="dash-container">
-        {/* Top bar — same pattern as the tournament page's header row */}
-        <div className="dash-topbar">
-          <span className="dash-brand">
-            <span aria-hidden="true">♟</span> Swiss Manager
-          </span>
-          <ThemePicker theme={theme} onChange={setTheme} />
-        </div>
+      <div className="dash-shell">
+        <aside className="dash-side">
+          <div className="dash-brand">
+            <span className="dash-accent-bar" aria-hidden="true" />
+            Swiss Manager
+          </div>
 
-        {/* Centered header */}
-        <div className="dash-header">
-          <div className="dash-eyebrow">Admin · Tournament Manager</div>
-          <h1 className="dash-title">Dashboard</h1>
           <button
             type="button"
-            className="dash-btn dash-btn-primary"
+            className="dash-btn dash-btn-primary dash-side-new"
             onClick={() => navigate("/new")}
           >
             + New Tournament
           </button>
-        </div>
 
-        {stats && stats.total > 0 && (
-          <div className="dash-stats">
-            {statItems.map((item) => (
-              <div className="dash-stat" key={item.label}>
-                <span className="dash-stat-icon" aria-hidden="true">
-                  {item.icon}
-                </span>
-                <div className="dash-stat-body">
-                  <strong>{item.value}</strong>
-                  <span>{item.label}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {error && <div className="dash-panel dash-error">{error}</div>}
-
-        <div className="dash-grid">
-          {/* ── Main column: tournaments ───────────────────────────── */}
-          <main className="dash-main">
-            <section className="dash-panel">
-              <div className="dash-panel-head">
-                <h2>Your Tournaments</h2>
-
-                {tournaments && tournaments.length > 0 && (
-                  <div className="dash-filters">
-                    <div className="dash-segmented" role="group">
-                      {["all", "individual", "team"].map((f) => (
-                        <button
-                          key={f}
-                          type="button"
-                          className={formatFilter === f ? "active" : ""}
-                          onClick={() => setFormatFilter(f)}
-                        >
-                          {f === "all" ? "All formats" : FORMAT_LABEL[f]}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="dash-segmented" role="group">
-                      {[
-                        ["all", "All"],
-                        ["active", "In progress"],
-                        ["finished", "Finished"],
-                      ].map(([val, label]) => (
-                        <button
-                          key={val}
-                          type="button"
-                          className={statusFilter === val ? "active" : ""}
-                          onClick={() => setStatusFilter(val)}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+          <nav className="dash-nav" aria-label="Dashboard sections">
+            {VIEWS.map((v) => (
+              <button
+                key={v.id}
+                type="button"
+                aria-current={v.id === view ? "page" : undefined}
+                className={`dash-nav-item${v.id === view ? " is-active" : ""}`}
+                onClick={() => selectView(v.id)}
+              >
+                <span>{v.label}</span>
+                {navCounts[v.id] !== null && (
+                  <span className="dash-nav-count">{navCounts[v.id]}</span>
                 )}
-              </div>
+              </button>
+            ))}
+          </nav>
+        </aside>
 
-              {tournaments === null && (
-                <p className="dash-note dash-pad">Loading…</p>
+        <main className="dash-main">
+          <header className="dash-topbar">
+            <h1 className="dash-title">{heroTitle}</h1>
+            <ThemePicker theme={theme} onChange={setTheme} />
+          </header>
+
+          {error && <div className="dash-panel dash-error">{error}</div>}
+
+          {/* ── Tournaments ─────────────────────────────────────────── */}
+          {view === "tournaments" && (
+            <section aria-label="Your tournaments">
+              {stats && stats.total > 0 && (
+                <div className="dash-stats">
+                  {statItems.map((item) => (
+                    <div className="dash-stat" key={item.label}>
+                      <span className="dash-stat-icon" aria-hidden="true">
+                        {item.icon}
+                      </span>
+                      <strong>{item.value}</strong>
+                      <span className="dash-stat-label">{item.label}</span>
+                    </div>
+                  ))}
+                </div>
               )}
 
+              <PaneHeading>Your Tournaments</PaneHeading>
+
+              {tournaments && tournaments.length > 0 && (
+                <div className="dash-filters">
+                  <div className="dash-filter-group">
+                    <span className="dash-filter-label">Format</span>
+                    {["all", "individual", "team"].map((f) => (
+                      <button
+                        key={f}
+                        type="button"
+                        className={`dash-chip${
+                          formatFilter === f ? " active" : ""
+                        }`}
+                        onClick={() => setFormatFilter(f)}
+                      >
+                        {f === "all" ? "All" : FORMAT_LABEL[f]}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="dash-filter-group">
+                    <span className="dash-filter-label">Status</span>
+                    {[
+                      ["all", "All"],
+                      ["active", "In progress"],
+                      ["finished", "Finished"],
+                    ].map(([val, label]) => (
+                      <button
+                        key={val}
+                        type="button"
+                        className={`dash-chip${
+                          statusFilter === val ? " active" : ""
+                        }`}
+                        onClick={() => setStatusFilter(val)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {tournaments === null && <p className="dash-note">Loading…</p>}
+
               {tournaments && tournaments.length === 0 && (
-                <div className="dash-empty">
+                <div className="dash-panel dash-empty">
                   <div className="dash-empty-icon">♟</div>
-                  <h3>No tournaments yet</h3>
+                  <h2>No tournaments yet</h2>
                   <p className="dash-note">
                     Create your first tournament to generate Round 1 pairings.
                   </p>
@@ -371,246 +507,166 @@ export default function Dashboard() {
               )}
 
               {filtered && filtered.length === 0 && tournaments.length > 0 && (
-                <p className="dash-note dash-pad dash-center">
+                <div className="dash-panel dash-empty dash-note">
                   No tournaments match these filters.
-                </p>
+                </div>
               )}
 
               {filtered && filtered.length > 0 && (
                 <ul className="dash-list">
-                  {filtered.map((t) => {
-                    const { percent, label } = progressFor(t);
-                    const open = () => navigate(`/tournament/${t.id}`);
-                    return (
-                      <li
-                        key={t.id}
-                        className="dash-row"
-                        role="link"
-                        tabIndex={0}
-                        onClick={open}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            open();
-                          }
-                        }}
-                      >
-                        <div className="dash-row-main">
-                          <h3 className="dash-row-title">{t.name}</h3>
-                          <div className="dash-tags">
-                            <span className="dash-chip">
-                              {t.format === "match" && t.matchType === "cage"
-                                ? "Cage Match"
-                                : FORMAT_LABEL[t.format] || t.format}
-                            </span>
-                            {t.variant && t.variant !== "standard" && (
-                              <span className="dash-chip dash-chip-variant">
-                                {VARIANT_LABEL[t.variant] || t.variant}
-                              </span>
-                            )}
-                            {t.timeControl && (
-                              <span className="dash-chip dash-chip-outline">
-                                {t.timeControl}
-                              </span>
-                            )}
-                            {t.source === "desktop" && (
-                              <span className="dash-chip dash-chip-variant">
-                                Published from Desktop
-                              </span>
-                            )}
-                            {t.federation && (
-                              <span className="dash-federation">
-                                {t.federation}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="dash-row-progress">
-                          <div className="dash-bar">
-                            <div
-                              className={`dash-bar-fill ${
-                                t.status === "finished" ? "is-muted" : ""
-                              }`}
-                              style={{ width: `${percent}%` }}
-                            />
-                          </div>
-                          <span>{label}</span>
-                        </div>
-
-                        <div className="dash-row-count">
-                          <strong>{t.competitorCount}</strong>
-                          <span>
-                            {t.format === "team" ? "teams" : "players"}
-                          </span>
-                        </div>
-
-                        <div className="dash-row-end">
-                          <span className={statusPillClass(t.status)}>
-                            {t.status}
-                          </span>
-                          <button
-                            type="button"
-                            className="dash-delete"
-                            onClick={(e) => handleDelete(e, t.id)}
-                            title="Delete"
-                            aria-label={`Delete ${t.name}`}
-                          >
-                            ✕
-                          </button>
-                        </div>
-
-                        {t.status === "finished" && t.winner && (
-                          <div className="dash-winner">🏆 {t.winner}</div>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </section>
-          </main>
-
-          {/* ── Side column: news + reviews ────────────────────────── */}
-          <aside className="dash-side">
-            <section className="dash-panel">
-              <div className="dash-panel-head">
-                <h2>Kenyan Chess World</h2>
-              </div>
-              <ul className="dash-news">
-                {NEWS_ITEMS.map((item) => (
-                  <li key={item.title} className="dash-news-item">
-                    <div className="dash-news-meta">
-                      <span className="dash-news-tag">{item.tag}</span>
-                      <span>{item.date}</span>
-                    </div>
-                    <h3>{item.title}</h3>
-                    <p>{item.excerpt}</p>
-                  </li>
-                ))}
-              </ul>
-              <p className="dash-note dash-pad-sm">
-                Sample content — edit anytime
-              </p>
-            </section>
-
-            <section className="dash-panel">
-              <div className="dash-panel-head">
-                <h2>What Organizers Say</h2>
-              </div>
-
-              {reviews === null ? (
-                <p className="dash-note dash-pad">Loading…</p>
-              ) : reviews.length === 0 ? (
-                <p className="dash-note dash-pad">
-                  No reviews yet — be the first to share your experience.
-                </p>
-              ) : (
-                <ul className="dash-reviews">
-                  {visibleReviews.map((r) => (
-                    <li key={r.id} className="dash-review">
-                      <Stars value={r.rating} />
-                      <p className="dash-review-quote">"{r.quote}"</p>
-                      <div className="dash-review-author">
-                        <strong>{r.name}</strong>
-                        <span>{r.role}</span>
-                      </div>
+                  {filtered.map((t) => (
+                    <li key={t.id}>
+                      <TournamentRow
+                        t={t}
+                        onOpen={() => navigate(`/tournament/${t.id}`)}
+                        onDelete={(e) => handleDelete(e, t.id)}
+                      />
                     </li>
                   ))}
                 </ul>
               )}
+            </section>
+          )}
 
-              {reviews && reviews.length > REVIEWS_COLLAPSED_COUNT && (
-                <button
-                  type="button"
-                  className="dash-link-btn"
-                  onClick={() => setShowAllReviews((s) => !s)}
-                >
-                  {showAllReviews
-                    ? "Show fewer"
-                    : `Show all ${reviews.length} reviews`}
-                </button>
-              )}
-
-              <div className="dash-review-cta">
-                {!reviewFormOpen ? (
-                  <button
-                    type="button"
-                    className="dash-btn dash-btn-ghost"
-                    onClick={() => setReviewFormOpen(true)}
+          {/* ── News ────────────────────────────────────────────────── */}
+          {view === "news" && (
+            <section aria-label="News">
+              <PaneHeading note="Sample content — edit anytime">
+                From the Kenyan Chess World
+              </PaneHeading>
+              <div className="dash-news-grid">
+                {NEWS_ITEMS.map((item) => (
+                  <article
+                    key={item.title}
+                    className="dash-panel dash-news-card"
                   >
-                    + Share Your Experience
-                  </button>
-                ) : reviewSubmitted ? (
-                  <p className="dash-note">Thanks for the review! 🙌</p>
-                ) : (
-                  <form onSubmit={submitReview} className="dash-form">
-                    <label className="dash-label">
-                      <span>Your name</span>
-                      <input
-                        type="text"
-                        className="dash-input"
-                        value={reviewName}
-                        onChange={(e) => setReviewName(e.target.value)}
-                        placeholder="Jane Wanjiku"
-                      />
-                    </label>
-                    <div className="dash-label">
-                      <span>Rating</span>
-                      <Stars value={reviewRating} onChange={setReviewRating} />
-                    </div>
-                    <label className="dash-label">
-                      <span>Your review</span>
-                      <textarea
-                        rows={3}
-                        className="dash-input"
-                        value={reviewQuote}
-                        onChange={(e) => setReviewQuote(e.target.value)}
-                        placeholder="What's it been like running tournaments with Swiss Manager?"
-                      />
-                    </label>
-                    <div className="dash-form-actions">
-                      <button
-                        className="dash-btn dash-btn-primary"
-                        type="submit"
-                        disabled={reviewBusy}
-                      >
-                        {reviewBusy ? "Submitting…" : "Submit Review"}
-                      </button>
-                      <button
-                        type="button"
-                        className="dash-btn dash-btn-ghost"
-                        onClick={() => setReviewFormOpen(false)}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                    {reviewError && (
-                      <span className="dash-form-error">{reviewError}</span>
-                    )}
-                  </form>
-                )}
+                    <span className="dash-tag">{item.tag}</span>
+                    <h3>{item.title}</h3>
+                    <p>{item.excerpt}</p>
+                    <span className="dash-news-date">{item.date}</span>
+                  </article>
+                ))}
               </div>
             </section>
-          </aside>
-        </div>
+          )}
 
-        {/* Footer */}
-        <div className="dash-footer">
-          <div>
-            <p className="dash-footer-title">Swiss Manager</p>
-            <p className="dash-footer-sub">
-              Built and maintained by Gilbert Williams.
-            </p>
-          </div>
-          <div className="dash-footer-contact">
-            <a href="tel:+254719737274">0719 737 274</a>
-            <a href="tel:+254714591285">0714 591 285</a>
-            <a href="mailto:gilbertwilliamsnyange@gmail.com">
-              gilbertwilliamsnyange@gmail.com
-            </a>
-          </div>
-        </div>
+          {/* ── Reviews ─────────────────────────────────────────────── */}
+          {view === "reviews" && (
+            <section aria-label="Reviews">
+              <PaneHeading>What Organizers Say</PaneHeading>
+
+              {reviews === null ? (
+                <p className="dash-note">Loading…</p>
+              ) : reviews.length === 0 ? (
+                <p className="dash-note">
+                  No reviews yet — be the first to share your experience.
+                </p>
+              ) : (
+                <div className="dash-reviews-grid">
+                  {reviews.map((r) => (
+                    <figure key={r.id} className="dash-panel dash-review-card">
+                      <Stars value={r.rating} />
+                      <blockquote className="dash-review-quote">
+                        "{r.quote}"
+                      </blockquote>
+                      <figcaption className="dash-review-author">
+                        <strong>{r.name}</strong>
+                        <span>{r.role}</span>
+                      </figcaption>
+                    </figure>
+                  ))}
+                </div>
+              )}
+
+              {!reviewFormOpen ? (
+                <button
+                  type="button"
+                  className="dash-btn dash-btn-secondary"
+                  onClick={() => setReviewFormOpen(true)}
+                >
+                  + Share Your Experience
+                </button>
+              ) : (
+                <div className="dash-panel dash-review-form">
+                  {reviewSubmitted ? (
+                    <p className="dash-note dash-m-0">
+                      Thanks for the review! 🙌
+                    </p>
+                  ) : (
+                    <form onSubmit={submitReview}>
+                      <div className="dash-form-grid">
+                        <label className="dash-label">
+                          <span className="dash-filter-label">Your name</span>
+                          <input
+                            type="text"
+                            className="dash-input"
+                            value={reviewName}
+                            onChange={(e) => setReviewName(e.target.value)}
+                            placeholder="Jane Wanjiku"
+                          />
+                        </label>
+                        <div className="dash-label">
+                          <span className="dash-filter-label">Rating</span>
+                          <div className="dash-rating-wrap">
+                            <Stars
+                              value={reviewRating}
+                              onChange={setReviewRating}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <label className="dash-label dash-label-mb">
+                        <span className="dash-filter-label">Your review</span>
+                        <textarea
+                          rows={3}
+                          className="dash-input dash-textarea"
+                          value={reviewQuote}
+                          onChange={(e) => setReviewQuote(e.target.value)}
+                          placeholder="What's it been like running tournaments with Swiss Manager?"
+                        />
+                      </label>
+                      <div className="dash-form-actions">
+                        <button
+                          className="dash-btn dash-btn-primary"
+                          type="submit"
+                          disabled={reviewBusy}
+                        >
+                          {reviewBusy ? "Submitting…" : "Submit Review"}
+                        </button>
+                        <button
+                          type="button"
+                          className="dash-btn dash-btn-secondary"
+                          onClick={() => setReviewFormOpen(false)}
+                        >
+                          Cancel
+                        </button>
+                        {reviewError && (
+                          <span className="dash-form-error">{reviewError}</span>
+                        )}
+                      </div>
+                    </form>
+                  )}
+                </div>
+              )}
+            </section>
+          )}
+
+          <footer className="dash-footer">
+            <div>
+              <p className="dash-footer-title">Swiss Manager</p>
+              <p className="dash-footer-sub">
+                Built and maintained by Gilbert Williams.
+              </p>
+            </div>
+            <div className="dash-footer-contact">
+              <a href="tel:+254719737274">0719 737 274</a>
+              <a href="tel:+254714591285">0714 591 285</a>
+              <a href="mailto:gilbertwilliamsnyange@gmail.com">
+                gilbertwilliamsnyange@gmail.com
+              </a>
+            </div>
+          </footer>
+        </main>
       </div>
     </div>
   );

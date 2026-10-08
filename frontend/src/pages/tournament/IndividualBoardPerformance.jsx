@@ -24,7 +24,7 @@ export default function IndividualBoardPerformance() {
           padding: 40,
           textAlign: "center",
           color: "var(--tp-muted, #8a8a9a)",
-          fontFamily: "'SF Mono', Monaco, monospace",
+          fontFamily: "var(--tp-font-ui, Georgia, 'Times New Roman', serif)",
           fontSize: 14,
         }}
       >
@@ -45,7 +45,7 @@ export default function IndividualBoardPerformance() {
           padding: 40,
           textAlign: "center",
           color: "var(--tp-muted, #8a8a9a)",
-          fontFamily: "'SF Mono', Monaco, monospace",
+          fontFamily: "var(--tp-font-ui, Georgia, 'Times New Roman', serif)",
           fontSize: 14,
         }}
       >
@@ -62,12 +62,18 @@ export default function IndividualBoardPerformance() {
         display: "flex",
         flexDirection: "column",
         gap: "24px",
-        fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
+        fontFamily: "var(--tp-font-ui, Georgia, 'Times New Roman', serif)",
         color: "var(--tp-text, #e8e8e8)",
         padding: "8px 0",
       }}
     >
-      <p style={{ margin: "0 0 4px", color: "var(--tp-muted, #8a8a9a)", fontSize: 12 }}>
+      <p
+        style={{
+          margin: "0 0 4px",
+          color: "var(--tp-muted, #8a8a9a)",
+          fontSize: 12,
+        }}
+      >
         Every player ranked against everyone else who played the same board
         number, across all teams.
       </p>

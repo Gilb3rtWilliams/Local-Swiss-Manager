@@ -43,12 +43,13 @@ const sectionHeadingStyle = {
 const fideLinkStyle = {
   color: "#8aa9d4",
   textDecoration: "none",
-  fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
+  fontFamily: "var(--tp-font-ui, Georgia, 'Times New Roman', serif)",
   fontSize: 11,
 };
 
 function FideLink({ fideId }) {
-  if (!fideId) return <span style={{ color: "var(--tp-faint, #4a4a55)" }}>—</span>;
+  if (!fideId)
+    return <span style={{ color: "var(--tp-faint, #4a4a55)" }}>—</span>;
   return (
     <a
       href={`https://ratings.fide.com/profile/${fideId}`}
@@ -98,7 +99,7 @@ export default function TeamProfile() {
     display: "flex",
     flexDirection: "column",
     gap: "24px",
-    fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
+    fontFamily: "var(--tp-font-ui, Georgia, 'Times New Roman', serif)",
     color: "var(--tp-text, #e8e8e8)",
     background:
       "radial-gradient(circle at 50% 0%, var(--tp-surface-2, #1f1f2e) 0%, transparent 70%)",
@@ -109,7 +110,13 @@ export default function TeamProfile() {
   if (loading) {
     return (
       <div style={wrapperStyle}>
-        <div style={{ ...cardStyle, textAlign: "center", color: "var(--tp-muted, #8a8a9a)" }}>
+        <div
+          style={{
+            ...cardStyle,
+            textAlign: "center",
+            color: "var(--tp-muted, #8a8a9a)",
+          }}
+        >
           Loading team profile…
         </div>
       </div>
@@ -120,7 +127,11 @@ export default function TeamProfile() {
     return (
       <div style={wrapperStyle}>
         <div style={{ ...cardStyle, textAlign: "center" }}>
-          <p style={{ color: "var(--tp-danger, #ff6b6b)", margin: "0 0 16px 0" }}>{error}</p>
+          <p
+            style={{ color: "var(--tp-danger, #ff6b6b)", margin: "0 0 16px 0" }}
+          >
+            {error}
+          </p>
           <Link
             to={`/tournament/${t.id}/standings`}
             style={{ color: "var(--tp-muted, #8a8a9a)", fontSize: 12 }}
@@ -172,7 +183,13 @@ export default function TeamProfile() {
             >
               {profile.name}
             </h2>
-            <div style={{ color: "var(--tp-muted, #8a8a9a)", fontSize: 12, marginTop: 6 }}>
+            <div
+              style={{
+                color: "var(--tp-muted, #8a8a9a)",
+                fontSize: 12,
+                marginTop: 6,
+              }}
+            >
               {profile.rank
                 ? `Rank #${profile.rank} of ${profile.teamCount}`
                 : "Unranked"}
@@ -195,7 +212,13 @@ export default function TeamProfile() {
       <div style={cardStyle}>
         <h3 style={sectionHeadingStyle}>Roster</h3>
         {profile.roster.length === 0 ? (
-          <p style={{ color: "var(--tp-muted, #8a8a9a)", fontSize: 13, margin: 0 }}>
+          <p
+            style={{
+              color: "var(--tp-muted, #8a8a9a)",
+              fontSize: 13,
+              margin: 0,
+            }}
+          >
             No players on this team.
           </p>
         ) : (
@@ -231,8 +254,18 @@ export default function TeamProfile() {
               </thead>
               <tbody>
                 {profile.roster.map((p) => (
-                  <tr key={p.id} style={{ borderBottom: "1px solid var(--tp-surface-2, #1f1f2a)" }}>
-                    <td style={{ padding: "10px 12px", color: "var(--tp-dim, #6b6b7b)" }}>
+                  <tr
+                    key={p.id}
+                    style={{
+                      borderBottom: "1px solid var(--tp-surface-2, #1f1f2a)",
+                    }}
+                  >
+                    <td
+                      style={{
+                        padding: "10px 12px",
+                        color: "var(--tp-dim, #6b6b7b)",
+                      }}
+                    >
                       {p.boardNum ?? "—"}
                     </td>
                     <td style={{ padding: "10px 12px", fontWeight: 600 }}>
@@ -293,7 +326,13 @@ export default function TeamProfile() {
       <div style={cardStyle}>
         <h3 style={sectionHeadingStyle}>Match History</h3>
         {profile.matches.length === 0 ? (
-          <p style={{ color: "var(--tp-muted, #8a8a9a)", fontSize: 13, margin: 0 }}>
+          <p
+            style={{
+              color: "var(--tp-muted, #8a8a9a)",
+              fontSize: 13,
+              margin: 0,
+            }}
+          >
             No matches recorded yet.
           </p>
         ) : (
@@ -350,12 +389,22 @@ export default function TeamProfile() {
                           </Link>
                         </span>
                       ) : (
-                        <span style={{ color: "var(--tp-muted, #8a8a9a)", fontStyle: "italic" }}>
+                        <span
+                          style={{
+                            color: "var(--tp-muted, #8a8a9a)",
+                            fontStyle: "italic",
+                          }}
+                        >
                           No opponent — bye round
                         </span>
                       )}
                       {m.opponentId && (
-                        <span style={{ color: "var(--tp-muted, #8a8a9a)", fontSize: 12 }}>
+                        <span
+                          style={{
+                            color: "var(--tp-muted, #8a8a9a)",
+                            fontSize: 12,
+                          }}
+                        >
                           {m.ourScore} – {m.opponentScore}
                         </span>
                       )}
@@ -398,7 +447,12 @@ export default function TeamProfile() {
                           }}
                         >
                           <span style={{ color: "var(--tp-muted, #8a8a9a)" }}>
-                            <span style={{ color: "var(--tp-dim, #6b6b7b)", marginRight: 8 }}>
+                            <span
+                              style={{
+                                color: "var(--tp-dim, #6b6b7b)",
+                                marginRight: 8,
+                              }}
+                            >
                               Bd {b.boardNum}
                             </span>
                             {b.ourPlayerName}
@@ -458,9 +512,13 @@ function StatBox({ label, value, highlight }) {
   return (
     <div
       style={{
-        background: highlight ? "rgba(var(--tp-accent-rgb, 212, 168, 83), 0.08)" : "var(--tp-surface-2, #181822)",
+        background: highlight
+          ? "rgba(var(--tp-accent-rgb, 212, 168, 83), 0.08)"
+          : "var(--tp-surface-2, #181822)",
         border: `1px solid ${
-          highlight ? "rgba(var(--tp-accent-rgb, 212, 168, 83), 0.35)" : "var(--tp-border, #252532)"
+          highlight
+            ? "rgba(var(--tp-accent-rgb, 212, 168, 83), 0.35)"
+            : "var(--tp-border, #252532)"
         }`,
         borderRadius: 8,
         padding: "10px 16px",
@@ -472,7 +530,9 @@ function StatBox({ label, value, highlight }) {
         style={{
           fontSize: 18,
           fontWeight: 700,
-          color: highlight ? "var(--tp-brass, #d4a853)" : "var(--tp-text, #e8e8e8)",
+          color: highlight
+            ? "var(--tp-brass, #d4a853)"
+            : "var(--tp-text, #e8e8e8)",
         }}
       >
         {value}

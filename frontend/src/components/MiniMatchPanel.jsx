@@ -40,7 +40,7 @@ const S = {
     maxHeight: "88vh",
     overflowY: "auto",
     padding: 24,
-    fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
+    fontFamily: "var(--tp-font-ui, Georgia, 'Times New Roman', serif)",
     color: "var(--tp-text, #e8e8e8)",
   },
   header: {
@@ -74,7 +74,11 @@ const S = {
     fontSize: 14,
     fontWeight: 600,
   },
-  scoreNums: { fontSize: 22, fontWeight: 800, color: "var(--tp-brass, #d4a853)" },
+  scoreNums: {
+    fontSize: 22,
+    fontWeight: 800,
+    color: "var(--tp-brass, #d4a853)",
+  },
   decidedBanner: {
     background: "rgba(var(--tp-accent-rgb, 212, 168, 83), 0.12)",
     border: "1px solid rgba(var(--tp-accent-rgb, 212, 168, 83), 0.4)",
@@ -99,7 +103,10 @@ const S = {
     fontSize: 13,
   },
   gamesList: { display: "flex", flexDirection: "column" },
-  rowWrap: { borderBottom: "1px solid var(--tp-border, #252532)", padding: "10px 2px" },
+  rowWrap: {
+    borderBottom: "1px solid var(--tp-border, #252532)",
+    padding: "10px 2px",
+  },
   row: { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" },
   num: { color: "var(--tp-muted, #8a8a9a)", fontSize: 12, minWidth: 22 },
   players: { flex: 1, fontSize: 13, minWidth: 140 },

@@ -28,7 +28,9 @@ function CompetitorChip({ c, isTeam, onDragStart, dimmed }) {
         onDragStart?.(c.id);
       }}
       style={{
-        background: dimmed ? "var(--tp-surface, #1a1a24)" : "var(--tp-border, #252532)",
+        background: dimmed
+          ? "var(--tp-surface, #1a1a24)"
+          : "var(--tp-border, #252532)",
         border: "1px solid var(--tp-border-strong, #353545)",
         borderRadius: 8,
         padding: "10px 12px",
@@ -78,9 +80,15 @@ function Slot({ label, competitor, isTeam, onDrop, onClear, onDragStart }) {
         }}
         style={{
           minHeight: 46,
-          border: `1px dashed ${over ? "var(--tp-brass, #d4a853)" : "var(--tp-border-strong, #353545)"}`,
+          border: `1px dashed ${
+            over
+              ? "var(--tp-brass, #d4a853)"
+              : "var(--tp-border-strong, #353545)"
+          }`,
           borderRadius: 8,
-          background: over ? "rgba(var(--tp-accent-rgb, 212, 168, 83), 0.08)" : "transparent",
+          background: over
+            ? "rgba(var(--tp-accent-rgb, 212, 168, 83), 0.08)"
+            : "transparent",
           display: "flex",
           alignItems: "center",
           justifyContent: competitor ? "space-between" : "center",
@@ -116,7 +124,9 @@ function Slot({ label, competitor, isTeam, onDrop, onClear, onDragStart }) {
             </button>
           </>
         ) : (
-          <span style={{ color: "var(--tp-faint, #4a4a5a)", fontSize: 11 }}>Drop here</span>
+          <span style={{ color: "var(--tp-faint, #4a4a5a)", fontSize: 11 }}>
+            Drop here
+          </span>
         )}
       </div>
     </div>
@@ -246,7 +256,7 @@ export default function ManualPairing() {
         display: "flex",
         flexDirection: "column",
         gap: "24px",
-        fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
+        fontFamily: "var(--tp-font-ui, Georgia, 'Times New Roman', serif)",
         color: "var(--tp-text, #e8e8e8)",
       }}
     >
@@ -301,7 +311,12 @@ export default function ManualPairing() {
         </div>
 
         <p
-          style={{ color: "var(--tp-muted, #8a8a9a)", fontSize: 12, lineHeight: 1.6, margin: 0 }}
+          style={{
+            color: "var(--tp-muted, #8a8a9a)",
+            fontSize: 12,
+            lineHeight: 1.6,
+            margin: 0,
+          }}
         >
           Drag {isTeam ? "teams" : "players"} from the pool into a White or
           Black slot to pair them.{" "}
@@ -362,7 +377,13 @@ export default function ManualPairing() {
             Unpaired ({unplaced.length})
           </div>
           {unplaced.length === 0 ? (
-            <p style={{ color: "var(--tp-faint, #4a4a5a)", fontSize: 11, margin: 0 }}>
+            <p
+              style={{
+                color: "var(--tp-faint, #4a4a5a)",
+                fontSize: 11,
+                margin: 0,
+              }}
+            >
               Everyone's placed.
             </p>
           ) : (
@@ -375,7 +396,8 @@ export default function ManualPairing() {
               style={{
                 marginTop: 4,
                 background: "rgba(var(--tp-accent-rgb, 212, 168, 83), 0.1)",
-                border: "1px solid rgba(var(--tp-accent-rgb, 212, 168, 83), 0.3)",
+                border:
+                  "1px solid rgba(var(--tp-accent-rgb, 212, 168, 83), 0.3)",
                 borderRadius: 8,
                 padding: "10px 12px",
                 color: "var(--tp-brass, #d4a853)",
@@ -475,11 +497,19 @@ export default function ManualPairing() {
           disabled={!readyToFinish || busy}
           onClick={handleFinish}
           style={{
-            background: !readyToFinish || busy ? "var(--tp-surface, #1a1a24)" : "var(--tp-border, #252532)",
+            background:
+              !readyToFinish || busy
+                ? "var(--tp-surface, #1a1a24)"
+                : "var(--tp-border, #252532)",
             border: `1px solid ${
-              !readyToFinish || busy ? "var(--tp-border, #252532)" : "var(--tp-brass, #d4a853)"
+              !readyToFinish || busy
+                ? "var(--tp-border, #252532)"
+                : "var(--tp-brass, #d4a853)"
             }`,
-            color: !readyToFinish || busy ? "var(--tp-dim, #6b6b7b)" : "var(--tp-brass, #d4a853)",
+            color:
+              !readyToFinish || busy
+                ? "var(--tp-dim, #6b6b7b)"
+                : "var(--tp-brass, #d4a853)",
             fontSize: 11,
             fontWeight: 700,
             letterSpacing: "0.05em",

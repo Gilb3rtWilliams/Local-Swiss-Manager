@@ -160,7 +160,7 @@ export default function Standings() {
           padding: 40,
           textAlign: "center",
           color: "var(--tp-muted, #8a8a9a)",
-          fontFamily: "'SF Mono', Monaco, monospace",
+          fontFamily: "var(--tp-font-ui, Georgia, 'Times New Roman', serif)",
           fontSize: 14,
         }}
       >
@@ -230,7 +230,7 @@ export default function Standings() {
         display: "flex",
         flexDirection: "column",
         gap: "24px",
-        fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
+        fontFamily: "var(--tp-font-ui, Georgia, 'Times New Roman', serif)",
         color: "var(--tp-text, #e8e8e8)",
         background:
           "radial-gradient(circle at 50% 0%, var(--tp-surface-2, #1f1f2e) 0%, transparent 70%)",

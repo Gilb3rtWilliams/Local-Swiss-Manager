@@ -635,126 +635,29 @@ const SYSTEM_LABEL = {
   double_elimination: "Double Elimination",
 };
 
-// Read-only preview for the round that's still in progress — no click
-// handlers, no result entry. Deliberately mirrors RoundHistory.jsx's exact
-// markup/classes (team-match-card, pairing-table, board-num, color dots,
-// bye-result, etc.) re-skinned into the warm palette in PublicResults.css,
-// so a live round and a finished round look identical in every way except
-// the result column. Once the round is decided it moves into `rounds` and
-// the real RoundHistory component takes over — same look, same classes.
-function CurrentRoundPreview({ format, pairings }) {
-  if (format === "team") {
-    return (
-      <div className="team-matches">
-        {pairings.map((p) => (
-          <div className="team-match-card" key={p.idx}>
-            {p.type === "bye" ? (
-              <div className="team-match-bye">
-                <span className="player-name">{p.teamName}</span>
-                <span className="bye-result">BYE — full team +1 each</span>
-              </div>
-            ) : (
-              <>
-                <div className="team-match-header">
-                  <span className="team-tag white">{p.teamWhiteName}</span>
-                  <span className="vs">vs</span>
-                  <span className="team-tag black">{p.teamBlackName}</span>
-                </div>
-                <table className="pairing-table board-table">
-                  <thead>
-                    <tr>
-                      <th className="board-num">Bd</th>
-                      <th>White</th>
-                      <th>Black</th>
-                      <th>Result</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {p.boards.map((b) => (
-                      <tr key={b.boardNum}>
-                        <td className="board-num">{b.boardNum}</td>
-                        {b.sitOut ? (
-                          <td colSpan={3}>
-                            <span className="player-name">
-                              {(b.white || b.black)?.name}
-                            </span>
-                            <span className="bye-result"> sits out</span>
-                          </td>
-                        ) : (
-                          <>
-                            <td>
-                              <span className="color-w" />
-                              <span className="player-name">
-                                {b.white?.name}
-                              </span>
-                            </td>
-                            <td>
-                              <span className="color-b" />
-                              <span className="player-name">
-                                {b.black?.name}
-                              </span>
-                            </td>
-                            <td>
-                              <span className="pv-pending">to be played</span>
-                            </td>
-                          </>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </>
-            )}
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <table className="pairing-table">
-      <thead>
-        <tr>
-          <th className="board-num">#</th>
-          <th>White</th>
-          <th>Black</th>
-          <th>Result</th>
-        </tr>
-      </thead>
-      <tbody>
-        {pairings.map((p, i) => (
-          <tr key={p.idx}>
-            {p.type === "bye" ? (
-              <>
-                <td className="board-num">—</td>
-                <td colSpan={2}>
-                  <span className="player-name">{p.playerName}</span>
-                </td>
-                <td>
-                  <span className="bye-result">BYE (+1)</span>
-                </td>
-              </>
-            ) : (
-              <>
-                <td className="board-num">{i + 1}</td>
-                <td>
-                  <span className="color-w" />
-                  <span className="player-name">{p.whiteName}</span>
-                </td>
-                <td>
-                  <span className="color-b" />
-                  <span className="player-name">{p.blackName}</span>
-                </td>
-                <td>
-                  <span className="pv-pending">to be played</span>
-                </td>
-              </>
-            )}
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
+// The live round's payload (data.currentPairings) names team-board players as
+// objects (b.white.name) while completed rounds use flat fields
+// (b.whiteName), so reshape it once and let RoundHistory draw both. That keeps
+// an upcoming round pixel-identical to a finished one; RoundHistory's
+// `pending` flag swaps the result for "vs" / "To be played".
+function toHistoryShape(format, pairings) {
+  if (format !== "team") return { pairings };
+  return {
+    pairings: pairings.map((p) =>
+      p.type === "bye"
+        ? p
+        : {
+            ...p,
+            boards: (p.boards || []).map((b) => ({
+              ...b,
+              whiteName: b.whiteName ?? b.white?.name,
+              blackName: b.blackName ?? b.black?.name,
+              playerName: b.playerName ?? (b.white || b.black)?.name,
+              result: null,
+            })),
+          },
+    ),
+  };
 }
 
 export default function PublicResults() {
@@ -1103,9 +1006,10 @@ export default function PublicResults() {
             }
           >
             {selectedRound === "current" ? (
-              <CurrentRoundPreview
+              <RoundHistory
                 format={data.format}
-                pairings={data.currentPairings}
+                round={toHistoryShape(data.format, data.currentPairings)}
+                pending
               />
             ) : (
               <RoundHistory

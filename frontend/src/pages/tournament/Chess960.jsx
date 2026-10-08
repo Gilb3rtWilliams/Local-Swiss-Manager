@@ -74,9 +74,17 @@ function CageGamePicker({ games, selectedId, onSelect }) {
             type="button"
             onClick={() => onSelect(g.id)}
             style={{
-              background: active ? "var(--tp-border, #252532)" : "var(--tp-surface, #1a1a24)",
-              border: `1px solid ${active ? "var(--tp-brass, #d4a853)" : "var(--tp-border-strong, #353545)"}`,
-              color: active ? "var(--tp-text, #e8e8e8)" : "var(--tp-muted, #8a8a9a)",
+              background: active
+                ? "var(--tp-border, #252532)"
+                : "var(--tp-surface, #1a1a24)",
+              border: `1px solid ${
+                active
+                  ? "var(--tp-brass, #d4a853)"
+                  : "var(--tp-border-strong, #353545)"
+              }`,
+              color: active
+                ? "var(--tp-text, #e8e8e8)"
+                : "var(--tp-muted, #8a8a9a)",
               fontSize: 11,
               fontWeight: 600,
               padding: "8px 12px",
@@ -128,9 +136,17 @@ function BracketMatchPicker({ matches, selectedId, onSelect }) {
             type="button"
             onClick={() => onSelect(m.id)}
             style={{
-              background: active ? "var(--tp-border, #252532)" : "var(--tp-surface, #1a1a24)",
-              border: `1px solid ${active ? "var(--tp-brass, #d4a853)" : "var(--tp-border-strong, #353545)"}`,
-              color: active ? "var(--tp-text, #e8e8e8)" : "var(--tp-muted, #8a8a9a)",
+              background: active
+                ? "var(--tp-border, #252532)"
+                : "var(--tp-surface, #1a1a24)",
+              border: `1px solid ${
+                active
+                  ? "var(--tp-brass, #d4a853)"
+                  : "var(--tp-border-strong, #353545)"
+              }`,
+              color: active
+                ? "var(--tp-text, #e8e8e8)"
+                : "var(--tp-muted, #8a8a9a)",
               fontSize: 11,
               fontWeight: 600,
               padding: "8px 12px",
@@ -273,7 +289,7 @@ export default function Chess960() {
           padding: 40,
           textAlign: "center",
           color: "var(--tp-muted, #8a8a9a)",
-          fontFamily: "'SF Mono', Monaco, monospace",
+          fontFamily: "var(--tp-font-ui, Georgia, 'Times New Roman', serif)",
           fontSize: 14,
         }}
       >
@@ -345,7 +361,7 @@ export default function Chess960() {
         display: "flex",
         flexDirection: "column",
         gap: "24px",
-        fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
+        fontFamily: "var(--tp-font-ui, Georgia, 'Times New Roman', serif)",
         color: "var(--tp-text, #e8e8e8)",
         background:
           "radial-gradient(circle at 50% 0%, var(--tp-surface-2, #1f1f2e) 0%, transparent 70%)",
@@ -460,7 +476,13 @@ export default function Chess960() {
         )}
 
         {!current ? (
-          <p style={{ color: "var(--tp-muted, #8a8a9a)", fontSize: 14, margin: 0 }}>
+          <p
+            style={{
+              color: "var(--tp-muted, #8a8a9a)",
+              fontSize: 14,
+              margin: 0,
+            }}
+          >
             {emptyStateHint}
           </p>
         ) : (
@@ -514,10 +536,12 @@ export default function Chess960() {
                     style={{
                       color: "var(--tp-brass, #d4a853)",
                       fontSize: 12,
-                      background: "rgba(var(--tp-accent-rgb, 212, 168, 83), 0.1)",
+                      background:
+                        "rgba(var(--tp-accent-rgb, 212, 168, 83), 0.1)",
                       padding: "8px 12px",
                       borderRadius: 6,
-                      border: "1px solid rgba(var(--tp-accent-rgb, 212, 168, 83), 0.2)",
+                      border:
+                        "1px solid rgba(var(--tp-accent-rgb, 212, 168, 83), 0.2)",
                       margin: 0,
                       lineHeight: 1.4,
                     }}

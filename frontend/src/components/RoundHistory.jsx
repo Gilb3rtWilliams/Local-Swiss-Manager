@@ -71,7 +71,7 @@ function teamResultOptions(teamAIsWhite, aName, bName) {
   ];
 }
 
-const mono = "'SF Mono', Monaco, 'Cascadia Code', monospace";
+const mono = "var(--tp-font-ui, Georgia, 'Times New Roman', serif)";
 
 const ACCENT_WIN = "#4ade80";
 const ACCENT_LOSS = "#f87171";
@@ -190,6 +190,7 @@ function TeamHistoryMatch({
   isEditing,
   loading,
   matchPlay,
+  pending,
   onResultChange,
   onOpenMiniMatch,
 }) {
@@ -244,7 +245,7 @@ function TeamHistoryMatch({
             border: "1px solid var(--tp-border, #353545)",
           }}
         >
-          {score.a} – {score.b}
+          {pending ? "vs" : `${score.a} – ${score.b}`}
         </div>
         <div style={{ padding: "16px 24px", textAlign: "right" }}>
           <span
@@ -302,6 +303,8 @@ function TeamHistoryMatch({
             ? "Draw"
             : outcome === "double"
             ? "Double forfeit"
+            : pending
+            ? "To be played"
             : "No result";
 
         const mmScore = b.miniMatch?.score;
@@ -421,7 +424,11 @@ function TeamHistoryMatch({
                           fontSize: 13,
                         }}
                       >
-                        {b.result ? formatResult(b.result) : "—"}
+                        {pending
+                          ? "vs"
+                          : b.result
+                          ? formatResult(b.result)
+                          : "—"}
                       </div>
                       <div
                         style={{
@@ -495,6 +502,7 @@ function IndividualRound({
   isEditing,
   loading,
   matchPlay,
+  pending,
   onResultChange,
   onOpenMiniMatch,
 }) {
@@ -611,6 +619,8 @@ function IndividualRound({
             ? "Draw"
             : outcome === "double"
             ? "Double forfeit"
+            : pending
+            ? "To be played"
             : "No result";
         const showMiniMatch = matchPlay && p.miniMatch;
         const mmScore = p.miniMatch?.score;
@@ -706,7 +716,7 @@ function IndividualRound({
                       fontSize: 13,
                     }}
                   >
-                    {p.result ? formatResult(p.result) : "—"}
+                    {pending ? "vs" : p.result ? formatResult(p.result) : "—"}
                   </div>
                   <div
                     style={{
@@ -762,6 +772,9 @@ export default function RoundHistory({
   onResultChange,
   loading = false,
   matchPlay = false,
+  // Round not played yet: same layout, but "vs" / "To be played" in place of
+  // a result. Used by the public page for the live round.
+  pending = false,
   onOpenMiniMatch,
 }) {
   if (!round) return <p className="muted">No completed rounds yet.</p>;
@@ -816,6 +829,7 @@ export default function RoundHistory({
               isEditing={isEditing}
               loading={loading}
               matchPlay={matchPlay}
+              pending={pending}
               onResultChange={onResultChange}
               onOpenMiniMatch={onOpenMiniMatch}
             />
@@ -831,6 +845,7 @@ export default function RoundHistory({
       isEditing={isEditing}
       loading={loading}
       matchPlay={matchPlay}
+      pending={pending}
       onResultChange={onResultChange}
       onOpenMiniMatch={onOpenMiniMatch}
     />

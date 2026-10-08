@@ -25,9 +25,17 @@ function ResultButtons({
             key={r}
             onClick={() => onSetResult(matchKey, r)}
             style={{
-              background: isActive ? "var(--tp-border-strong, #3a3a4a)" : "transparent",
-              border: `1px solid ${isActive ? "var(--tp-dim, #5a5a6a)" : "var(--tp-border, #2a2a35)"}`,
-              color: isActive ? "var(--tp-heading, #ffffff)" : "var(--tp-muted, #8a8a9a)",
+              background: isActive
+                ? "var(--tp-border-strong, #3a3a4a)"
+                : "transparent",
+              border: `1px solid ${
+                isActive
+                  ? "var(--tp-dim, #5a5a6a)"
+                  : "var(--tp-border, #2a2a35)"
+              }`,
+              color: isActive
+                ? "var(--tp-heading, #ffffff)"
+                : "var(--tp-muted, #8a8a9a)",
               fontSize: 10,
               padding: "4px 6px",
               borderRadius: 4,
@@ -110,7 +118,7 @@ export default function PairingsIndividual({
         display: "flex",
         flexDirection: "column",
         gap: "24px",
-        fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
+        fontFamily: "var(--tp-font-ui, Georgia, 'Times New Roman', serif)",
         background:
           "radial-gradient(circle at 50% 0%, var(--tp-surface-2, #1f1f2e) 0%, transparent 70%)",
         padding: "24px 0",

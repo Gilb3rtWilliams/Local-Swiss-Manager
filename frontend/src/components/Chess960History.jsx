@@ -26,7 +26,7 @@ export default function Chess960History({
         border: "1px solid var(--tp-border, #252532)",
         borderRadius: 12,
         padding: "24px",
-        fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
+        fontFamily: "var(--tp-font-ui, Georgia, 'Times New Roman', serif)",
       }}
     >
       {/* Header */}
@@ -73,14 +73,22 @@ export default function Chess960History({
                 display: "flex",
                 flexDirection: "column",
                 gap: 12,
-                background: isActive ? "var(--tp-surface, #1a1a24)" : "transparent",
-                border: `1px solid ${isActive ? "var(--tp-dim, #5a5a6a)" : "var(--tp-border, #252532)"}`,
+                background: isActive
+                  ? "var(--tp-surface, #1a1a24)"
+                  : "transparent",
+                border: `1px solid ${
+                  isActive
+                    ? "var(--tp-dim, #5a5a6a)"
+                    : "var(--tp-border, #252532)"
+                }`,
                 borderRadius: 10,
                 padding: 12,
                 cursor: "pointer",
                 transition: "all 0.2s ease",
                 flexShrink: 0,
-                boxShadow: isActive ? "0 4px 12px color-mix(in srgb, var(--tp-shadow-color, #000) 20%, transparent)" : "none",
+                boxShadow: isActive
+                  ? "0 4px 12px color-mix(in srgb, var(--tp-shadow-color, #000) 20%, transparent)"
+                  : "none",
               }}
             >
               {/* Card Header */}
@@ -96,7 +104,9 @@ export default function Chess960History({
                     fontSize: 10,
                     fontWeight: 700,
                     letterSpacing: "0.08em",
-                    color: isActive ? "var(--tp-brass, #d4a853)" : "var(--tp-dim, #6b6b7b)",
+                    color: isActive
+                      ? "var(--tp-brass, #d4a853)"
+                      : "var(--tp-dim, #6b6b7b)",
                     textTransform: "uppercase",
                   }}
                 >
@@ -106,7 +116,9 @@ export default function Chess960History({
                   style={{
                     fontSize: 12,
                     fontWeight: 600,
-                    color: isActive ? "var(--tp-text, #e8e8e8)" : "var(--tp-muted, #8a8a9a)",
+                    color: isActive
+                      ? "var(--tp-text, #e8e8e8)"
+                      : "var(--tp-muted, #8a8a9a)",
                   }}
                 >
                   #{r.chess960.id}

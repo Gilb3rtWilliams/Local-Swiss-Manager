@@ -19,7 +19,13 @@ function resolvePlayerMeta(playerObj, livePlayers) {
   return { title: "", id: null };
 }
 
-function PlayerLink({ basePath, id, title, name, titleColor = "var(--tp-loss-soft, #c25555)" }) {
+function PlayerLink({
+  basePath,
+  id,
+  title,
+  name,
+  titleColor = "var(--tp-loss-soft, #c25555)",
+}) {
   const label = (
     <>
       {title && (
@@ -94,9 +100,17 @@ function TeamResultButtons({
             key={label}
             onClick={() => onSetResult(result)}
             style={{
-              background: isActive ? "var(--tp-border-strong, #3a3a4a)" : "transparent",
-              border: `1px solid ${isActive ? "var(--tp-dim, #5a5a6a)" : "var(--tp-border, #2a2a35)"}`,
-              color: isActive ? "var(--tp-heading, #ffffff)" : "var(--tp-muted, #8a8a9a)",
+              background: isActive
+                ? "var(--tp-border-strong, #3a3a4a)"
+                : "transparent",
+              border: `1px solid ${
+                isActive
+                  ? "var(--tp-dim, #5a5a6a)"
+                  : "var(--tp-border, #2a2a35)"
+              }`,
+              color: isActive
+                ? "var(--tp-heading, #ffffff)"
+                : "var(--tp-muted, #8a8a9a)",
               fontSize: 10,
               padding: "4px 6px",
               borderRadius: 4,
@@ -140,7 +154,7 @@ function TeamBoardsMatch({
         borderRadius: 12,
         overflow: "hidden",
         marginBottom: 24,
-        fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
+        fontFamily: "var(--tp-font-ui, Georgia, 'Times New Roman', serif)",
         color: "var(--tp-text, #e8e8e8)",
       }}
     >
@@ -152,7 +166,12 @@ function TeamBoardsMatch({
           borderBottom: "1px solid var(--tp-border, #252532)",
         }}
       >
-        <div style={{ padding: "16px 24px", borderRight: "1px solid var(--tp-border, #252532)" }}>
+        <div
+          style={{
+            padding: "16px 24px",
+            borderRight: "1px solid var(--tp-border, #252532)",
+          }}
+        >
           <span
             style={{
               display: "inline-flex",
@@ -252,7 +271,9 @@ function TeamBoardsMatch({
               display: "grid",
               gridTemplateColumns: "1fr 140px 1fr",
               borderBottom:
-                b.boardNum === p.boards.length ? "none" : "1px solid var(--tp-border, #252532)",
+                b.boardNum === p.boards.length
+                  ? "none"
+                  : "1px solid var(--tp-border, #252532)",
               minHeight: 120,
             }}
           >
@@ -416,7 +437,11 @@ function TeamBoardsMatch({
                   }}
                 >
                   <span
-                    style={{ color: "var(--tp-brass, #d4a853)", fontWeight: 800, fontSize: 15 }}
+                    style={{
+                      color: "var(--tp-brass, #d4a853)",
+                      fontWeight: 800,
+                      fontSize: 15,
+                    }}
                   >
                     {/* score.A / score.B follow White / Black, so flip them
                         when the left-hand team is Black on this board */}

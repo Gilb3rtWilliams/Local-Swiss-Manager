@@ -7,12 +7,17 @@
 @import url("https://fonts.googleapis.com/css2?family=Cascadia+Code:wght@400;500;600;700&display=swap");
 
 .navbar {
-  --nav-bg: rgba(12, 12, 18, 0.85);
-  --nav-border: #252532;
-  --nav-text: #eeecf4;
-  --nav-muted: #8d8da0;
-  --nav-teal: #00d4a8;
-  --nav-teal-hover: #1de6ba;
+  /* Themed: each token reads the active theme's --tp-* variable (the same
+     ones the public pages use) and falls back to the original dark slate &
+     teal values when no theme has set it. Tints/glows are derived from the
+     accent with color-mix, so they follow the theme too. */
+  --nav-accent: var(--tp-accent, var(--tp-brass, #00d4a8));
+  --nav-accent-hover: color-mix(in srgb, var(--nav-accent) 78%, white);
+  --nav-bg: color-mix(in srgb, var(--tp-bg, #0c0c12) 85%, transparent);
+  --nav-border: var(--tp-border, #252532);
+  --nav-text: var(--tp-text, #eeecf4);
+  --nav-muted: var(--tp-muted, #8d8da0);
+  --nav-on-accent: var(--tp-bg, #08211c);
   --nav-maroon: #f44336;
   --nav-maroon-hover: #ff8a80;
 
@@ -55,21 +60,22 @@
 }
 
 .navbar-brand:hover {
-  color: var(--nav-teal);
+  color: var(--nav-accent);
 }
 
 .navbar-glyph {
   font-size: 1.8rem; /* Increased glyph size to match the larger brand text */
   color: var(--nav-text);
-  transition:
-    color 0.2s ease,
+  transition: color 0.2s ease,
     transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .navbar-brand:hover .navbar-glyph {
-  color: var(--nav-teal);
+  color: var(--nav-accent);
   transform: rotate(-10deg) scale(1.15);
-  filter: drop-shadow(0 0 8px rgba(0, 212, 168, 0.45));
+  filter: drop-shadow(
+    0 0 8px color-mix(in srgb, var(--nav-accent) 45%, transparent)
+  );
 }
 
 /* ── NAVIGATION ACTIONS ────────────────────────────────────────────────── */
@@ -96,17 +102,17 @@
 }
 
 .navbar-link:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(0, 212, 168, 0.35);
-  color: var(--nav-teal);
+  background: color-mix(in srgb, var(--nav-text) 5%, transparent);
+  border-color: color-mix(in srgb, var(--nav-accent) 35%, transparent);
+  color: var(--nav-accent);
 }
 
 .navbar-link.active {
-  background: rgba(0, 212, 168, 0.12);
-  border-color: rgba(0, 212, 168, 0.45);
-  color: var(--nav-teal);
+  background: color-mix(in srgb, var(--nav-accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--nav-accent) 45%, transparent);
+  color: var(--nav-accent);
   font-weight: 700;
-  box-shadow: 0 0 12px rgba(0, 212, 168, 0.15);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--nav-accent) 15%, transparent);
 }
 
 /* Log Out Button */
@@ -123,21 +129,21 @@ button.navbar-link:hover {
 /* ── PRIMARY BUTTON ───────────────────────────────────────────────────── */
 
 .btn-primary {
-  background: var(--nav-teal);
-  color: #08211c;
-  border: 1px solid var(--nav-teal);
+  background: var(--nav-accent);
+  color: var(--nav-on-accent);
+  border: 1px solid var(--nav-accent);
   cursor: pointer;
   font-family: inherit;
   font-weight: 700;
-  box-shadow: 0 4px 12px rgba(0, 212, 168, 0.25);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--nav-accent) 25%, transparent);
   transition: all 0.2s ease;
 }
 
 .btn-primary:hover {
-  background: var(--nav-teal-hover);
-  border-color: var(--nav-teal-hover);
+  background: var(--nav-accent-hover);
+  border-color: var(--nav-accent-hover);
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(0, 212, 168, 0.35);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--nav-accent) 35%, transparent);
 }
 
 .btn-primary:active {

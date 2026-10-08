@@ -126,7 +126,7 @@ export default function StartingRank({ t: tProp, basePath } = {}) {
         display: "flex",
         flexDirection: "column",
         gap: "24px",
-        fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
+        fontFamily: "var(--tp-font-ui, Georgia, 'Times New Roman', serif)",
         color: "var(--tp-text, #e8e8e8)",
         background:
           "radial-gradient(circle at 50% 0%, var(--tp-surface-2, #1f1f2e) 0%, transparent 70%)",
@@ -312,7 +312,7 @@ export default function StartingRank({ t: tProp, basePath } = {}) {
                                 padding: "10px 18px",
                                 fontSize: 11,
                                 fontFamily:
-                                  "'SF Mono', Monaco, 'Cascadia Code', monospace",
+                                  "var(--tp-font-ui, Georgia, 'Times New Roman', serif)",
                               }}
                             >
                               <FideId p={p} />
@@ -407,7 +407,7 @@ export default function StartingRank({ t: tProp, basePath } = {}) {
                         padding: "12px 18px",
                         fontSize: 11,
                         fontFamily:
-                          "'SF Mono', Monaco, 'Cascadia Code', monospace",
+                          "var(--tp-font-ui, Georgia, 'Times New Roman', serif)",
                       }}
                     >
                       <FideId p={p} />

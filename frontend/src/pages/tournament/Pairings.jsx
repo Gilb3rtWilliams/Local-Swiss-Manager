@@ -186,8 +186,14 @@ export default function Pairings() {
   };
 
   const btnStyle = (disabled) => ({
-    background: disabled ? "var(--tp-surface, #1a1a24)" : "var(--tp-border, #252532)",
-    border: `1px solid ${disabled ? "var(--tp-border, #252532)" : "var(--tp-border-strong, #353545)"}`,
+    background: disabled
+      ? "var(--tp-surface, #1a1a24)"
+      : "var(--tp-border, #252532)",
+    border: `1px solid ${
+      disabled
+        ? "var(--tp-border, #252532)"
+        : "var(--tp-border-strong, #353545)"
+    }`,
     color: disabled ? "var(--tp-dim, #6b6b7b)" : "var(--tp-text, #e8e8e8)",
     fontSize: 11,
     fontWeight: 600,
@@ -206,7 +212,7 @@ export default function Pairings() {
         display: "flex",
         flexDirection: "column",
         gap: "24px",
-        fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
+        fontFamily: "var(--tp-font-ui, Georgia, 'Times New Roman', serif)",
         color: "var(--tp-text, #e8e8e8)",
         background:
           "radial-gradient(circle at 50% 0%, var(--tp-surface-2, #1f1f2e) 0%, transparent 70%)",
@@ -332,7 +338,9 @@ export default function Pairings() {
               alignItems: "center",
               cursor: "pointer",
               marginBottom: lateOpen ? 20 : 0,
-              borderBottom: lateOpen ? "1px solid var(--tp-border, #252532)" : "none",
+              borderBottom: lateOpen
+                ? "1px solid var(--tp-border, #252532)"
+                : "none",
               paddingBottom: lateOpen ? 12 : 0,
             }}
             onClick={() => setLateOpen((o) => !o)}
@@ -446,7 +454,11 @@ export default function Pairings() {
                 </button>
                 {lateError && (
                   <span
-                    style={{ color: "var(--tp-danger, #ff6b6b)", fontSize: 11, fontWeight: 600 }}
+                    style={{
+                      color: "var(--tp-danger, #ff6b6b)",
+                      fontSize: 11,
+                      fontWeight: 600,
+                    }}
                   >
                     {lateError}
                   </span>

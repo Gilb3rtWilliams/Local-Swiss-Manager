@@ -98,7 +98,7 @@ export default function TournamentLayout() {
           background: "var(--tp-bg, #13131a)",
           padding: "40px",
           color: "var(--tp-danger, #ff6b6b)",
-          fontFamily: "'SF Mono', Monaco, monospace",
+          fontFamily: "var(--tp-font-ui, Georgia, 'Times New Roman', serif)",
           textAlign: "center",
         }}
       >
@@ -116,7 +116,7 @@ export default function TournamentLayout() {
           background: "var(--tp-bg, #13131a)",
           padding: "40px",
           color: "var(--tp-muted, #8a8a9a)",
-          fontFamily: "'SF Mono', Monaco, monospace",
+          fontFamily: "var(--tp-font-ui, Georgia, 'Times New Roman', serif)",
           textAlign: "center",
         }}
       >
@@ -132,7 +132,7 @@ export default function TournamentLayout() {
         minHeight: "100vh",
         background: "var(--tp-bg, #13131a)",
         color: "var(--tp-text, #e8e8e8)",
-        fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
+        fontFamily: "var(--tp-font-ui, Georgia, 'Times New Roman', serif)",
         position: "relative",
       }}
     >
@@ -193,6 +193,8 @@ export default function TournamentLayout() {
               fontWeight: 600,
               letterSpacing: "0.15em",
               textTransform: "uppercase",
+              fontFamily:
+                "var(--tp-font-num, 'IBM Plex Mono', ui-monospace, 'SF Mono', Consolas, monospace)",
               color: "var(--tp-muted, #8a8a9a)",
               marginBottom: 16,
             }}
@@ -220,7 +222,8 @@ export default function TournamentLayout() {
               letterSpacing: "0.05em",
               textTransform: "uppercase",
               margin: 0,
-              textShadow: "0 2px 10px color-mix(in srgb, var(--tp-shadow-color, #000) 50%, transparent)",
+              textShadow:
+                "0 2px 10px color-mix(in srgb, var(--tp-shadow-color, #000) 50%, transparent)",
             }}
           >
             {t.name}
@@ -239,7 +242,8 @@ export default function TournamentLayout() {
             padding: 8,
             borderRadius: 16,
             border: "1px solid var(--tp-border, #252532)",
-            boxShadow: "0 8px 32px color-mix(in srgb, var(--tp-shadow-color, #000) 40%, transparent)",
+            boxShadow:
+              "0 8px 32px color-mix(in srgb, var(--tp-shadow-color, #000) 40%, transparent)",
           }}
         >
           {tabsFor(t).map((tab) => (
@@ -255,10 +259,18 @@ export default function TournamentLayout() {
                 textTransform: "uppercase",
                 textDecoration: "none",
                 transition: "all 0.2s ease",
-                color: isActive ? "var(--tp-heading, #ffffff)" : "var(--tp-muted, #8a8a9a)",
-                background: isActive ? "var(--tp-border, #252532)" : "transparent",
-                border: `1px solid ${isActive ? "var(--tp-border-strong, #353545)" : "transparent"}`,
-                boxShadow: isActive ? "0 2px 8px color-mix(in srgb, var(--tp-shadow-color, #000) 20%, transparent)" : "none",
+                color: isActive
+                  ? "var(--tp-heading, #ffffff)"
+                  : "var(--tp-muted, #8a8a9a)",
+                background: isActive
+                  ? "var(--tp-border, #252532)"
+                  : "transparent",
+                border: `1px solid ${
+                  isActive ? "var(--tp-border-strong, #353545)" : "transparent"
+                }`,
+                boxShadow: isActive
+                  ? "0 2px 8px color-mix(in srgb, var(--tp-shadow-color, #000) 20%, transparent)"
+                  : "none",
               })}
             >
               {tab.label}
@@ -269,7 +281,8 @@ export default function TournamentLayout() {
         {/* Content Outlet Container */}
         <div
           style={{
-            background: "color-mix(in srgb, var(--tp-bg, #13131a) 60%, transparent)",
+            background:
+              "color-mix(in srgb, var(--tp-bg, #13131a) 60%, transparent)",
             border: "1px solid var(--tp-border, #252532)",
             borderRadius: 16,
             backdropFilter: "blur(10px)",

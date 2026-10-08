@@ -8,7 +8,11 @@ export default function Navbar() {
   const navigate = useNavigate();
   const { authenticated, logout } = useAuth();
 
+  // Organizer-only chrome: render nothing for visitors who aren't logged in
+  // (authenticated is null while the session check is still pending, false
+  // once it has failed), and keep it off the public client pages.
   if (
+    authenticated !== true ||
     location.pathname === "/" ||
     location.pathname.startsWith("/register/") ||
     location.pathname.startsWith("/results/")
@@ -27,32 +31,23 @@ export default function Navbar() {
           <span className="navbar-glyph">♟</span> Local Swiss Manager
         </Link>
         <nav className="navbar-actions">
-          {authenticated && (
-            <>
-              <Link
-                to="/dashboard"
-                className={`navbar-link ${
-                  location.pathname === "/dashboard" ? "active" : ""
-                }`}
-              >
-                Dashboard
-              </Link>
-              <button
-                className="btn-primary btn-sm"
-                onClick={() => navigate("/new")}
-              >
-                + New Tournament
-              </button>
-              <button className="navbar-link" onClick={handleLogout}>
-                Log out
-              </button>
-            </>
-          )}
-          {authenticated === false && location.pathname !== "/login" && (
-            <Link to="/login" className="navbar-link">
-              Log In
-            </Link>
-          )}
+          <Link
+            to="/dashboard"
+            className={`navbar-link ${
+              location.pathname === "/dashboard" ? "active" : ""
+            }`}
+          >
+            Dashboard
+          </Link>
+          <button
+            className="btn-primary btn-sm"
+            onClick={() => navigate("/new")}
+          >
+            + New Tournament
+          </button>
+          <button className="navbar-link" onClick={handleLogout}>
+            Log out
+          </button>
           <AuthWidget />
         </nav>
       </div>

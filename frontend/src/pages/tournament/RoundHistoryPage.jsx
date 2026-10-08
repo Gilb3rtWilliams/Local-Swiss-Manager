@@ -40,7 +40,7 @@ export default function RoundHistoryPage() {
           padding: 40,
           textAlign: "center",
           color: "var(--tp-muted, #8a8a9a)",
-          fontFamily: "'SF Mono', Monaco, monospace",
+          fontFamily: "var(--tp-font-ui, Georgia, 'Times New Roman', serif)",
           fontSize: 14,
         }}
       >
@@ -140,7 +140,7 @@ export default function RoundHistoryPage() {
         display: "flex",
         flexDirection: "column",
         gap: "24px",
-        fontFamily: "'SF Mono', Monaco, 'Cascadia Code', monospace",
+        fontFamily: "var(--tp-font-ui, Georgia, 'Times New Roman', serif)",
         color: "var(--tp-text, #e8e8e8)",
         background:
           "radial-gradient(circle at 50% 0%, var(--tp-surface-2, #1f1f2e) 0%, transparent 70%)",
@@ -192,8 +192,13 @@ export default function RoundHistoryPage() {
                   }}
                   style={{
                     background:
-                      historyRound === r.round ? "var(--tp-border-strong, #3b3b54)" : "var(--tp-surface, #1a1a24)",
-                    color: historyRound === r.round ? "var(--tp-heading, #ffffff)" : "var(--tp-muted, #8a8a9a)",
+                      historyRound === r.round
+                        ? "var(--tp-border-strong, #3b3b54)"
+                        : "var(--tp-surface, #1a1a24)",
+                    color:
+                      historyRound === r.round
+                        ? "var(--tp-heading, #ffffff)"
+                        : "var(--tp-muted, #8a8a9a)",
                     border: "1px solid var(--tp-border, #252532)",
                     borderRadius: "6px",
                     padding: "4px 10px",
@@ -213,8 +218,12 @@ export default function RoundHistoryPage() {
               <button
                 onClick={() => setIsEditing(!isEditing)}
                 style={{
-                  background: isEditing ? "#e5a93c" : "var(--tp-border, #252532)",
-                  color: isEditing ? "var(--tp-bg, #13131a)" : "var(--tp-text, #e8e8e8)",
+                  background: isEditing
+                    ? "#e5a93c"
+                    : "var(--tp-border, #252532)",
+                  color: isEditing
+                    ? "var(--tp-bg, #13131a)"
+                    : "var(--tp-text, #e8e8e8)",
                   border: "none",
                   borderRadius: "6px",
                   padding: "6px 14px",
@@ -233,9 +242,11 @@ export default function RoundHistoryPage() {
                   onClick={handleDeleteRound}
                   disabled={loading}
                   style={{
-                    background: "color-mix(in srgb, var(--tp-loss, #f44336) 14%, var(--tp-card-solid, #191924))",
+                    background:
+                      "color-mix(in srgb, var(--tp-loss, #f44336) 14%, var(--tp-card-solid, #191924))",
                     color: "var(--tp-danger, #ff6b6b)",
-                    border: "1px solid color-mix(in srgb, var(--tp-loss, #f44336) 35%, var(--tp-card-solid, #191924))",
+                    border:
+                      "1px solid color-mix(in srgb, var(--tp-loss, #f44336) 35%, var(--tp-card-solid, #191924))",
                     borderRadius: "6px",
                     padding: "6px 14px",
                     fontSize: "12px",
@@ -250,9 +261,11 @@ export default function RoundHistoryPage() {
                   onClick={handleDeleteAndRegenerate}
                   disabled={loading}
                   style={{
-                    background: "color-mix(in srgb, var(--tp-win, #4caf50) 16%, var(--tp-card-solid, #191924))",
+                    background:
+                      "color-mix(in srgb, var(--tp-win, #4caf50) 16%, var(--tp-card-solid, #191924))",
                     color: "#4ade80",
-                    border: "1px solid color-mix(in srgb, var(--tp-win, #4caf50) 35%, var(--tp-card-solid, #191924))",
+                    border:
+                      "1px solid color-mix(in srgb, var(--tp-win, #4caf50) 35%, var(--tp-card-solid, #191924))",
                     borderRadius: "6px",
                     padding: "6px 14px",
                     fontSize: "12px",
@@ -273,8 +286,10 @@ export default function RoundHistoryPage() {
             style={{
               padding: "10px 14px",
               marginBottom: "16px",
-              background: "color-mix(in srgb, var(--tp-loss, #f44336) 14%, var(--tp-card-solid, #191924))",
-              border: "1px solid color-mix(in srgb, var(--tp-loss, #f44336) 35%, var(--tp-card-solid, #191924))",
+              background:
+                "color-mix(in srgb, var(--tp-loss, #f44336) 14%, var(--tp-card-solid, #191924))",
+              border:
+                "1px solid color-mix(in srgb, var(--tp-loss, #f44336) 35%, var(--tp-card-solid, #191924))",
               borderRadius: "6px",
               color: "var(--tp-danger, #ff8888)",
               fontSize: "12px",

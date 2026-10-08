@@ -5,7 +5,7 @@
    round toolbar, then a sidebar menu + content pane.
 ─────────────────────────────────────────────────────────────────────────── */
 
-@import url("https://fonts.googleapis.com/css2?family=Cascadia+Code:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap");
 
 .pv-root {
   --pv-bg: var(--tp-bg, #13131a);
@@ -22,6 +22,19 @@
   /* No theme token exists for "win" green, so it stays fixed. */
   --pv-felt: #4caf50;
 
+  /* Typography: Georgia for text and headings; lining-figure face for numbers
+     (Georgia's digits are old-style). Override once in theme.css via
+     --tp-font-ui / --tp-font-num. */
+  --pv-font: var(--tp-font-ui, "Georgia", "Times New Roman", serif);
+  --pv-font-num: var(
+    --tp-font-num,
+    "IBM Plex Mono",
+    ui-monospace,
+    "SF Mono",
+    Consolas,
+    monospace
+  );
+
   /* Neutral tints derived from the text colour: a faint wash on dark themes
      and on light ones alike (replaces the old white-alpha overlays). */
   --pv-tint-1: color-mix(in srgb, var(--pv-text) 4%, transparent);
@@ -36,7 +49,7 @@
   min-height: 100vh;
   background: var(--pv-bg);
   color: var(--pv-text);
-  font-family: var(--font-mono, "SF Mono", Monaco, "Cascadia Code", monospace);
+  font-family: var(--pv-font);
   padding-bottom: 60px;
 }
 
@@ -831,4 +844,20 @@
   .pv-toolbar .pv-round-picker {
     width: 100%;
   }
+}
+
+/* ── Figures: lining numerals so columns and counts read evenly ──────── */
+.pv-meta,
+.pv-stat-value,
+.pv-round-pill-number,
+.pv-game-round,
+.pv-outcome,
+.pv-root .board-num,
+.pv-root .pairing-table strong,
+.pv-root .rank-col,
+.pv-root .score-col,
+.pv-root .tiebreak-col,
+.pv-root .fide-id-col,
+.pv-root .rating-tag {
+  font-family: var(--pv-font-num);
 }

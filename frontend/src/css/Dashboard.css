@@ -1,47 +1,38 @@
-/* ── Dashboard ────────────────────────────────────────────────────────────
-   Themed by the same system as the tournament pages: the root carries
-   `tp-theme` + `data-theme`, and every color below resolves from the
-   --tp-* variables (with the same fallbacks TournamentLayout.jsx uses), so
-   switching theme with <ThemePicker> restyles this page too.
+/* ── Dashboard ─────────────────────────────────────────────────────────────
+   App shell: a left sidebar (brand, primary action, section menu) and a
+   content pane showing one section at a time — tournaments as a ledger of
+   rows, then news and reviews. Serif headings, monospace numerals: the
+   vocabulary of a pairing sheet.
 
-   No ambient background: the page is the flat theme background. Panels are
-   separated by borders only.
-
-   Everything is scoped under `.dash-root` so nothing leaks to other pages.
+   Colours come from the shared --tp-* theme tokens (css/theme.css), exactly as
+   on the organizer's tournament pages, each with the original dark value as
+   its fallback. Everything is scoped under `.dash-root` so it never leaks.
 ─────────────────────────────────────────────────────────────────────────── */
 
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap");
+
 .dash-root {
-  /* Local aliases — one place to see which theme variables this page uses */
   --d-bg: var(--tp-bg, #13131a);
-  --d-text: var(--tp-text, #e8e8e8);
-  --d-heading: var(--tp-heading, #ffffff);
-  --d-muted: var(--tp-muted, #8a8a9a);
+  --d-panel: var(--tp-card-solid, #191924);
+  --d-raised: var(--tp-border, #252532);
   --d-border: var(--tp-border, #252532);
   --d-border-strong: var(--tp-border-strong, #353545);
+  --d-ink: var(--tp-text, #e8e8e8);
+  --d-heading: var(--tp-heading, #ffffff);
+  --d-muted: var(--tp-muted, #8a8a9a);
+  --d-muted-soft: color-mix(in srgb, var(--d-muted) 65%, var(--d-bg));
+  --d-accent: var(--tp-brass, #d4a853);
+  --d-accent-rgb: var(--tp-accent-rgb, 212, 168, 83);
   --d-danger: var(--tp-danger, #ff6b6b);
-  --d-shadow: color-mix(in srgb, var(--tp-shadow-color, #000) 40%, transparent);
-  /* Subtle hover/fill tint that works on any theme: a sliver of the text color */
-  --d-tint: color-mix(in srgb, var(--d-text) 5%, transparent);
-  --d-tint-strong: color-mix(in srgb, var(--d-text) 10%, transparent);
-
-  /* Accent: use the theme's own accent if it defines one, otherwise brass. */
-  --d-accent: var(--tp-accent, #d4a853);
-  --d-on-accent: #13131a;
-
-  /* Status colors, mixed toward the text color so they stay legible on both
-     light and dark themes. */
-  --d-ok: color-mix(in srgb, #00b894 65%, var(--d-text));
-  --d-ok-soft: color-mix(in srgb, #00b894 16%, transparent);
-  --d-warn: color-mix(in srgb, #d4a853 65%, var(--d-text));
-  --d-warn-soft: color-mix(in srgb, #d4a853 16%, transparent);
-  --d-info: color-mix(in srgb, #7c93e6 65%, var(--d-text));
-  --d-info-soft: color-mix(in srgb, #7c93e6 16%, transparent);
+  /* Faint neutral washes derived from the text colour, so they read on dark
+     and light themes alike. */
+  --d-tint: color-mix(in srgb, var(--d-ink) 5%, transparent);
+  --d-shadow: color-mix(in srgb, var(--tp-shadow-color, #000) 30%, transparent);
 
   min-height: 100vh;
   background: var(--d-bg);
-  color: var(--d-text);
-  font-family: "SF Mono", Monaco, "Cascadia Code", monospace;
-  box-sizing: border-box;
+  color: var(--d-ink);
+  font-family: "Inter", system-ui, sans-serif;
 }
 
 .dash-root *,
@@ -50,597 +41,586 @@
   box-sizing: border-box;
 }
 
-.dash-container {
-  width: 100%;
-  max-width: 100%;
-  margin: 0 auto;
-  padding: 40px 20px;
-}
-
 .dash-root h1,
 .dash-root h2,
-.dash-root h3,
-.dash-root p {
+.dash-root h3 {
+  font-family: "Georgia", "Times New Roman", serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   margin: 0;
+  color: var(--d-heading);
 }
 
-/* ── Top bar ──────────────────────────────────────────────────────────── */
+.dash-root button {
+  font-family: inherit;
+}
+
+.dash-root :focus-visible {
+  outline: 2px solid var(--d-accent);
+  outline-offset: 2px;
+}
+
+/* The one accent device the page repeats: a small tick before a heading. */
+.dash-accent-bar {
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 4px;
+  height: 0.85em;
+  margin-right: 10px;
+  border-radius: 2px;
+  background: var(--d-accent);
+}
+
+/* ── Shell ────────────────────────────────────────────────────────────── */
+.dash-shell {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.dash-side {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 28px 16px;
+  background: var(--d-panel);
+  border-right: 1px solid var(--d-border);
+}
+
+.dash-side-new {
+  width: 100%;
+}
+
+.dash-brand {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  font-family: "Georgia", "Times New Roman", serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--d-heading);
+}
+
+.dash-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dash-nav-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--d-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.dash-nav-item:hover {
+  background: var(--d-tint);
+  color: var(--d-ink);
+}
+
+/* Active item mirrors the active tab on the organizer's tournament pages. */
+.dash-nav-item.is-active {
+  background: var(--d-raised);
+  border-color: var(--d-border-strong);
+  color: var(--d-heading);
+  box-shadow: inset 3px 0 0 var(--d-accent);
+}
+
+.dash-nav-count {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: var(--d-muted);
+}
+
+.dash-main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 28px 36px 36px;
+}
+
+.dash-main > section {
+  flex: 1 0 auto;
+}
+
 .dash-topbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.dash-title {
+  display: flex;
+  align-items: center;
+  font-size: 1.5rem;
+}
+
+.dash-note {
+  font-size: 0.8rem;
+  color: var(--d-muted);
+}
+
+.dash-m-0 {
+  margin: 0;
+}
+
+/* ── Surfaces, buttons, inputs ───────────────────────────────────────── */
+.dash-panel {
+  background: var(--d-panel);
+  border: 1px solid var(--d-border);
+  border-radius: 14px;
+  padding: 20px;
+}
+
+.dash-error {
+  color: var(--d-danger);
   margin-bottom: 20px;
 }
 
-.dash-brand {
+.dash-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--d-muted);
-}
-
-/* ── Header ───────────────────────────────────────────────────────────── */
-.dash-root .dash-header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  width: 100%;
-  margin: 0 0 32px;
-  padding: 0;
-  float: none;
-  text-align: center;
-  gap: 16px;
-}
-
-.dash-root .dash-header > * {
-  margin-left: 0;
-  margin-right: 0;
-  align-self: center;
-}
-
-.dash-eyebrow {
-  display: inline-block;
-  border: 1px solid var(--d-border-strong);
-  padding: 6px 16px;
-  border-radius: 20px;
-  font-size: 10px;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.85rem;
   font-weight: 600;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--d-muted);
-}
-
-.dash-root .dash-title {
-  text-align: center;
-  font-size: 32px;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--d-heading);
-}
-
-/* ── Buttons ──────────────────────────────────────────────────────────── */
-.dash-btn {
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  padding: 10px 18px;
   border-radius: 10px;
+  padding: 10px 16px;
+  border: 1px solid transparent;
   cursor: pointer;
-  border: 1px solid var(--d-border-strong);
-  background: transparent;
-  color: var(--d-text);
-  transition: all 0.2s ease;
+  transition: opacity 0.15s ease, border-color 0.15s ease, background 0.15s ease;
 }
 
 .dash-btn:disabled {
-  opacity: 0.5;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
 .dash-btn-primary {
   background: var(--d-accent);
-  border-color: var(--d-accent);
-  color: var(--d-on-accent);
+  color: var(--d-bg);
 }
 
 .dash-btn-primary:hover:not(:disabled) {
-  filter: brightness(1.08);
+  opacity: 0.9;
 }
 
-.dash-btn-ghost:hover:not(:disabled) {
-  background: var(--d-tint);
+.dash-btn-secondary {
+  background: var(--d-raised);
+  border-color: var(--d-border-strong);
+  color: var(--d-ink);
+}
+
+.dash-btn-secondary:hover:not(:disabled) {
   border-color: var(--d-accent);
 }
 
-.dash-link-btn {
-  display: block;
+.dash-input {
   width: 100%;
-  background: transparent;
-  border: none;
-  border-top: 1px solid var(--d-border);
-  color: var(--d-muted);
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--d-border-strong);
+  background: var(--d-bg);
+  color: var(--d-ink);
   font-family: inherit;
-  font-size: 11px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  padding: 12px;
-  cursor: pointer;
+  font-size: 0.9rem;
 }
 
-.dash-link-btn:hover {
-  color: var(--d-text);
-  background: var(--d-tint);
+.dash-input:focus {
+  outline: 2px solid var(--d-accent);
+  outline-offset: 1px;
 }
 
-/* ── Stats bar: one segmented strip instead of separate cards ─────────── */
+.dash-textarea {
+  resize: vertical;
+}
+
+/* ── Pane heading + stat strip ───────────────────────────────────────── */
+.dash-pane-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.dash-pane-head h2 {
+  display: flex;
+  align-items: center;
+  font-size: 1.15rem;
+}
+
+/* One bordered strip with hairline dividers, instead of four separate boxes. */
 .dash-stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 32px;
+  background: var(--d-panel);
   border: 1px solid var(--d-border);
-  border-radius: 16px;
-  background: var(--d-bg);
-  box-shadow: 0 8px 32px var(--d-shadow);
-  margin-bottom: 24px;
+  border-radius: 14px;
   overflow: hidden;
 }
 
 .dash-stat {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: "icon value" "icon label";
+  column-gap: 12px;
   align-items: center;
-  gap: 14px;
-  padding: 18px 22px;
-  border-right: 1px solid var(--d-border);
+  padding: 16px 20px;
 }
 
-.dash-stat:last-child {
-  border-right: none;
+.dash-stat + .dash-stat {
+  border-left: 1px solid var(--d-border);
 }
 
 .dash-stat-icon {
-  flex-shrink: 0;
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  background: var(--d-tint-strong);
+  grid-area: icon;
   color: var(--d-accent);
   display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .dash-stat-icon svg {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
 }
 
-.dash-stat-body {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.dash-stat-body strong {
-  font-size: 1.6rem;
+.dash-stat strong {
+  grid-area: value;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 1.5rem;
   line-height: 1.1;
   color: var(--d-heading);
 }
 
-.dash-stat-body span {
-  font-size: 0.64rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+.dash-stat-label {
+  grid-area: label;
+  font-size: 0.76rem;
   color: var(--d-muted);
 }
 
-/* ── Two-column body ──────────────────────────────────────────────────── */
-.dash-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
-  gap: 24px;
-  align-items: start;
-}
-
-.dash-main,
-.dash-side {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  min-width: 0;
-}
-
-/* ── Panels ───────────────────────────────────────────────────────────── */
-.dash-panel {
-  background: var(--d-bg);
-  border: 1px solid var(--d-border);
-  border-radius: 16px;
-  box-shadow: 0 8px 32px var(--d-shadow);
-  overflow: hidden;
-}
-
-.dash-panel-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 16px 22px;
-  border-bottom: 1px solid var(--d-border);
-}
-
-.dash-panel-head h2 {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--d-heading);
-}
-
-.dash-error {
-  padding: 14px 20px;
-  margin-bottom: 20px;
-  color: var(--d-danger);
-  border-color: color-mix(in srgb, var(--d-danger) 35%, transparent);
-  font-size: 13px;
-}
-
-.dash-note {
-  font-size: 12px;
-  color: var(--d-muted);
-  line-height: 1.5;
-}
-
-.dash-pad {
-  padding: 24px 22px;
-}
-
-.dash-pad-sm {
-  padding: 12px 22px 16px;
-}
-
-.dash-center {
-  text-align: center;
-}
-
-/* ── Filters: segmented controls ──────────────────────────────────────── */
+/* ── Filters ──────────────────────────────────────────────────────────── */
 .dash-filters {
   display: flex;
-  gap: 10px;
+  gap: 8px 24px;
   flex-wrap: wrap;
+  margin-bottom: 16px;
 }
 
-.dash-segmented {
-  display: inline-flex;
-  padding: 3px;
-  gap: 2px;
-  border: 1px solid var(--d-border);
-  border-radius: 10px;
+.dash-filter-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
-.dash-segmented button {
-  font-family: inherit;
-  font-size: 10px;
+.dash-filter-label {
+  font-size: 0.78rem;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  border: 1px solid transparent;
+  color: var(--d-muted);
+  margin-right: 4px;
+}
+
+.dash-chip {
+  font-family: "IBM Plex Mono", monospace;
+  border: 1px solid var(--d-border-strong);
   background: transparent;
   color: var(--d-muted);
-  padding: 6px 12px;
-  border-radius: 7px;
+  border-radius: 999px;
+  padding: 5px 14px;
+  font-size: 0.78rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
-.dash-segmented button:hover {
-  color: var(--d-text);
+.dash-chip:hover {
+  border-color: var(--d-accent);
+  color: var(--d-ink);
 }
 
-.dash-segmented button.active {
-  background: var(--d-border);
-  border-color: var(--d-border-strong);
-  color: var(--d-heading);
+.dash-chip.active {
+  background: var(--d-accent);
+  border-color: var(--d-accent);
+  color: var(--d-bg);
+  font-weight: 600;
 }
 
-/* ── Tournament list ──────────────────────────────────────────────────── */
+/* ── Tournament ledger ────────────────────────────────────────────────── */
 .dash-list {
   list-style: none;
   margin: 0;
   padding: 0;
+  background: var(--d-panel);
+  border: 1px solid var(--d-border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.dash-list > li + li {
+  border-top: 1px solid var(--d-border);
 }
 
 .dash-row {
   display: grid;
-  grid-template-columns: minmax(0, 2.4fr) minmax(130px, 1fr) 84px 150px;
+  grid-template-columns: 96px minmax(0, 1fr) 200px 96px 32px;
+  grid-template-areas: "status main progress count delete";
   align-items: center;
-  column-gap: 24px;
-  row-gap: 10px;
-  padding: 16px 22px;
-  border-bottom: 1px solid var(--d-border);
+  gap: 18px;
+  padding: 16px 20px;
   cursor: pointer;
   transition: background 0.15s ease;
 }
 
-.dash-row:last-child {
-  border-bottom: none;
-}
-
-.dash-row:hover,
-.dash-row:focus-visible {
+.dash-row:hover {
   background: var(--d-tint);
-  outline: none;
 }
 
 .dash-row:focus-visible {
-  box-shadow: inset 3px 0 0 var(--d-accent);
+  outline-offset: -2px;
+}
+
+.dash-row-main {
+  grid-area: main;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .dash-row-title {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 1.02rem;
   line-height: 1.35;
-  color: var(--d-heading);
-  margin-bottom: 8px;
+  color: var(--d-ink);
   overflow-wrap: anywhere;
 }
 
-.dash-tags {
+.dash-row-tags {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
 }
 
-.dash-chip {
-  font-size: 10px;
-  letter-spacing: 0.03em;
-  padding: 3px 9px;
-  border-radius: 6px;
-  line-height: 1.4;
-  background: var(--d-tint-strong);
-  color: var(--d-muted);
-}
-
-.dash-chip-variant {
-  background: var(--d-info-soft);
-  color: var(--d-info);
-}
-
-.dash-chip-outline {
-  background: transparent;
-  border: 1px solid var(--d-border-strong);
-  color: var(--d-text);
-}
-
-.dash-federation {
-  font-size: 11px;
+.dash-row-federation {
+  font-size: 0.76rem;
   font-style: italic;
-  color: var(--d-muted);
+  color: var(--d-muted-soft);
+}
+
+.dash-row-winner {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--d-accent);
 }
 
 .dash-row-progress {
+  grid-area: progress;
   display: flex;
   flex-direction: column;
   gap: 6px;
-}
-
-.dash-row-progress > span {
-  font-size: 11px;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.78rem;
   color: var(--d-muted);
 }
 
-.dash-bar {
+.dash-progress {
   height: 4px;
   border-radius: 999px;
-  background: var(--d-tint-strong);
+  background: var(--d-raised);
   overflow: hidden;
 }
 
-.dash-bar-fill {
+.dash-progress-fill {
   height: 100%;
   border-radius: 999px;
   background: var(--d-accent);
 }
 
-.dash-bar-fill.is-muted {
-  background: var(--d-muted);
+.dash-progress-fill.is-muted {
+  background: var(--d-muted-soft);
 }
 
 .dash-row-count {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
+  grid-area: count;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.8rem;
+  color: var(--d-muted);
   text-align: right;
+  white-space: nowrap;
 }
 
-.dash-row-count strong {
-  font-size: 1.15rem;
-  color: var(--d-heading);
-}
-
-.dash-row-count span {
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--d-muted);
-}
-
-.dash-row-end {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  justify-content: flex-end;
-}
-
-.dash-pill {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 4px 11px;
-  border-radius: 999px;
-  background: var(--d-tint-strong);
-  color: var(--d-muted);
-}
-
-.dash-pill-active {
-  background: var(--d-ok-soft);
-  color: var(--d-ok);
-}
-
-.dash-pill-setup {
-  background: var(--d-warn-soft);
-  color: var(--d-warn);
-}
-
-.dash-pill-finished {
-  background: var(--d-tint-strong);
-  color: var(--d-muted);
-}
-
-.dash-delete {
+.dash-row-delete {
+  grid-area: delete;
   background: transparent;
   border: none;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 13px;
-  padding: 4px;
+  padding: 6px;
+  color: var(--d-muted-soft);
   line-height: 1;
-  color: var(--d-muted);
   transition: color 0.15s ease;
 }
 
-.dash-delete:hover {
+.dash-row-delete:hover {
   color: var(--d-danger);
 }
 
-.dash-winner {
-  grid-column: 1 / -1;
-  background: var(--d-warn-soft);
-  border: 1px solid color-mix(in srgb, #d4a853 28%, transparent);
-  color: var(--d-warn);
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
+/* Status pills: accent = in progress, dashed = not started, plain = done. */
+.dash-pill {
+  justify-self: start;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 4px 11px;
+  border-radius: 999px;
+  border: 1px solid transparent;
 }
 
-/* ── Empty state ──────────────────────────────────────────────────────── */
+.dash-pill-active {
+  background: rgba(var(--d-accent-rgb), 0.14);
+  color: var(--d-accent);
+}
+
+.dash-pill-setup {
+  border: 1px dashed var(--d-border-strong);
+  color: var(--d-ink);
+}
+
+.dash-pill-finished {
+  background: var(--d-raised);
+  color: var(--d-muted);
+}
+
+.dash-chip-tag {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.68rem;
+  padding: 3px 9px;
+  border-radius: 6px;
+  line-height: 1.4;
+  background: var(--d-raised);
+  border: 1px solid var(--d-border);
+  color: var(--d-muted);
+}
+
+.dash-chip-tag-accent {
+  background: rgba(var(--d-accent-rgb), 0.12);
+  border-color: transparent;
+  color: var(--d-accent);
+}
+
+.dash-chip-tag-outline {
+  background: transparent;
+  border-color: var(--d-border-strong);
+}
+
 .dash-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
   text-align: center;
-  padding: 48px 22px;
+  padding: 48px 24px;
+}
+
+.dash-empty h2 {
+  margin-bottom: 8px;
+}
+
+.dash-empty .dash-btn {
+  margin-top: 16px;
 }
 
 .dash-empty-icon {
   font-size: 32px;
+  margin-bottom: 12px;
   color: var(--d-accent);
-}
-
-.dash-empty h3 {
-  font-size: 15px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--d-heading);
-}
-
-.dash-empty .dash-btn {
-  margin-top: 8px;
 }
 
 /* ── News ─────────────────────────────────────────────────────────────── */
-.dash-news {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.dash-news-grid,
+.dash-reviews-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
 }
 
-.dash-news-item {
-  padding: 16px 22px;
-  border-bottom: 1px solid var(--d-border);
+.dash-reviews-grid {
+  margin-bottom: 20px;
 }
 
-.dash-news-item:last-child {
-  border-bottom: none;
+.dash-news-card h3 {
+  font-size: 1rem;
+  margin: 0 0 8px;
+  color: var(--d-ink);
 }
 
-.dash-news-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  font-size: 10px;
+.dash-news-card p {
+  font-size: 0.88rem;
   color: var(--d-muted);
-}
-
-.dash-news-tag {
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-weight: 700;
-  color: var(--d-accent);
-}
-
-.dash-news-item h3 {
-  font-size: 13px;
-  line-height: 1.4;
-  color: var(--d-heading);
-  margin-bottom: 6px;
-}
-
-.dash-news-item p {
-  font-size: 12px;
   line-height: 1.55;
-  color: var(--d-muted);
-  display: -webkit-box;
-  line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  margin: 0 0 10px;
+}
+
+.dash-tag {
+  display: inline-block;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.7rem;
+  color: var(--d-accent);
+  background: rgba(var(--d-accent-rgb), 0.12);
+  border-radius: 999px;
+  padding: 3px 10px;
+  margin-bottom: 10px;
+}
+
+.dash-news-date {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.72rem;
+  color: var(--d-muted-soft);
 }
 
 /* ── Reviews ──────────────────────────────────────────────────────────── */
-.dash-reviews {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.dash-review-form {
+  max-width: 720px;
 }
 
-.dash-review {
+.dash-review-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 16px 22px;
-  border-bottom: 1px solid var(--d-border);
-}
-
-.dash-review:last-child {
-  border-bottom: none;
+  gap: 10px;
+  margin: 0;
 }
 
 .dash-review-stars {
   color: var(--d-accent);
   letter-spacing: 2px;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
 }
 
 .dash-review-quote {
-  font-size: 12px;
-  line-height: 1.6;
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--d-ink);
   font-style: italic;
-  color: var(--d-text);
 }
 
 .dash-review-author {
@@ -648,43 +628,22 @@
   justify-content: space-between;
   align-items: baseline;
   gap: 8px;
-  font-size: 11px;
+  font-size: 0.82rem;
   color: var(--d-muted);
+  border-top: 1px solid var(--d-border);
+  padding-top: 10px;
+  margin-top: auto;
 }
 
 .dash-review-author strong {
-  color: var(--d-heading);
+  color: var(--d-ink);
 }
 
-.dash-review-cta {
-  padding: 16px 22px;
-  border-top: 1px solid var(--d-border);
-}
-
-.dash-review-cta .dash-btn {
-  width: 100%;
-}
-
-.dash-star-picker {
-  display: flex;
-  gap: 4px;
-  font-size: 1.3rem;
-  cursor: pointer;
-}
-
-.dash-star-picker span {
-  color: var(--d-border-strong);
-}
-
-.dash-star-picker span.filled {
-  color: var(--d-accent);
-}
-
-/* ── Review form ──────────────────────────────────────────────────────── */
-.dash-form {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+.dash-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
 .dash-label {
@@ -693,132 +652,161 @@
   gap: 6px;
 }
 
-.dash-label > span:first-child {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--d-muted);
+.dash-label-mb {
+  margin-bottom: 16px;
 }
 
-.dash-input {
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--d-border-strong);
-  background: var(--d-tint);
-  color: var(--d-text);
-  font-family: inherit;
-  font-size: 12px;
-  resize: vertical;
+.dash-rating-wrap {
+  height: 38px;
+  display: flex;
+  align-items: center;
 }
 
-.dash-input:focus {
-  outline: 2px solid var(--d-accent);
-  outline-offset: 1px;
+.dash-star-picker {
+  display: flex;
+  gap: 2px;
+}
+
+.dash-star-picker button {
+  background: none;
+  border: none;
+  padding: 2px 3px;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--d-border-strong);
+}
+
+.dash-star-picker button.filled {
+  color: var(--d-accent);
 }
 
 .dash-form-actions {
   display: flex;
-  gap: 10px;
+  align-items: center;
   flex-wrap: wrap;
+  gap: 12px;
 }
 
 .dash-form-error {
   color: var(--d-danger);
-  font-size: 12px;
+  font-size: 0.8rem;
 }
 
 /* ── Footer ───────────────────────────────────────────────────────────── */
-.dash-root .dash-footer {
-  width: 100%;
-  margin-top: 40px;
-  border: 1px solid var(--d-border);
-  border-radius: 16px;
-  padding: 24px 28px;
+.dash-footer {
+  margin-top: 48px;
+  padding-top: 20px;
+  border-top: 1px solid var(--d-border);
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  gap: 20px;
+  align-items: flex-start;
   flex-wrap: wrap;
+  gap: 16px;
 }
 
 .dash-footer-title {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--d-heading);
-  margin-bottom: 4px;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.95rem;
+  margin: 0 0 4px;
+  color: var(--d-ink);
 }
 
 .dash-footer-sub {
-  font-size: 12px;
+  font-size: 0.82rem;
   color: var(--d-muted);
+  margin: 0;
 }
 
 .dash-footer-contact {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
   gap: 4px;
-  font-size: 12px;
+  align-items: flex-end;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.82rem;
 }
 
 .dash-footer-contact a {
-  color: var(--d-muted);
+  color: var(--d-accent);
   text-decoration: none;
 }
 
 .dash-footer-contact a:hover {
-  color: var(--d-accent);
   text-decoration: underline;
 }
 
 /* ── Responsive ───────────────────────────────────────────────────────── */
 @media (max-width: 1100px) {
-  .dash-grid {
-    grid-template-columns: minmax(0, 1fr);
+  .dash-row {
+    grid-template-columns: 96px minmax(0, 1fr) 150px 88px 32px;
+    gap: 14px;
   }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 860px) {
+  /* The sidebar becomes a top block: brand + button, then a scrollable menu. */
+  .dash-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dash-side {
+    position: static;
+    height: auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 16px;
+    padding: 14px 16px;
+    border-right: none;
+    border-bottom: 1px solid var(--d-border);
+  }
+  .dash-brand {
+    margin-right: auto;
+  }
+  .dash-side-new {
+    width: auto;
+  }
+  .dash-nav {
+    flex-direction: row;
+    width: 100%;
+    overflow-x: auto;
+  }
+  .dash-nav-item {
+    width: auto;
+    flex: 0 0 auto;
+    white-space: nowrap;
+    gap: 10px;
+  }
+  .dash-main {
+    padding: 20px 16px 28px;
+  }
   .dash-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .dash-stat:nth-child(2) {
-    border-right: none;
+  .dash-stat:nth-child(3) {
+    border-left: none;
   }
-  .dash-stat:nth-child(-n + 2) {
-    border-bottom: 1px solid var(--d-border);
+  .dash-stat:nth-child(n + 3) {
+    border-top: 1px solid var(--d-border);
   }
-
   .dash-row {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-  .dash-row-main {
-    grid-column: 1 / -1;
-  }
-  .dash-row-progress {
-    grid-column: 1 / 2;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "status count delete"
+      "main main main"
+      "progress progress progress";
+    gap: 10px 12px;
   }
   .dash-row-count {
-    align-items: flex-end;
-  }
-  .dash-row-end {
-    grid-column: 1 / -1;
-    justify-content: space-between;
-  }
-}
-
-@media (max-width: 640px) {
-  .dash-footer {
-    flex-direction: column;
-    align-items: flex-start;
+    text-align: right;
   }
   .dash-footer-contact {
     align-items: flex-start;
   }
-  .dash-title {
-    font-size: 26px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dash-root * {
+    transition: none !important;
   }
 }
