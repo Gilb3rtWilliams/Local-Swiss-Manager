@@ -1,3 +1,4 @@
+import { useState } from "react";
 import "../css/RoundHistory.css";
 
 const DECISIVE_RESULTS = new Set(["1-0", "0-1", "1F-0F", "0F-1F"]);
@@ -147,9 +148,28 @@ function TeamHistoryMatch({
   const anyResult = (p.boards || []).some((bd) => !bd.sitOut && bd.result);
   const matchPending = partial ? !anyResult : pending;
 
+  // Phones: the match is a tap-to-expand row. The CSS only collapses at
+  // narrow widths, so desktop always shows every board. The organizer's
+  // result-entry view (isEditing) is never collapsed.
+  const [open, setOpen] = useState(false);
+  const expanded = open || isEditing;
+  const toggle = () => setOpen((o) => !o);
+
   return (
-    <div className="rh-card">
-      <div className="rh-head rh-head--team">
+    <div className={`rh-card rh-collapsible${expanded ? " is-open" : ""}`}>
+      <div
+        className="rh-head rh-head--team"
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        onClick={toggle}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            toggle();
+          }
+        }}
+      >
         <div className="rh-head-side">
           <span
             className="rh-head-team"
@@ -166,150 +186,155 @@ function TeamHistoryMatch({
             {p.teamBlackName} ●
           </span>
         </div>
+        <span className="rh-chevron" aria-hidden="true">
+          ▾
+        </span>
       </div>
 
-      {p.boards.map((b) => {
-        if (b.sitOut) {
+      <div className="rh-boards">
+        {p.boards.map((b) => {
+          if (b.sitOut) {
+            return (
+              <div className="rh-sitout" key={b.boardNum}>
+                <span>{b.playerName}</span> sat out this round
+              </div>
+            );
+          }
+
+          const teamAIsWhite = teamAIsWhiteOn(b.boardNum);
+          const aName = teamAIsWhite ? b.whiteName : b.blackName;
+          const bName = teamAIsWhite ? b.blackName : b.whiteName;
+          const outcome = outcomeFor(b.result, teamAIsWhite);
+          const boardPending = partial ? !b.result : pending;
+          const lockedByOtherBoard =
+            decisiveBoard && decisiveBoard.boardNum !== b.boardNum && !b.result;
+          const showMiniMatch = matchPlay && !isBughouse && b.miniMatch;
+
+          const outcomeText =
+            outcome === "A"
+              ? `${aName} wins`
+              : outcome === "B"
+              ? `${bName} wins`
+              : outcome === "draw"
+              ? "Draw"
+              : outcome === "double"
+              ? "Double forfeit"
+              : boardPending
+              ? "To be played"
+              : "No result";
+
+          const mmScore = b.miniMatch?.score;
+
           return (
-            <div className="rh-sitout" key={b.boardNum}>
-              <span>{b.playerName}</span> sat out this round
+            <div className="rh-board" key={b.boardNum}>
+              <PlayerSide
+                name={aName}
+                isWhite={teamAIsWhite}
+                teamName={p.teamWhiteName}
+                teamColor="var(--tp-brass, #d4a853)"
+                align="left"
+                outcome={
+                  outcome === "A"
+                    ? "win"
+                    : outcome === "B"
+                    ? "loss"
+                    : outcome === "draw"
+                    ? "draw"
+                    : null
+                }
+              />
+
+              <div className="rh-mid">
+                <div className="rh-mid-label">Board {b.boardNum}</div>
+
+                {lockedByOtherBoard ? (
+                  <div className="rh-note">
+                    Match decided on Board {decisiveBoard.boardNum}
+                  </div>
+                ) : (
+                  <>
+                    {showMiniMatch && mmScore && (
+                      <span className="rh-mm">
+                        {/* score.A follows White, so flip when the left team
+                          is Black on this board */}
+                        {teamAIsWhite ? mmScore.A : mmScore.B}
+                        {" – "}
+                        {teamAIsWhite ? mmScore.B : mmScore.A}
+                      </span>
+                    )}
+
+                    {isEditing && !showMiniMatch ? (
+                      <select
+                        className="result-select rh-select"
+                        value={b.result || ""}
+                        disabled={loading}
+                        onChange={(e) =>
+                          onResultChange?.(index, e.target.value, b.boardNum)
+                        }
+                      >
+                        <option value="" disabled>
+                          Select
+                        </option>
+                        {teamResultOptions(teamAIsWhite, aName, bName).map(
+                          (opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ),
+                        )}
+                      </select>
+                    ) : (
+                      <div className="rh-result">
+                        <div className="rh-chip">
+                          {boardPending
+                            ? "vs"
+                            : b.result
+                            ? formatResult(b.result)
+                            : "—"}
+                        </div>
+                        <div className="rh-outcome">{outcomeText}</div>
+                      </div>
+                    )}
+
+                    {b.derivedFromBoard && (
+                      <div className="rh-note">
+                        derived from Board {b.derivedFromBoard}
+                      </div>
+                    )}
+
+                    {showMiniMatch && (
+                      <button
+                        type="button"
+                        className="btn-secondary btn-sm"
+                        onClick={() => onOpenMiniMatch?.(index, b.boardNum)}
+                      >
+                        View Mini-Match →
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+
+              <PlayerSide
+                name={bName}
+                isWhite={!teamAIsWhite}
+                teamName={p.teamBlackName}
+                teamColor="#6b9df7"
+                align="right"
+                outcome={
+                  outcome === "B"
+                    ? "win"
+                    : outcome === "A"
+                    ? "loss"
+                    : outcome === "draw"
+                    ? "draw"
+                    : null
+                }
+              />
             </div>
           );
-        }
-
-        const teamAIsWhite = teamAIsWhiteOn(b.boardNum);
-        const aName = teamAIsWhite ? b.whiteName : b.blackName;
-        const bName = teamAIsWhite ? b.blackName : b.whiteName;
-        const outcome = outcomeFor(b.result, teamAIsWhite);
-        const boardPending = partial ? !b.result : pending;
-        const lockedByOtherBoard =
-          decisiveBoard && decisiveBoard.boardNum !== b.boardNum && !b.result;
-        const showMiniMatch = matchPlay && !isBughouse && b.miniMatch;
-
-        const outcomeText =
-          outcome === "A"
-            ? `${aName} wins`
-            : outcome === "B"
-            ? `${bName} wins`
-            : outcome === "draw"
-            ? "Draw"
-            : outcome === "double"
-            ? "Double forfeit"
-            : boardPending
-            ? "To be played"
-            : "No result";
-
-        const mmScore = b.miniMatch?.score;
-
-        return (
-          <div className="rh-board" key={b.boardNum}>
-            <PlayerSide
-              name={aName}
-              isWhite={teamAIsWhite}
-              teamName={p.teamWhiteName}
-              teamColor="var(--tp-brass, #d4a853)"
-              align="left"
-              outcome={
-                outcome === "A"
-                  ? "win"
-                  : outcome === "B"
-                  ? "loss"
-                  : outcome === "draw"
-                  ? "draw"
-                  : null
-              }
-            />
-
-            <div className="rh-mid">
-              <div className="rh-mid-label">Board {b.boardNum}</div>
-
-              {lockedByOtherBoard ? (
-                <div className="rh-note">
-                  Match decided on Board {decisiveBoard.boardNum}
-                </div>
-              ) : (
-                <>
-                  {showMiniMatch && mmScore && (
-                    <span className="rh-mm">
-                      {/* score.A follows White, so flip when the left team
-                          is Black on this board */}
-                      {teamAIsWhite ? mmScore.A : mmScore.B}
-                      {" – "}
-                      {teamAIsWhite ? mmScore.B : mmScore.A}
-                    </span>
-                  )}
-
-                  {isEditing && !showMiniMatch ? (
-                    <select
-                      className="result-select rh-select"
-                      value={b.result || ""}
-                      disabled={loading}
-                      onChange={(e) =>
-                        onResultChange?.(index, e.target.value, b.boardNum)
-                      }
-                    >
-                      <option value="" disabled>
-                        Select
-                      </option>
-                      {teamResultOptions(teamAIsWhite, aName, bName).map(
-                        (opt) => (
-                          <option key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </option>
-                        ),
-                      )}
-                    </select>
-                  ) : (
-                    <div className="rh-result">
-                      <div className="rh-chip">
-                        {boardPending
-                          ? "vs"
-                          : b.result
-                          ? formatResult(b.result)
-                          : "—"}
-                      </div>
-                      <div className="rh-outcome">{outcomeText}</div>
-                    </div>
-                  )}
-
-                  {b.derivedFromBoard && (
-                    <div className="rh-note">
-                      derived from Board {b.derivedFromBoard}
-                    </div>
-                  )}
-
-                  {showMiniMatch && (
-                    <button
-                      type="button"
-                      className="btn-secondary btn-sm"
-                      onClick={() => onOpenMiniMatch?.(index, b.boardNum)}
-                    >
-                      View Mini-Match →
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-
-            <PlayerSide
-              name={bName}
-              isWhite={!teamAIsWhite}
-              teamName={p.teamBlackName}
-              teamColor="#6b9df7"
-              align="right"
-              outcome={
-                outcome === "B"
-                  ? "win"
-                  : outcome === "A"
-                  ? "loss"
-                  : outcome === "draw"
-                  ? "draw"
-                  : null
-              }
-            />
-          </div>
-        );
-      })}
+        })}
+      </div>
     </div>
   );
 }
