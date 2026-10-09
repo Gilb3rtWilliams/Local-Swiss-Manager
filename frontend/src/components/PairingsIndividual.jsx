@@ -58,6 +58,9 @@ export default function PairingsIndividual({
   onSetResult,
   onOpenMiniMatch,
   basePath: basePathProp,
+  // True for a round that's been paired in advance but hasn't opened yet: its
+  // mini-matches can't be played until it becomes the open round.
+  miniMatchLocked = false,
 }) {
   const outletContext = useOutletContext();
   const t = outletContext?.t;
@@ -323,6 +326,12 @@ export default function PairingsIndividual({
                     </div>
                     <button
                       type="button"
+                      disabled={miniMatchLocked}
+                      title={
+                        miniMatchLocked
+                          ? "Available once this round opens"
+                          : undefined
+                      }
                       onClick={() => onOpenMiniMatch(p.idx, undefined)}
                       style={{
                         background: "var(--tp-border, #252532)",
@@ -333,12 +342,13 @@ export default function PairingsIndividual({
                         letterSpacing: "0.05em",
                         padding: "6px 12px",
                         borderRadius: 6,
-                        cursor: "pointer",
+                        cursor: miniMatchLocked ? "not-allowed" : "pointer",
+                        opacity: miniMatchLocked ? 0.5 : 1,
                         textTransform: "uppercase",
                         fontFamily: "inherit",
                       }}
                     >
-                      Open Mini-Match →
+                      {miniMatchLocked ? "Not open yet" : "Open Mini-Match →"}
                     </button>
                   </>
                 ) : (

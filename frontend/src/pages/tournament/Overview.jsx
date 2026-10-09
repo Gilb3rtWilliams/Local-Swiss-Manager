@@ -64,6 +64,17 @@ export default function Overview() {
     t.system === "single_elimination" || t.system === "double_elimination";
   const editableRoster = t.currentRound === 0 && t.status === "setup";
 
+  // Rounds paired ahead of the open one (t.queuedRounds, oldest first). The
+  // open round is t.currentRound; the last paired round is currentRound plus
+  // however many are queued behind it.
+  const queuedRounds = t.queuedRounds || [];
+  const lastPairedRound = t.currentRound + queuedRounds.length;
+  const canQueueRound =
+    !isElimination &&
+    t.status !== "finished" &&
+    Boolean(t.currentPairings) &&
+    lastPairedRound < t.totalRounds;
+
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [matchPlayRoundGames, setMatchPlayRoundGames] = useState(
@@ -76,7 +87,7 @@ export default function Overview() {
   // previous round.
   useEffect(() => {
     setMatchPlayRoundGames(t.matchPlayNumberOfGames || 2);
-  }, [t.matchPlayNumberOfGames, t.currentRound]);
+  }, [t.matchPlayNumberOfGames, t.currentRound, queuedRounds.length]);
   const [regBusy, setRegBusy] = useState(false);
   const [regError, setRegError] = useState("");
   const [copied, setCopied] = useState(false);
@@ -142,8 +153,13 @@ export default function Overview() {
   // Adding is allowed at any point in the tournament. Removing keeps its own
   // round-1 cutoff, mirroring the backend: past that point a player may
   // already have results/pairings baked into a round.
-  const lateAddEligible = rosterFormatMutable;
-  const lateDeleteEligible = rosterFormatMutable && t.currentRound <= 1;
+  // The backend refuses roster changes while rounds are queued (they were
+  // paired for the current field), so hide those controls instead of letting
+  // the request fail.
+  const rosterLockedByQueue = rosterFormatMutable && queuedRounds.length > 0;
+  const lateAddEligible = rosterFormatMutable && !rosterLockedByQueue;
+  const lateDeleteEligible =
+    rosterFormatMutable && !rosterLockedByQueue && t.currentRound <= 1;
 
   const registrationLink = t.registrationToken
     ? `${window.location.origin}/register/${t.registrationToken}`
@@ -596,6 +612,63 @@ export default function Overview() {
     }
   }
 
+  // Pair the next round while the current one is still being played. The
+  // server returns the whole updated tournament, so push it straight into the
+  // shared `t` (same pattern as the roster actions) and stay on this page —
+  // the organizer is mid-round, not heading off to enter results.
+  async function handleQueueRound() {
+    setBusy(true);
+    setError("");
+    try {
+      let payload = {};
+      if (t.matchPlay) {
+        const n = Number(matchPlayRoundGames);
+        if (!Number.isInteger(n) || n < 1) {
+          setError("Games per pairing must be a positive whole number.");
+          return;
+        }
+        payload = { matchPlayNumberOfGames: n };
+      }
+      const updated = await api.queueRound(t.id, payload);
+      setTournament(updated);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // Rounds only come off the END of the queue (later rounds were paired on top
+  // of earlier ones), so discarding round N also discards every queued round
+  // after it. Omit `fromRound` to discard them all.
+  async function handleDiscardQueued(fromRound) {
+    const later = queuedRounds.filter(
+      (q) => fromRound !== undefined && q.round > fromRound,
+    ).length;
+    const what =
+      fromRound === undefined
+        ? `all ${queuedRounds.length} queued round${
+            queuedRounds.length === 1 ? "" : "s"
+          }`
+        : later > 0
+        ? `Round ${fromRound} and the ${later} queued round${
+            later === 1 ? "" : "s"
+          } after it`
+        : `Round ${fromRound}`;
+    if (!window.confirm(`Discard ${what}? You can pair them again afterwards.`))
+      return;
+    setBusy(true);
+    setError("");
+    try {
+      const updated = await api.discardQueuedRounds(t.id, fromRound);
+      setTournament(updated);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleExtend() {
     setBusy(true);
     setError("");
@@ -866,11 +939,17 @@ export default function Overview() {
                     <span>Total Rounds</span>
                     <input
                       type="number"
-                      min={t.currentRound || 1}
+                      min={lastPairedRound || 1}
                       value={editTotalRounds}
                       disabled={t.status === "finished"}
                       onChange={(e) => setEditTotalRounds(e.target.value)}
                     />
+                    {queuedRounds.length > 0 && (
+                      <span className="hint">
+                        Rounds up to {lastPairedRound} are already paired —
+                        discard queued rounds to shorten the event below that.
+                      </span>
+                    )}
                     {t.status === "finished" && (
                       <span className="hint">
                         Finished — use "Add Extra Round" instead.
@@ -894,6 +973,16 @@ export default function Overview() {
                       ? ", and removed until Round 2 begins"
                       : "; removal is locked once Round 2 begins"}
                     .)
+                  </span>
+                )}
+                {rosterLockedByQueue && (
+                  <span
+                    className="hint"
+                    style={{ marginLeft: 10, fontWeight: "normal" }}
+                  >
+                    (Adding or removing players is paused while rounds are
+                    queued in advance — discard them first. Names, titles &amp;
+                    ratings can still be edited.)
                   </span>
                 )}
                 {!editableRoster && !rosterFormatMutable && (
@@ -1554,6 +1643,120 @@ export default function Overview() {
               >
                 Go to Pairings →
               </button>
+            </div>
+          )}
+
+          {t.currentPairings && (queuedRounds.length > 0 || canQueueRound) && (
+            <div className="card">
+              <div className="section-header">
+                <h2>Rounds in Advance</h2>
+                {queuedRounds.length > 1 && (
+                  <button
+                    className="btn-secondary btn-sm"
+                    disabled={busy}
+                    onClick={() => handleDiscardQueued()}
+                  >
+                    Discard all
+                  </button>
+                )}
+              </div>
+
+              {queuedRounds.length === 0 && (
+                <p className="muted" style={{ marginBottom: 12 }}>
+                  Round {t.currentRound} is still being played. You can pair
+                  Round {t.currentRound + 1} now — it becomes the open round
+                  automatically once Round {t.currentRound} is submitted.
+                </p>
+              )}
+
+              {queuedRounds.map((q) => {
+                const partial = q.basedOn && !q.basedOn.complete;
+                return (
+                  <div
+                    key={q.round}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      flexWrap: "wrap",
+                      padding: "8px 0",
+                      borderTop: "1px solid #e6e0d0",
+                    }}
+                  >
+                    <strong>Round {q.round}</strong>
+                    <span className="muted">
+                      {q.pairings.length} pairing
+                      {q.pairings.length === 1 ? "" : "s"} ·{" "}
+                      {q.mode === "manual" ? "paired manually" : "auto-paired"}
+                    </span>
+                    {q.stale && (
+                      <span
+                        className="inline-error"
+                        title="A result in an earlier round was edited after this round was paired."
+                      >
+                        Out of date — re-pair
+                      </span>
+                    )}
+                    {!q.stale && partial && t.system === "swiss" && (
+                      <span
+                        className="hint"
+                        title="Swiss pairings depend on results. This round was paired before the open round finished."
+                      >
+                        Provisional · paired with {q.basedOn.played}/
+                        {q.basedOn.total} games of the open round reported
+                      </span>
+                    )}
+                    <button
+                      className="btn-secondary btn-sm"
+                      style={{ marginLeft: "auto" }}
+                      disabled={busy}
+                      onClick={() => handleDiscardQueued(q.round)}
+                    >
+                      Discard
+                    </button>
+                  </div>
+                );
+              })}
+
+              {canQueueRound && (
+                <div style={{ marginTop: queuedRounds.length ? 12 : 0 }}>
+                  {t.matchPlay && (
+                    <label
+                      className="field"
+                      style={{ maxWidth: 260, marginBottom: 14 }}
+                    >
+                      <span>Games per Pairing (Best of N)</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={matchPlayRoundGames}
+                        onChange={(e) => setMatchPlayRoundGames(e.target.value)}
+                      />
+                      <span className="hint">
+                        Applies to the round you pair now, and becomes the
+                        default for later rounds.
+                      </span>
+                    </label>
+                  )}
+                  <button
+                    className="btn-primary"
+                    disabled={busy}
+                    onClick={handleQueueRound}
+                  >
+                    {busy
+                      ? "Pairing…"
+                      : `Pair Round ${lastPairedRound + 1} Now`}
+                  </button>
+                  <button
+                    className="btn-secondary"
+                    style={{ marginLeft: 8 }}
+                    disabled={busy}
+                    onClick={() => navigate(`/tournament/${t.id}/pair-manual`)}
+                  >
+                    Pair Manually
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </>

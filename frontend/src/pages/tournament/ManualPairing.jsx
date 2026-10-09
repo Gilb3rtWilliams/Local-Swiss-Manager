@@ -134,9 +134,14 @@ function Slot({ label, competitor, isTeam, onDrop, onClear, onDragStart }) {
 }
 
 export default function ManualPairing() {
-  const { t, refresh } = useOutletContext();
+  const { t, refresh, setTournament } = useOutletContext();
   const navigate = useNavigate();
   const isTeam = t.format === "team";
+  // A round is already open, so this pairing is for a LATER round: it gets
+  // queued behind the open one instead of starting a round now. Derived from
+  // the tournament itself (not router state) so it survives a page refresh.
+  const queueMode = Boolean(t.currentPairings);
+  const lastPairedRound = t.currentRound + (t.queuedRounds || []).length;
 
   const pool = useMemo(
     () => (isTeam ? t.teams : t.players),
@@ -237,9 +242,19 @@ export default function ManualPairing() {
       }));
       const payload = { pairs };
       if (byeCandidate) payload.byeId = byeCandidate.id;
-      await api.generateManualRound(t.id, payload);
-      refresh();
-      navigate(`/tournament/${t.id}/pairings`);
+      if (queueMode) {
+        const updated = await api.queueManualRound(t.id, payload);
+        // Mid-round: update the shared tournament and go back to the
+        // overview (where the queued round is listed), not to the pairings
+        // tab, which is still showing the open round.
+        if (setTournament) setTournament(updated);
+        else refresh();
+        navigate(`/tournament/${t.id}/overview`);
+      } else {
+        await api.generateManualRound(t.id, payload);
+        refresh();
+        navigate(`/tournament/${t.id}/pairings`);
+      }
     } catch (e) {
       setError(e.message);
     } finally {
@@ -247,8 +262,11 @@ export default function ManualPairing() {
     }
   }
 
-  const nextRoundLabel =
-    t.currentRound === 0 ? "Round 1" : `Round ${t.currentRound + 1}`;
+  const nextRoundLabel = queueMode
+    ? `Round ${lastPairedRound + 1}`
+    : t.currentRound === 0
+    ? "Round 1"
+    : `Round ${t.currentRound + 1}`;
 
   return (
     <div
@@ -322,6 +340,8 @@ export default function ManualPairing() {
           Black slot to pair them.{" "}
           {isOdd &&
             "Whoever's left over once every pairing is filled automatically gets the bye."}
+          {queueMode &&
+            ` Round ${t.currentRound} is still in progress — this round will be queued and start automatically once it's submitted.`}
         </p>
       </div>
 
@@ -520,7 +540,11 @@ export default function ManualPairing() {
             fontFamily: "inherit",
           }}
         >
-          {busy ? "Pairing…" : "Finish & Start Round"}
+          {busy
+            ? "Pairing…"
+            : queueMode
+            ? `Queue ${nextRoundLabel}`
+            : "Finish & Start Round"}
         </button>
         {!readyToFinish && (
           <span style={{ color: "var(--tp-dim, #6b6b7b)", fontSize: 11 }}>

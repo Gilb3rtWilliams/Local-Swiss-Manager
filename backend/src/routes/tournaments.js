@@ -79,6 +79,50 @@ router.post(
   wrap((req) => svc.submitResults(req.params.id, req.body.results || [])),
 );
 
+// Save the results of the games played so far WITHOUT closing the round — the
+// rest stay open and can be saved later. Same entry shape as POST /results; a
+// null `result` clears a saved one. Closing the round is still POST /results.
+// Optional body.round targets a round paired in advance (default: the open
+// round); nothing is scored until that round is opened and submitted.
+router.patch(
+  "/:id/results",
+  requireAdmin,
+  wrap((req) =>
+    svc.saveRoundResults(req.params.id, req.body.results || [], req.body.round),
+  ),
+);
+
+// ─── Rounds paired in advance ────────────────────────────────────────────
+// While a round is open, pair the next one(s) without finishing it. The
+// queued round becomes the open round automatically when the current one is
+// submitted. Body: { count?, matchPlayNumberOfGames? }
+router.post(
+  "/:id/round/queue",
+  requireAdmin,
+  wrap((req) => svc.queueNextRound(req.params.id, req.body)),
+);
+
+// Same, with organizer-chosen pairings (payload as POST /:id/round/manual).
+router.post(
+  "/:id/round/queue/manual",
+  requireAdmin,
+  wrap((req) => svc.queueManualRound(req.params.id, req.body)),
+);
+
+// Discard every queued round, or — with :round — that round and any after it.
+router.delete(
+  "/:id/round/queue",
+  requireAdmin,
+  wrap((req) => svc.discardQueuedRounds(req.params.id)),
+);
+router.delete(
+  "/:id/round/queue/:round",
+  requireAdmin,
+  wrap((req) =>
+    svc.discardQueuedRounds(req.params.id, parseInt(req.params.round, 10)),
+  ),
+);
+
 router.patch(
   "/:id/rounds/:round/results",
   requireAdmin,

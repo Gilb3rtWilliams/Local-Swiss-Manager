@@ -67,6 +67,10 @@ function runLegacyMigrations() {
       // Team standings saved before match points were credited per TEAM
       // (rather than per board color) are repaired here so existing
       // tournaments are correct the moment the server starts.
+      if (!Array.isArray(t.queuedRounds)) {
+        t.queuedRounds = [];
+        migrated = true;
+      }
       if (repairTeamMatchPoints(t)) migrated = true;
       if (t.thirdPlaceMatch === undefined) {
         // Tournament predates this feature — its bracket (if already built)
@@ -136,14 +140,14 @@ function seedList(t) {
 // team/player objects. Returns null once currentRound goes past the fixed
 // schedule (e.g. an extra playoff round added after the event finished),
 // so the caller can fall back to Swiss-style pairing for that round.
-function roundRobinPairsForRound(t) {
+function roundRobinPairsForRound(t, round = t.currentRound) {
   const seeds = seedList(t);
   const n = seeds.length;
   const schedule =
     t.system === "double_round_robin"
       ? roundRobin.doubleRoundRobinSchedule(n)
       : roundRobin.singleRoundRobinSchedule(n);
-  const roundPairs = schedule[t.currentRound - 1];
+  const roundPairs = schedule[round - 1];
   if (!roundPairs) return null;
   return roundPairs.map((pair) =>
     "bye" in pair
@@ -302,11 +306,15 @@ function makeMatchPlayMiniMatch(
 // undefined when Match Play is off, so callers can pass this straight
 // through to buildTeamBoards()/makeMatchPlayMiniMatch() and skip attaching
 // anything.
-function swissMatchPlayOptions(t) {
+function swissMatchPlayOptions(
+  t,
+  position = t.currentChess960,
+  numberOfGames = t.matchPlayNumberOfGames,
+) {
   if (!t.matchPlay) return undefined;
   return {
-    numberOfGames: t.matchPlayNumberOfGames,
-    chess960Position: t.chess960 ? t.currentChess960 : undefined,
+    numberOfGames,
+    chess960Position: t.chess960 ? position : undefined,
     allowDraw: true,
   };
 }
@@ -774,6 +782,9 @@ async function createTournament(input) {
     teams: [],
     rounds: [],
     currentPairings: null,
+    // Rounds paired ahead of time while the current one is still open — see
+    // "Queued rounds" below. Always empty unless a round is open.
+    queuedRounds: [],
 
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -1222,6 +1233,439 @@ async function updateCageMatchCompetitorDetails(id, side, payload = {}) {
   return serializeTournament(t);
 }
 
+// ─── Queued rounds (pairing ahead of the open round) ─────────────────────────
+// The tournament keeps ONE open round (t.currentPairings) plus an ordered
+// queue of rounds that were paired ahead of time (t.queuedRounds). When the
+// open round is submitted, the next queued round is promoted to the open
+// round automatically (see submitResults()).
+//
+// Why a queue rather than several open rounds: everything downstream —
+// result entry, the Match Play mini-match addressing, standings, the public
+// view — is built around exactly one open round. A queue adds the ability to
+// pair ahead without touching any of that.
+//
+// Pairing a round that follows unfinished ones needs standings that don't
+// exist yet. Instead of pretending, pairings are computed against a
+// PROVISIONAL copy of the field (provisionalState): the real state, plus the
+// open round's pairings applied (opponents, colors, byes — and the scores of
+// whatever games already have results), plus any earlier queued rounds (whose
+// games count as unplayed, i.e. no points yet). The real players/teams are
+// never modified, because generatePairings() is pure and only ever sees the
+// copies. Each queued round records how much of the open round had been
+// reported when it was paired (basedOn) so the UI can say how provisional it
+// is. Round-robin pairings are fixed by the schedule, so they never depend on
+// results at all.
+
+function queuedRoundsOf(t) {
+  if (!Array.isArray(t.queuedRounds)) t.queuedRounds = [];
+  return t.queuedRounds;
+}
+
+// Roster-changing operations are blocked while rounds are queued: the queued
+// pairings were built for the current field, and a late player or a removal
+// would leave them pairing someone who's gone, or missing someone who's new.
+function assertNoQueuedRounds(t, what) {
+  if (queuedRoundsOf(t).length > 0) {
+    const e = new Error(
+      `${what} isn't available while rounds are queued in advance — discard the queued rounds first, since they were paired for the current field.`,
+    );
+    e.status = 409;
+    throw e;
+  }
+}
+
+function parseMatchPlayGames(value) {
+  if (value === undefined) return undefined;
+  const n = Number(value);
+  if (!Number.isInteger(n) || n < 1) {
+    const e = new Error("matchPlayNumberOfGames must be a positive integer.");
+    e.status = 400;
+    throw e;
+  }
+  return n;
+}
+
+// How far along a set of pairings is: how many games need a result and how
+// many have one. Bughouse is counted per match (one decisive board settles
+// it), everything else per board/game — the same rule submitResults() uses to
+// decide whether a round is complete.
+function roundProgressOf(t, pairings) {
+  if (!pairings) return null;
+  let played = 0;
+  let total = 0;
+  pairings.forEach((p) => {
+    if (t.format === "team") {
+      if (p.type !== "match") return;
+      const real = p.boards.filter((b) => !b.sitOut);
+      if (t.variant === "bughouse") {
+        total += 1;
+        if (
+          real.some((b) => isDecisiveResult(b.result)) ||
+          (real.length > 0 && real.every((b) => b.result))
+        ) {
+          played += 1;
+        }
+      } else {
+        real.forEach((b) => {
+          total += 1;
+          if (b.result) played += 1;
+        });
+      }
+    } else if (p.type === "individual") {
+      total += 1;
+      if (p.result) played += 1;
+    }
+  });
+  return { played, total, complete: played === total };
+}
+
+function cloneCompetitor(c) {
+  return {
+    ...c,
+    opponents: new Set(c.opponents),
+    colorHistory: [...(c.colorHistory || [])],
+    results: { ...(c.results || {}) },
+  };
+}
+
+function applyPairingsProvisionally(t, pMap, tMap, pairings) {
+  pairings.forEach((p) => {
+    if (t.format === "team") {
+      if (p.type === "bye") {
+        const team = tMap.get(p.team);
+        team.score += 1;
+        team.byeRounds += 1;
+        team.colorHistory.push(null);
+        return;
+      }
+      const tw = tMap.get(p.teamWhite);
+      const tb = tMap.get(p.teamBlack);
+      let wp = 0;
+      let bp = 0;
+      let anyPlayed = false;
+      if (t.variant === "bughouse") {
+        const b1 = p.boards[0];
+        const b2 = p.boards[1];
+        const whiteWon =
+          (b1 && WHITE_WIN_RESULTS.has(b1.result)) ||
+          (b2 && BLACK_WIN_RESULTS.has(b2.result));
+        const blackWon =
+          (b1 && BLACK_WIN_RESULTS.has(b1.result)) ||
+          (b2 && WHITE_WIN_RESULTS.has(b2.result));
+        if (whiteWon) {
+          wp = 1;
+          anyPlayed = true;
+        } else if (blackWon) {
+          bp = 1;
+          anyPlayed = true;
+        }
+      } else {
+        p.boards.forEach((bd) => {
+          if (bd.sitOut || !bd.result) return;
+          anyPlayed = true;
+          const tp = teamPointsForBoard(
+            bd.boardNum,
+            scoreFromResult(bd.result, "white"),
+            scoreFromResult(bd.result, "black"),
+          );
+          wp += tp.teamWhite;
+          bp += tp.teamBlack;
+        });
+      }
+      tw.opponents.add(tb.id);
+      tb.opponents.add(tw.id);
+      tw.colorHistory.push("W");
+      tb.colorHistory.push("B");
+      tw.lastColor = "W";
+      tb.lastColor = "B";
+      tw.colorDiff++;
+      tb.colorDiff--;
+      tw.score += wp;
+      tb.score += bp;
+      if (anyPlayed) {
+        tw.results[tb.id] = wp;
+        tb.results[tw.id] = bp;
+      }
+      return;
+    }
+
+    if (p.type === "bye") {
+      const pl = pMap.get(p.white);
+      pl.score += 1;
+      pl.byeRounds += 1;
+      pl.colorHistory.push(null);
+      return;
+    }
+    if (p.result) {
+      applyGame(pMap, p.white, p.black, p.result);
+    } else {
+      // Paired but not yet played: the colors and the opponent are already
+      // spent, the points aren't there yet.
+      const w = pMap.get(p.white);
+      const b = pMap.get(p.black);
+      w.opponents.add(p.black);
+      b.opponents.add(p.white);
+      w.colorHistory.push("W");
+      b.colorHistory.push("B");
+      w.lastColor = "W";
+      b.lastColor = "B";
+      w.colorDiff++;
+      b.colorDiff--;
+    }
+  });
+}
+
+// The field as it would stand once the open round and every queued round
+// have been played — with unplayed games contributing no points.
+function provisionalState(t) {
+  const players = t.players.map(cloneCompetitor);
+  const teams = t.format === "team" ? t.teams.map(cloneCompetitor) : [];
+  const pMap = byId(players);
+  const tMap = byId(teams);
+  if (t.currentPairings) {
+    applyPairingsProvisionally(t, pMap, tMap, t.currentPairings);
+  }
+  queuedRoundsOf(t).forEach((q) =>
+    applyPairingsProvisionally(t, pMap, tMap, q.pairings),
+  );
+  return { players, teams, live: false };
+}
+
+// The automatic pairing for round `round`, built from `state` (the live field
+// for the open round, a provisional copy for a queued one). Pure: it returns
+// the pairings and leaves `t` alone — the caller decides where they go.
+function buildAutoPairings(t, round, state, mpOptions) {
+  if (t.format === "team") {
+    const teamPairings =
+      (isRoundRobinSystem(t) && roundRobinPairsForRound(t, round)) ||
+      (() => {
+        const teamComps = state.teams.map(teamCompetitor);
+        const pairings = engine.generatePairings(teamComps);
+        if (state.live) {
+          // Sync any bye bookkeeping changes back before board expansion (colors not yet set for byes).
+          state.teams.forEach((team) => {
+            const comp = teamComps.find((c) => c.id === team.id);
+            syncTeamFromCompetitor(team, comp);
+          });
+        }
+        return pairings;
+      })();
+
+    return teamPairings.map((pair) => {
+      const teamWhite = t.teams.find((x) => x.id === pair.white.id);
+      const teamBlack = pair.black
+        ? t.teams.find((x) => x.id === pair.black.id)
+        : null;
+
+      if (!teamBlack) {
+        // Bye team: every player on the team gets an individual bye point.
+        return { type: "bye", team: teamWhite.id, boards: [] };
+      }
+
+      return {
+        type: "match",
+        teamWhite: teamWhite.id,
+        teamBlack: teamBlack.id,
+        boards: buildTeamBoards(t, teamWhite, teamBlack, mpOptions),
+      };
+    });
+  }
+
+  const pairings =
+    (isRoundRobinSystem(t) && roundRobinPairsForRound(t, round)) ||
+    engine.generatePairings(state.players.map(playerToCompetitor));
+  return pairings.map((pair) => {
+    const isBye = pair.black === null;
+    const pairing = {
+      type: isBye ? "bye" : "individual",
+      white: pair.white.id,
+      black: pair.black ? pair.black.id : null,
+      result: undefined,
+    };
+    if (!isBye && t.matchPlay) {
+      pairing.miniMatch = makeMatchPlayMiniMatch(
+        pairing.white,
+        pairing.black,
+        mpOptions,
+      );
+    }
+    return pairing;
+  });
+}
+
+function assertCanQueueRound(t) {
+  assertNotCageMatch(t);
+  if (isEliminationSystem(t)) {
+    const e = new Error(
+      "This is a bracket tournament — there are no rounds to pair in advance.",
+    );
+    e.status = 400;
+    throw e;
+  }
+  if (t.status === "finished") {
+    const e = new Error("Tournament already finished");
+    e.status = 409;
+    throw e;
+  }
+  if (!t.currentPairings) {
+    const e = new Error(
+      "No round is open — generate the next round normally instead. Rounds can only be paired in advance while another round is still open.",
+    );
+    e.status = 409;
+    throw e;
+  }
+  const queued = queuedRoundsOf(t).length;
+  const next = t.currentRound + queued + 1;
+  if (next > t.totalRounds) {
+    const e = new Error(
+      `All ${t.totalRounds} rounds already exist (round ${
+        t.currentRound
+      } is open${queued ? ` and ${queued} more are queued` : ""}).`,
+    );
+    e.status = 409;
+    throw e;
+  }
+  return next;
+}
+
+function pushQueuedRound(t, { round, mode, chess960: position, pairings }) {
+  queuedRoundsOf(t).push({
+    round,
+    mode,
+    chess960: position,
+    pairings,
+    // How much of the open round was reported when this was paired: a Swiss
+    // round paired at "2 of 14 games reported" rests on very provisional
+    // standings, and the UI should be able to say so.
+    basedOn: roundProgressOf(t, t.currentPairings),
+    stale: false,
+    createdAt: new Date().toISOString(),
+  });
+}
+
+// Pairs the next round (or the next `count` rounds) while the open round is
+// still in progress. Body: { count?: number, matchPlayNumberOfGames?: number }
+async function queueNextRound(id, updates = {}) {
+  const t = assertTournament(id);
+  assertCanQueueRound(t);
+
+  const count = updates.count === undefined ? 1 : Number(updates.count);
+  if (!Number.isInteger(count) || count < 1) {
+    const e = new Error("count must be a positive integer.");
+    e.status = 400;
+    throw e;
+  }
+  const room = t.totalRounds - (t.currentRound + queuedRoundsOf(t).length);
+  if (count > room) {
+    const e = new Error(
+      `Only ${room} more round${
+        room === 1 ? "" : "s"
+      } can be queued (the tournament is ${t.totalRounds} rounds long).`,
+    );
+    e.status = 409;
+    throw e;
+  }
+  const gamesN = t.matchPlay
+    ? parseMatchPlayGames(updates.matchPlayNumberOfGames)
+    : undefined;
+
+  // Each round is pushed as soon as it's built, so the NEXT one's provisional
+  // state includes it. If any of them fails, the queue is put back exactly as
+  // it was — a half-queued batch is never left behind.
+  const queueSnapshot = [...queuedRoundsOf(t)];
+  try {
+    for (let i = 0; i < count; i++) {
+      const round = t.currentRound + queuedRoundsOf(t).length + 1;
+      const position = t.chess960 ? chess960.randomChess960Position() : null;
+      const pairings = buildAutoPairings(
+        t,
+        round,
+        provisionalState(t),
+        swissMatchPlayOptions(t, position, gamesN),
+      );
+      pushQueuedRound(t, { round, mode: "auto", chess960: position, pairings });
+    }
+  } catch (err) {
+    t.queuedRounds = queueSnapshot;
+    throw err;
+  }
+
+  if (gamesN !== undefined) t.matchPlayNumberOfGames = gamesN;
+  t.updatedAt = new Date().toISOString();
+  await persist();
+  return serializeTournament(t);
+}
+
+// Same as queueNextRound(), but the organizer chooses the pairings (payload
+// shape as generateManualRound()). Colors left unspecified are assigned
+// against the provisional field, so they account for the open round.
+async function queueManualRound(id, payload = {}) {
+  const t = assertTournament(id);
+  const round = assertCanQueueRound(t);
+
+  const gamesN = t.matchPlay
+    ? parseMatchPlayGames(payload.matchPlayNumberOfGames)
+    : undefined;
+  const position = t.chess960 ? chess960.randomChess960Position() : null;
+  const pairings = buildManualPairings(
+    t,
+    payload,
+    provisionalState(t),
+    swissMatchPlayOptions(t, position, gamesN),
+  );
+
+  pushQueuedRound(t, { round, mode: "manual", chess960: position, pairings });
+  if (gamesN !== undefined) t.matchPlayNumberOfGames = gamesN;
+  t.updatedAt = new Date().toISOString();
+  await persist();
+  return serializeTournament(t);
+}
+
+// Drops queued rounds from `fromRound` onward (all of them when omitted).
+// Rounds only come off the END of the queue: a later round was paired on top
+// of an earlier one, so removing the earlier one alone would leave it resting
+// on a round that no longer exists.
+async function discardQueuedRounds(id, fromRound) {
+  const t = assertTournament(id);
+  assertNotCageMatch(t);
+  const queue = queuedRoundsOf(t);
+  if (queue.length > 0) {
+    const from =
+      fromRound === undefined || fromRound === null
+        ? queue[0].round
+        : Number(fromRound);
+    if (
+      !Number.isInteger(from) ||
+      from < queue[0].round ||
+      from > queue[queue.length - 1].round
+    ) {
+      const e = new Error(
+        `No queued round ${fromRound} — queued rounds are ${queue[0].round}–${
+          queue[queue.length - 1].round
+        }.`,
+      );
+      e.status = 404;
+      throw e;
+    }
+    t.queuedRounds = queue.filter((q) => q.round < from);
+    t.updatedAt = new Date().toISOString();
+    await persist();
+  }
+  return serializeTournament(t);
+}
+
+// Called when a closed round's result is edited: automatic Swiss pairings
+// that were queued earlier were built on the OLD numbers. They're kept (the
+// organizer may well be happy with them) but flagged, so the UI can offer to
+// discard and re-pair. Round-robin and manual pairings don't depend on
+// standings, so they're never stale.
+function markQueuedRoundsStale(t) {
+  if (isRoundRobinSystem(t)) return;
+  queuedRoundsOf(t).forEach((q) => {
+    if (q.mode === "auto") q.stale = true;
+  });
+}
+
 // ─── Round generation ───────────────────────────────────────────────────────
 async function generateNextRound(id, updates = {}) {
   const t = assertTournament(id);
@@ -1244,106 +1688,43 @@ async function generateNextRound(id, updates = {}) {
     throw e;
   }
 
-  t.currentRound += 1;
-  t.status = "active";
+  // Everything that can fail (bad matchPlayNumberOfGames, pairing errors)
+  // happens BEFORE anything on `t` is touched, so a rejected request can't
+  // leave the round counter half-advanced.
+  const gamesN = t.matchPlay
+    ? parseMatchPlayGames(updates.matchPlayNumberOfGames)
+    : undefined;
+  const round = t.currentRound + 1;
 
   // A fresh position every round — same spirit as pairings themselves being
   // regenerated each round, not carried over from the last one.
-  t.currentChess960 = t.chess960 ? chess960.randomChess960Position() : null;
+  const position = t.chess960 ? chess960.randomChess960Position() : null;
+
+  const pairings = buildAutoPairings(
+    t,
+    round,
+    { players: t.players, teams: t.teams, live: true },
+    swissMatchPlayOptions(t, position, gamesN),
+  );
 
   // Match Play: the organizer can change games-per-round each time a new
   // round is generated — updating t.matchPlayNumberOfGames here makes that
   // the new default too (same convention nameEdits below already follows).
-  if (t.matchPlay && updates.matchPlayNumberOfGames !== undefined) {
-    const n = Number(updates.matchPlayNumberOfGames);
-    if (!Number.isInteger(n) || n < 1) {
-      const e = new Error("matchPlayNumberOfGames must be a positive integer.");
-      e.status = 400;
-      throw e;
-    }
-    t.matchPlayNumberOfGames = n;
-  }
+  if (gamesN !== undefined) t.matchPlayNumberOfGames = gamesN;
+  t.currentRound = round;
+  t.status = "active";
+  t.currentChess960 = position;
+  t.currentPairings = pairings;
 
-  if (t.format === "team") {
-    const teamPairings =
-      (isRoundRobinSystem(t) && roundRobinPairsForRound(t)) ||
-      (() => {
-        const teamComps = t.teams.map(teamCompetitor);
-        const pairings = engine.generatePairings(teamComps);
-        // Sync any bye bookkeeping changes back before board expansion (colors not yet set for byes).
-        t.teams.forEach((team) => {
-          const comp = teamComps.find((c) => c.id === team.id);
-          syncTeamFromCompetitor(team, comp);
-        });
-        return pairings;
-      })();
-
-    t.currentPairings = teamPairings.map((pair) => {
-      const teamWhite = t.teams.find((x) => x.id === pair.white.id);
-      const teamBlack = pair.black
-        ? t.teams.find((x) => x.id === pair.black.id)
-        : null;
-
-      if (!teamBlack) {
-        // Bye team: every player on the team gets an individual bye point.
-        return { type: "bye", team: teamWhite.id, boards: [] };
-      }
-
-      const boards = buildTeamBoards(
-        t,
-        teamWhite,
-        teamBlack,
-        swissMatchPlayOptions(t),
-      );
-      return {
-        type: "match",
-        teamWhite: teamWhite.id,
-        teamBlack: teamBlack.id,
-        boards,
-      };
-    });
-  } else {
-    const pairings =
-      (isRoundRobinSystem(t) && roundRobinPairsForRound(t)) ||
-      engine.generatePairings(t.players.map(playerToCompetitor));
-    t.currentPairings = pairings.map((pair) => {
-      const isBye = pair.black === null;
-      const pairing = {
-        type: isBye ? "bye" : "individual",
-        white: pair.white.id,
-        black: pair.black ? pair.black.id : null,
-        result: undefined,
-      };
-      if (!isBye && t.matchPlay) {
-        pairing.miniMatch = makeMatchPlayMiniMatch(
-          pairing.white,
-          pairing.black,
-          swissMatchPlayOptions(t),
-        );
-      }
-      return pairing;
-    });
-
+  if (t.format !== "team") {
     // Apply Targeted Name Changes (Permitted at any time)
     // Expects frontend to send: updates.nameEdits = [{ id: "player-123", newName: "John Doe" }]
     if (updates.nameEdits && Array.isArray(updates.nameEdits)) {
       updates.nameEdits.forEach((edit) => {
-        // 1. Update in the main players array
         const player = t.players.find((p) => p.id === edit.id);
         if (player) {
           if (edit.newName !== undefined) player.name = edit.newName;
           if (edit.newTitle !== undefined) player.title = edit.newTitle;
-        }
-
-        // 2. If this is a team tournament, also update the name inside the team's roster array
-        if (t.format === "team" && t.teams) {
-          t.teams.forEach((team) => {
-            const teamMember = team.players.find((p) => p.id === edit.id);
-            if (teamMember) {
-              if (edit.newName !== undefined) teamMember.name = edit.newName;
-              if (edit.newTitle !== undefined) teamMember.title = edit.newTitle;
-            }
-          });
         }
       });
     }
@@ -1384,29 +1765,14 @@ function resolveManualColors(a, b, colorChoice) {
   return engine.assignColors(a, b);
 }
 
-async function generateManualRound(id, payload = {}) {
-  const t = assertTournament(id);
-  assertNotCageMatch(t);
-  if (isEliminationSystem(t)) {
-    const e = new Error(
-      "This is a bracket tournament — results are submitted match-by-match via the bracket. Manual round pairing isn't available here.",
-    );
-    e.status = 400;
-    throw e;
-  }
-  if (t.currentPairings) {
-    const e = new Error("Current round is still open — submit results first");
-    e.status = 409;
-    throw e;
-  }
-  if (t.status === "finished") {
-    const e = new Error("Tournament already finished");
-    e.status = 409;
-    throw e;
-  }
-
+// Validates a manual pairing payload and builds the round's pairings — pure:
+// it touches nothing on `t`. `state` is whichever competitor state the colors
+// should be judged against (the live players/teams for the open round, a
+// provisional copy for a round paired in advance). Shared by
+// generateManualRound() and queueManualRound().
+function buildManualPairings(t, payload, state, mpOptions) {
   const isTeam = t.format === "team";
-  const pool = isTeam ? t.teams : t.players;
+  const pool = isTeam ? state.teams : state.players;
   const byId = new Map(pool.map((c) => [c.id, c]));
 
   const pairs = Array.isArray(payload.pairs) ? payload.pairs : [];
@@ -1487,22 +1853,9 @@ async function generateManualRound(id, payload = {}) {
     throw e;
   }
 
-  t.currentRound += 1;
-  t.status = "active";
-  t.currentChess960 = t.chess960 ? chess960.randomChess960Position() : null;
-
-  if (t.matchPlay && payload.matchPlayNumberOfGames !== undefined) {
-    const n = Number(payload.matchPlayNumberOfGames);
-    if (!Number.isInteger(n) || n < 1) {
-      const e = new Error("matchPlayNumberOfGames must be a positive integer.");
-      e.status = 400;
-      throw e;
-    }
-    t.matchPlayNumberOfGames = n;
-  }
-
+  let pairings;
   if (isTeam) {
-    t.currentPairings = pairs.map((pr) => {
+    pairings = pairs.map((pr) => {
       const a = byId.get(pr.aId);
       const b = byId.get(pr.bId);
       const { white: teamWhite, black: teamBlack } = resolveManualColors(
@@ -1510,12 +1863,7 @@ async function generateManualRound(id, payload = {}) {
         b,
         pr.color,
       );
-      const boards = buildTeamBoards(
-        t,
-        teamWhite,
-        teamBlack,
-        swissMatchPlayOptions(t),
-      );
+      const boards = buildTeamBoards(t, teamWhite, teamBlack, mpOptions);
       return {
         type: "match",
         teamWhite: teamWhite.id,
@@ -1524,10 +1872,10 @@ async function generateManualRound(id, payload = {}) {
       };
     });
     if (byeId) {
-      t.currentPairings.push({ type: "bye", team: byeId, boards: [] });
+      pairings.push({ type: "bye", team: byeId, boards: [] });
     }
   } else {
-    t.currentPairings = pairs.map((pr) => {
+    pairings = pairs.map((pr) => {
       const a = byId.get(pr.aId);
       const b = byId.get(pr.bId);
       const { white, black } = resolveManualColors(a, b, pr.color);
@@ -1541,13 +1889,13 @@ async function generateManualRound(id, payload = {}) {
         pairing.miniMatch = makeMatchPlayMiniMatch(
           pairing.white,
           pairing.black,
-          swissMatchPlayOptions(t),
+          mpOptions,
         );
       }
       return pairing;
     });
     if (byeId) {
-      t.currentPairings.push({
+      pairings.push({
         type: "bye",
         white: byeId,
         black: null,
@@ -1555,6 +1903,49 @@ async function generateManualRound(id, payload = {}) {
       });
     }
   }
+
+  return pairings;
+}
+
+async function generateManualRound(id, payload = {}) {
+  const t = assertTournament(id);
+  assertNotCageMatch(t);
+  if (isEliminationSystem(t)) {
+    const e = new Error(
+      "This is a bracket tournament — results are submitted match-by-match via the bracket. Manual round pairing isn't available here.",
+    );
+    e.status = 400;
+    throw e;
+  }
+  if (t.currentPairings) {
+    const e = new Error("Current round is still open — submit results first");
+    e.status = 409;
+    throw e;
+  }
+  if (t.status === "finished") {
+    const e = new Error("Tournament already finished");
+    e.status = 409;
+    throw e;
+  }
+
+  // Build first, commit after: a rejected payload leaves `t` untouched.
+  const gamesN = t.matchPlay
+    ? parseMatchPlayGames(payload.matchPlayNumberOfGames)
+    : undefined;
+  const round = t.currentRound + 1;
+  const position = t.chess960 ? chess960.randomChess960Position() : null;
+  const pairings = buildManualPairings(
+    t,
+    payload,
+    { players: t.players, teams: t.teams, live: true },
+    swissMatchPlayOptions(t, position, gamesN),
+  );
+
+  if (gamesN !== undefined) t.matchPlayNumberOfGames = gamesN;
+  t.currentRound = round;
+  t.status = "active";
+  t.currentChess960 = position;
+  t.currentPairings = pairings;
 
   t.updatedAt = new Date().toISOString();
   await persist();
@@ -1932,6 +2323,117 @@ function teamPointsForBoard(boardNum, wScore, bScore) {
   };
 }
 
+// Saves results for the games that have been played, WITHOUT closing the
+// round — the rest stay open. Body entries are the same shape submitResults()
+// takes ({ pairIndex, result } or { pairIndex, boardNum, result }); a null or
+// empty `result` clears a previously saved one (a mis-entered result can be
+// taken back while the round is still open). Everything is validated before
+// anything is applied, so one bad entry can't leave the round half-updated.
+//
+// Standings are NOT touched here — they're applied when the round is
+// submitted, exactly as before. Submitting afterwards (with or without a
+// payload) uses whatever was saved here and only requires the remaining games
+// to have results.
+//
+// `roundNumber` (optional) picks WHICH round the results go into: the open
+// round (the default) or any round that was paired in advance. Results saved
+// into a queued round just sit on its pairings — nothing is scored — and
+// carry over untouched when it's promoted to the open round.
+async function saveRoundResults(id, resultsInput, roundNumber) {
+  const t = assertTournament(id);
+  assertNotCageMatch(t);
+  if (isEliminationSystem(t)) {
+    const e = new Error(
+      "This is a bracket tournament — use submitBracketMatchResult for a specific match instead.",
+    );
+    e.status = 400;
+    throw e;
+  }
+  if (!t.currentPairings) {
+    const e = new Error("No open round to save results for");
+    e.status = 409;
+    throw e;
+  }
+  let roundPairings = t.currentPairings;
+  if (
+    roundNumber !== undefined &&
+    roundNumber !== null &&
+    Number(roundNumber) !== t.currentRound
+  ) {
+    const queued = queuedRoundsOf(t).find(
+      (q) => q.round === Number(roundNumber),
+    );
+    if (!queued) {
+      const e = new Error(
+        `Round ${roundNumber} isn't open or queued, so there's nothing to save results into.`,
+      );
+      e.status = 404;
+      throw e;
+    }
+    roundPairings = queued.pairings;
+  }
+  if (t.matchPlay) {
+    const e = new Error(
+      "Match Play results are recorded by each mini-match as it's decided — there's nothing to save here.",
+    );
+    e.status = 409;
+    throw e;
+  }
+  if (!Array.isArray(resultsInput)) {
+    const e = new Error("results must be an array");
+    e.status = 400;
+    throw e;
+  }
+
+  const edits = resultsInput.map((r, i) => {
+    const where = `Entry ${i + 1}`;
+    if (!r || r.result === undefined) {
+      const e = new Error(
+        `${where}: result is required (send null to clear a saved result).`,
+      );
+      e.status = 400;
+      throw e;
+    }
+    const pairing = roundPairings[r.pairIndex];
+    const clear = r.result === null || r.result === "";
+    let target;
+    if (t.format === "team") {
+      if (!pairing || pairing.type !== "match") {
+        const e = new Error(`${where}: no match at pairIndex ${r.pairIndex}.`);
+        e.status = 400;
+        throw e;
+      }
+      target = pairing.boards.find((bd) => bd.boardNum === r.boardNum);
+      if (!target || target.sitOut) {
+        const e = new Error(
+          `${where}: no playable board ${r.boardNum} in that match.`,
+        );
+        e.status = 400;
+        throw e;
+      }
+    } else {
+      if (!pairing || pairing.type !== "individual") {
+        const e = new Error(
+          `${where}: no game at pairIndex ${r.pairIndex} (byes have no result).`,
+        );
+        e.status = 400;
+        throw e;
+      }
+      target = pairing;
+    }
+    if (!clear) assertValidResult(r.result);
+    return { target, value: clear ? undefined : r.result };
+  });
+
+  edits.forEach(({ target, value }) => {
+    target.result = value;
+  });
+
+  t.updatedAt = new Date().toISOString();
+  await persist();
+  return serializeTournament(t);
+}
+
 async function submitResults(id, resultsInput) {
   const t = assertTournament(id);
   assertNotCageMatch(t);
@@ -2157,7 +2659,16 @@ async function submitResults(id, resultsInput) {
 
   t.currentPairings = null;
 
-  if (t.currentRound >= t.totalRounds) {
+  const queue = queuedRoundsOf(t);
+  if (queue.length > 0) {
+    // The next round was already paired — it becomes the open round straight
+    // away rather than leaving the tournament with no round to play.
+    const next = queue.shift();
+    t.currentRound = next.round;
+    t.currentChess960 = next.chess960;
+    t.currentPairings = next.pairings;
+    t.status = "active";
+  } else if (t.currentRound >= t.totalRounds) {
     t.status = "finished";
     t.finishedAt = new Date().toISOString();
   }
@@ -2435,6 +2946,7 @@ async function editResult(id, roundNumber, edit = {}) {
   }
 
   recomputeStandingsFromRounds(t);
+  markQueuedRoundsStale(t);
 
   t.updatedAt = new Date().toISOString();
   await persist();
@@ -2470,6 +2982,13 @@ async function deleteRound(id, roundNumber) {
   // Currently open, unsubmitted round: cancel it rather than "delete" it —
   // there are no results or standings to unwind yet.
   if (t.currentPairings) {
+    if (queuedRoundsOf(t).some((q) => q.round === roundNumber)) {
+      const e = new Error(
+        `Round ${roundNumber} is queued, not played — discard it with the queued-rounds endpoint instead.`,
+      );
+      e.status = 409;
+      throw e;
+    }
     if (roundNumber !== t.currentRound) {
       const e = new Error(
         `Round ${t.currentRound} is still open — finish or cancel it before deleting round ${roundNumber}.`,
@@ -2477,6 +2996,7 @@ async function deleteRound(id, roundNumber) {
       e.status = 409;
       throw e;
     }
+    assertNoQueuedRounds(t, "Cancelling the open round");
     t.currentPairings = null;
     t.currentRound -= 1;
     t.currentChess960 = null;
@@ -3183,6 +3703,7 @@ function validateBughouseTeams(id) {
 async function addLatePlayer(id, { name, title, rating, teamId, fideId }) {
   const t = assertTournament(id);
   assertNotCageMatch(t);
+  assertNoQueuedRounds(t, "Late registration");
   if (isRoundRobinSystem(t)) {
     const e = new Error(
       "Late registration isn't supported for round-robin — the schedule is fixed for the full field before Round 1.",
@@ -3298,6 +3819,7 @@ async function deletePlayer(id, playerId) {
     e.status = 409;
     throw e;
   }
+  assertNoQueuedRounds(t, "Removing a player");
   if (t.currentRound > 1) {
     const e = new Error("Players can only be removed during round 1");
     e.status = 409;
@@ -3389,6 +3911,7 @@ function findByRegistrationToken(token) {
 }
 
 function assertRegistrationWindowOpen(t) {
+  assertNoQueuedRounds(t, "Registration");
   if (isRoundRobinSystem(t)) {
     const e = new Error(
       "Registration is closed — this tournament's schedule is fixed for the full field.",
@@ -4141,6 +4664,14 @@ async function updateTournamentDetails(id, updates = {}) {
         `Total rounds must be at least the current round (${t.currentRound})`,
       );
       e.status = 400;
+      throw e;
+    }
+    const lastQueued = t.currentRound + queuedRoundsOf(t).length;
+    if (n < lastQueued) {
+      const e = new Error(
+        `Rounds up to ${lastQueued} are already queued — discard the queued rounds before shortening the tournament to ${n}.`,
+      );
+      e.status = 409;
       throw e;
     }
     t.totalRounds = n;
@@ -5211,60 +5742,70 @@ function serializeTournament(t) {
   const nameOf = (id) => t.players.find((p) => p.id === id)?.name || "???";
   const teamNameOf = (id) => t.teams.find((x) => x.id === id)?.name || "???";
 
-  const currentPairings = t.currentPairings
-    ? t.currentPairings.map((p, idx) => {
-        if (t.format === "team") {
-          if (p.type === "bye")
-            return {
-              idx,
-              type: "bye",
-              teamId: p.team,
-              teamName: teamNameOf(p.team),
-            };
-          return {
-            idx,
-            type: "match",
-            teamWhiteId: p.teamWhite,
-            teamWhiteName: teamNameOf(p.teamWhite),
-            teamBlackId: p.teamBlack,
-            teamBlackName: teamNameOf(p.teamBlack),
-            boards: p.boards.map((b) => ({
-              boardNum: b.boardNum,
-              sitOut: !!b.sitOut,
-              white: b.white
-                ? { id: b.white.id, name: b.white.name, rating: b.white.rating }
-                : null,
-              black: b.black
-                ? { id: b.black.id, name: b.black.name, rating: b.black.rating }
-                : null,
-              result: b.result,
-              miniMatch: b.miniMatch
-                ? matchPlay.serialize(b.miniMatch, nameOf)
-                : undefined,
-            })),
-          };
-        }
+  const serializePairingList = (list) =>
+    list.map((p, idx) => {
+      if (t.format === "team") {
         if (p.type === "bye")
           return {
             idx,
             type: "bye",
-            playerId: p.white,
-            playerName: nameOf(p.white),
+            teamId: p.team,
+            teamName: teamNameOf(p.team),
           };
         return {
           idx,
-          type: "individual",
-          whiteId: p.white,
-          whiteName: nameOf(p.white),
-          blackId: p.black,
-          blackName: nameOf(p.black),
-          result: p.result,
-          miniMatch: p.miniMatch
-            ? matchPlay.serialize(p.miniMatch, nameOf)
-            : undefined,
+          type: "match",
+          teamWhiteId: p.teamWhite,
+          teamWhiteName: teamNameOf(p.teamWhite),
+          teamBlackId: p.teamBlack,
+          teamBlackName: teamNameOf(p.teamBlack),
+          boards: p.boards.map((b) => ({
+            boardNum: b.boardNum,
+            sitOut: !!b.sitOut,
+            white: b.white
+              ? { id: b.white.id, name: b.white.name, rating: b.white.rating }
+              : null,
+            black: b.black
+              ? { id: b.black.id, name: b.black.name, rating: b.black.rating }
+              : null,
+            result: b.result,
+            miniMatch: b.miniMatch
+              ? matchPlay.serialize(b.miniMatch, nameOf)
+              : undefined,
+          })),
         };
-      })
+      }
+      if (p.type === "bye")
+        return {
+          idx,
+          type: "bye",
+          playerId: p.white,
+          playerName: nameOf(p.white),
+        };
+      return {
+        idx,
+        type: "individual",
+        whiteId: p.white,
+        whiteName: nameOf(p.white),
+        blackId: p.black,
+        blackName: nameOf(p.black),
+        result: p.result,
+        miniMatch: p.miniMatch
+          ? matchPlay.serialize(p.miniMatch, nameOf)
+          : undefined,
+      };
+    });
+  const currentPairings = t.currentPairings
+    ? serializePairingList(t.currentPairings)
     : null;
+  const queuedRounds = queuedRoundsOf(t).map((q) => ({
+    round: q.round,
+    mode: q.mode,
+    stale: !!q.stale,
+    basedOn: q.basedOn || null,
+    chess960: q.chess960 || null,
+    pairings: serializePairingList(q.pairings),
+  }));
 
   const remainingRounds = Math.max(t.totalRounds - t.rounds.length, 0);
   let { standings, teamStandings, crossTable } = computeStandingsBlock(
@@ -5432,6 +5973,10 @@ function serializeTournament(t) {
       startingRank: x.startingRank,
     })),
     currentPairings,
+    // Progress of the open round (games with a result / games to play) and
+    // the rounds already paired behind it. See "Queued rounds" in this file.
+    roundProgress: roundProgressOf(t, t.currentPairings),
+    queuedRounds,
     standings,
     teamStandings,
     crossTable,
@@ -5661,6 +6206,10 @@ function getPublicBoardAwards(token) {
 }
 
 module.exports = {
+  saveRoundResults,
+  queueNextRound,
+  queueManualRound,
+  discardQueuedRounds,
   init,
   createTournament,
   generateNextRound,

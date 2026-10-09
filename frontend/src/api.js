@@ -97,6 +97,43 @@ export const api = {
     }),
   validateBughouseTeams: (id) =>
     request(`/tournaments/${id}/bughouse/validate`),
+  // Saves results for the games played so far WITHOUT closing the round (null
+  // result = clear a saved one). Same body shape as submitResults above — it
+  // must be JSON.stringify'd like every other call, or fetch sends the literal
+  // text "[object Object]" and the server rejects it as invalid JSON.
+  // `round` (optional) saves into a round paired in advance instead of the
+  // open one; omit it for the open round.
+  saveResults: (id, results, round) =>
+    request(`/tournaments/${id}/results`, {
+      method: "PATCH",
+      body: JSON.stringify(
+        round === undefined ? { results } : { results, round },
+      ),
+    }),
+
+  // ─── Rounds paired in advance ──────────────────────────────────────────
+  // Pair the next round while the current one is still open. It's queued and
+  // becomes the open round when the current one is submitted. Body (Match
+  // Play only): { matchPlayNumberOfGames }; `count` queues several at once.
+  queueRound: (id, body) =>
+    request(`/tournaments/${id}/round/queue`, {
+      method: "POST",
+      body: JSON.stringify(body || {}),
+    }),
+  // Same, with organizer-chosen pairings (payload as generateManualRound).
+  queueManualRound: (id, payload) =>
+    request(`/tournaments/${id}/round/queue/manual`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  // Drops queued rounds from `fromRound` onward — all of them when omitted.
+  discardQueuedRounds: (id, fromRound) =>
+    request(
+      fromRound === undefined
+        ? `/tournaments/${id}/round/queue`
+        : `/tournaments/${id}/round/queue/${fromRound}`,
+      { method: "DELETE" },
+    ),
 
   // ─── Cage Match (1 vs 1 match format) ──────────────────────────────────
   recordCageMatchMove: (id, sectionId, gameId, move) =>

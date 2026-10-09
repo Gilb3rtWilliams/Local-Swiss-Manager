@@ -136,6 +136,7 @@ function TeamBoardsMatch({
   isBughouse,
   livePlayers,
   basePath,
+  miniMatchLocked,
 }) {
   // Decisive-board locking is a bughouse rule only (one decisive board ends
   // the whole match). Standard team events score every board.
@@ -471,6 +472,12 @@ function TeamBoardsMatch({
                   </span>
                   <button
                     type="button"
+                    disabled={miniMatchLocked}
+                    title={
+                      miniMatchLocked
+                        ? "Available once this round opens"
+                        : undefined
+                    }
                     onClick={() => onOpenMiniMatch(p.idx, b.boardNum)}
                     style={{
                       background: "var(--tp-border, #252532)",
@@ -481,12 +488,13 @@ function TeamBoardsMatch({
                       letterSpacing: "0.05em",
                       padding: "5px 10px",
                       borderRadius: 6,
-                      cursor: "pointer",
+                      cursor: miniMatchLocked ? "not-allowed" : "pointer",
+                      opacity: miniMatchLocked ? 0.5 : 1,
                       textTransform: "uppercase",
                       fontFamily: "inherit",
                     }}
                   >
-                    Open Mini-Match →
+                    {miniMatchLocked ? "Not open yet" : "Open Mini-Match →"}
                   </button>
                 </div>
               ) : lockedByOtherBoard ? (
@@ -638,6 +646,7 @@ export default function PairingsTeam({
   onOpenMiniMatch,
   isBughouse,
   basePath: basePathProp,
+  miniMatchLocked = false,
 }) {
   const outletContext = useOutletContext();
   const t = outletContext?.t;
@@ -698,6 +707,7 @@ export default function PairingsTeam({
             isBughouse={isBughouse}
             livePlayers={livePlayers}
             basePath={basePath}
+            miniMatchLocked={miniMatchLocked}
           />
         ),
       )}
