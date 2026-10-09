@@ -1,3 +1,5 @@
+import "../css/RoundHistory.css";
+
 const DECISIVE_RESULTS = new Set(["1-0", "0-1", "1F-0F", "0F-1F"]);
 
 const RESULT_OPTIONS = [
@@ -86,110 +88,33 @@ function teamResultOptions(teamAIsWhite, aName, bName) {
   ];
 }
 
-const mono = "var(--tp-font-ui, Georgia, 'Times New Roman', serif)";
-
-const ACCENT_WIN = "#4ade80";
-const ACCENT_LOSS = "#f87171";
-const ACCENT_DRAW = "#fb923c";
-
 // side: "win" | "loss" | "draw" | null (no result / double forfeit)
+// Layout lives in RoundHistory.css so it can reflow on phones: three columns
+// (A | result | B) on wide screens, the two players stacked under the result
+// on narrow ones. `align` picks the grid slot ("left" = first player).
 function PlayerSide({ name, isWhite, teamName, teamColor, align, outcome }) {
   const right = align === "right";
-  const accent =
-    outcome === "win"
-      ? ACCENT_WIN
-      : outcome === "loss"
-      ? ACCENT_LOSS
-      : outcome === "draw"
-      ? ACCENT_DRAW
-      : null;
   const badge = (
-    <div
-      style={{
-        width: 44,
-        height: 44,
-        borderRadius: 8,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: 24,
-        flexShrink: 0,
-        background: isWhite ? "#f0e6d2" : "#252532",
-        color: isWhite ? "#1a1a20" : "#e8e8e8",
-        border: `1px solid ${isWhite ? "#e0d5c0" : "#353545"}`,
-      }}
-    >
+    <div className={`rh-badge ${isWhite ? "is-white" : "is-black"}`}>
       {isWhite ? "♔" : "♚"}
     </div>
   );
   return (
     <div
-      style={{
-        padding: "20px 24px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: right ? "flex-end" : "flex-start",
-        textAlign: right ? "right" : "left",
-        gap: 16,
-        boxShadow: accent
-          ? `inset ${right ? "-" : ""}3px 0 0 ${accent}`
-          : "none",
-      }}
+      className={`rh-side ${right ? "rh-side--right" : "rh-side--left"}${
+        outcome ? ` is-${outcome}` : ""
+      }`}
     >
       {!right && badge}
-      <div>
-        <div
-          style={{
-            fontSize: 20,
-            fontWeight: 700,
-            color: "var(--tp-text, #e8e8e8)",
-            letterSpacing: "-0.02em",
-            lineHeight: 1.2,
-          }}
-        >
-          {name}
-        </div>
+      <div className="rh-side-text">
+        <div className="rh-name">{name}</div>
         {teamName && (
-          <div
-            style={{
-              fontSize: 10,
-              color: teamColor,
-              fontWeight: 600,
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              marginTop: 4,
-            }}
-          >
+          <div className="rh-team" style={{ color: teamColor }}>
             {teamName}
           </div>
         )}
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 6,
-            flexDirection: right ? "row-reverse" : "row",
-            marginTop: 10,
-            padding: "4px 10px",
-            borderRadius: 4,
-            border: "1px solid var(--tp-border, #353545)",
-            fontSize: 9,
-            fontWeight: 600,
-            letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            color: "var(--tp-muted, #8a8a9a)",
-          }}
-        >
-          <span
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: 1,
-              display: "inline-block",
-              background: isWhite ? "#f0e6d2" : "#252532",
-              border: `1px solid ${isWhite ? "#e0d5c0" : "#454555"}`,
-            }}
-          />
+        <div className="rh-colortag">
+          <span className={`rh-swatch ${isWhite ? "is-white" : "is-black"}`} />
           {isWhite ? "WHITE" : "BLACK"}
         </div>
       </div>
@@ -223,86 +148,31 @@ function TeamHistoryMatch({
   const matchPending = partial ? !anyResult : pending;
 
   return (
-    <div
-      style={{
-        background: "var(--tp-bg, #13131a)",
-        border: "1px solid var(--tp-border, #252532)",
-        borderRadius: 12,
-        overflow: "hidden",
-        marginBottom: 24,
-        fontFamily: mono,
-        color: "var(--tp-text, #e8e8e8)",
-      }}
-    >
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr auto 1fr",
-          alignItems: "center",
-          borderBottom: "1px solid var(--tp-border, #252532)",
-        }}
-      >
-        <div style={{ padding: "16px 24px" }}>
+    <div className="rh-card">
+      <div className="rh-head rh-head--team">
+        <div className="rh-head-side">
           <span
-            style={{
-              color: "var(--tp-brass, #d4a853)",
-              fontSize: 11,
-              fontWeight: 600,
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
-            }}
+            className="rh-head-team"
+            style={{ color: "var(--tp-brass, #d4a853)" }}
           >
             ● {p.teamWhiteName}
           </span>
         </div>
-        <div
-          style={{
-            padding: "6px 18px",
-            fontSize: 18,
-            fontWeight: 800,
-            color: "var(--tp-brass, #d4a853)",
-            background: "var(--tp-card-solid, #1a1a24)",
-            borderRadius: 8,
-            border: "1px solid var(--tp-border, #353545)",
-          }}
-        >
+        <div className="rh-score">
           {matchPending ? "vs" : `${score.a} – ${score.b}`}
         </div>
-        <div style={{ padding: "16px 24px", textAlign: "right" }}>
-          <span
-            style={{
-              color: "#6b9df7",
-              fontSize: 11,
-              fontWeight: 600,
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
-            }}
-          >
+        <div className="rh-head-side rh-head-side--right">
+          <span className="rh-head-team" style={{ color: "#6b9df7" }}>
             {p.teamBlackName} ●
           </span>
         </div>
       </div>
 
-      {p.boards.map((b, bi) => {
-        const last = bi === p.boards.length - 1;
-        const rowBorder = last ? "none" : "1px solid var(--tp-border, #252532)";
-
+      {p.boards.map((b) => {
         if (b.sitOut) {
           return (
-            <div
-              key={b.boardNum}
-              style={{
-                padding: 24,
-                textAlign: "center",
-                color: "var(--tp-muted, #6b6b7b)",
-                fontSize: 13,
-                borderBottom: rowBorder,
-              }}
-            >
-              <span style={{ color: "var(--tp-muted, #a0a0b0)" }}>
-                {b.playerName}
-              </span>{" "}
-              sat out this round
+            <div className="rh-sitout" key={b.boardNum}>
+              <span>{b.playerName}</span> sat out this round
             </div>
           );
         }
@@ -332,15 +202,7 @@ function TeamHistoryMatch({
         const mmScore = b.miniMatch?.score;
 
         return (
-          <div
-            key={b.boardNum}
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 160px 1fr",
-              borderBottom: rowBorder,
-              minHeight: 120,
-            }}
-          >
+          <div className="rh-board" key={b.boardNum}>
             <PlayerSide
               name={aName}
               isWhite={teamAIsWhite}
@@ -358,52 +220,17 @@ function TeamHistoryMatch({
               }
             />
 
-            <div
-              style={{
-                padding: "16px 12px",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                borderLeft: "1px solid var(--tp-border, #252532)",
-                borderRight: "1px solid var(--tp-border, #252532)",
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 9,
-                  fontWeight: 600,
-                  letterSpacing: "0.15em",
-                  textTransform: "uppercase",
-                  color: "var(--tp-muted, #4a4a5a)",
-                }}
-              >
-                Board {b.boardNum}
-              </div>
+            <div className="rh-mid">
+              <div className="rh-mid-label">Board {b.boardNum}</div>
 
               {lockedByOtherBoard ? (
-                <div
-                  style={{
-                    fontSize: 9,
-                    color: "var(--tp-muted, #6b6b7b)",
-                    textAlign: "center",
-                    lineHeight: 1.4,
-                    maxWidth: 120,
-                  }}
-                >
+                <div className="rh-note">
                   Match decided on Board {decisiveBoard.boardNum}
                 </div>
               ) : (
                 <>
                   {showMiniMatch && mmScore && (
-                    <span
-                      style={{
-                        color: "var(--tp-brass, #d4a853)",
-                        fontWeight: 800,
-                        fontSize: 15,
-                      }}
-                    >
+                    <span className="rh-mm">
                       {/* score.A follows White, so flip when the left team
                           is Black on this board */}
                       {teamAIsWhite ? mmScore.A : mmScore.B}
@@ -414,13 +241,12 @@ function TeamHistoryMatch({
 
                   {isEditing && !showMiniMatch ? (
                     <select
-                      className="result-select"
+                      className="result-select rh-select"
                       value={b.result || ""}
                       disabled={loading}
                       onChange={(e) =>
                         onResultChange?.(index, e.target.value, b.boardNum)
                       }
-                      style={{ maxWidth: 140, fontSize: 11 }}
                     >
                       <option value="" disabled>
                         Select
@@ -434,46 +260,20 @@ function TeamHistoryMatch({
                       )}
                     </select>
                   ) : (
-                    <>
-                      <div
-                        style={{
-                          padding: "4px 12px",
-                          borderRadius: 999,
-                          background:
-                            "rgba(var(--tp-accent-rgb, 184, 134, 58), 0.15)",
-                          color: "var(--tp-text, #e8e8e8)",
-                          fontWeight: 700,
-                          fontSize: 13,
-                        }}
-                      >
+                    <div className="rh-result">
+                      <div className="rh-chip">
                         {boardPending
                           ? "vs"
                           : b.result
                           ? formatResult(b.result)
                           : "—"}
                       </div>
-                      <div
-                        style={{
-                          fontSize: 9,
-                          color: "var(--tp-muted, #8a8a9a)",
-                          textAlign: "center",
-                          lineHeight: 1.4,
-                          maxWidth: 130,
-                        }}
-                      >
-                        {outcomeText}
-                      </div>
-                    </>
+                      <div className="rh-outcome">{outcomeText}</div>
+                    </div>
                   )}
 
                   {b.derivedFromBoard && (
-                    <div
-                      style={{
-                        fontSize: 9,
-                        color: "var(--tp-muted, #6b6b7b)",
-                        textAlign: "center",
-                      }}
-                    >
+                    <div className="rh-note">
                       derived from Board {b.derivedFromBoard}
                     </div>
                   )}
@@ -514,11 +314,9 @@ function TeamHistoryMatch({
   );
 }
 
-const COLOR_WHITE_SIDE = "var(--tp-brass, #d4a853)";
-const COLOR_BLACK_SIDE = "#6b9df7";
-
 // Individual-event round, drawn with the same card language as a team match:
-// White on the left, Black on the right, result in the middle column.
+// White first, Black second, result in the middle column (or on top when the
+// screen is too narrow for three columns).
 function IndividualRound({
   round,
   isEditing,
@@ -530,108 +328,37 @@ function IndividualRound({
   onOpenMiniMatch,
 }) {
   const pairings = round.pairings;
-  const border = "1px solid var(--tp-border, #252532)";
 
   return (
-    <div
-      className="individual-round"
-      style={{
-        background: "var(--tp-bg, #13131a)",
-        border,
-        borderRadius: 12,
-        overflow: "hidden",
-        marginBottom: 24,
-        fontFamily: mono,
-        color: "var(--tp-text, #e8e8e8)",
-      }}
-    >
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 160px 1fr",
-          alignItems: "center",
-          borderBottom: border,
-        }}
-      >
-        <div style={{ padding: "16px 24px" }}>
+    <div className="rh-card individual-round">
+      <div className="rh-head rh-head--individual">
+        <div className="rh-head-side">
           <span
-            style={{
-              color: COLOR_WHITE_SIDE,
-              fontSize: 11,
-              fontWeight: 600,
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
-            }}
+            className="rh-head-team"
+            style={{ color: "var(--tp-brass, #d4a853)" }}
           >
             ● White
           </span>
         </div>
-        <div
-          style={{
-            textAlign: "center",
-            fontSize: 9,
-            fontWeight: 600,
-            letterSpacing: "0.15em",
-            textTransform: "uppercase",
-            color: "var(--tp-muted, #8a8a9a)",
-          }}
-        >
-          Result
-        </div>
-        <div style={{ padding: "16px 24px", textAlign: "right" }}>
-          <span
-            style={{
-              color: COLOR_BLACK_SIDE,
-              fontSize: 11,
-              fontWeight: 600,
-              letterSpacing: "0.12em",
-              textTransform: "uppercase",
-            }}
-          >
+        <div className="rh-head-mid">Result</div>
+        <div className="rh-head-side rh-head-side--right">
+          <span className="rh-head-team" style={{ color: "#6b9df7" }}>
             Black ●
           </span>
         </div>
       </div>
 
       {pairings.map((p, i) => {
-        const last = i === pairings.length - 1;
-        const rowBorder = last ? "none" : border;
-
         if (p.type === "bye") {
           return (
-            <div
-              key={i}
-              style={{
-                padding: 24,
-                textAlign: "center",
-                borderBottom: rowBorder,
-              }}
-            >
-              <span
-                style={{
-                  color: COLOR_WHITE_SIDE,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.1em",
-                  fontWeight: 600,
-                }}
-              >
-                {p.playerName}
-              </span>
-              <span
-                style={{
-                  display: "block",
-                  marginTop: 8,
-                  color: "var(--tp-muted, #8a8a9a)",
-                  fontSize: 12,
-                }}
-              >
-                BYE — RECEIVES +1
-              </span>
+            <div className="rh-bye rh-bye--row" key={i}>
+              <span className="rh-bye-name">{p.playerName}</span>
+              <span className="rh-bye-text">BYE — RECEIVES +1</span>
             </div>
           );
         }
 
-        // White is always the left-hand player here.
+        // White is always the first player here.
         const outcome = outcomeFor(p.result, true);
         const gamePending = partial ? !p.result : pending;
         const outcomeText =
@@ -650,15 +377,7 @@ function IndividualRound({
         const mmScore = p.miniMatch?.score;
 
         return (
-          <div
-            key={i}
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 160px 1fr",
-              borderBottom: rowBorder,
-              minHeight: 120,
-            }}
-          >
+          <div className="rh-board" key={i}>
             <PlayerSide
               name={p.whiteName}
               isWhite
@@ -674,49 +393,21 @@ function IndividualRound({
               }
             />
 
-            <div
-              style={{
-                padding: "16px 12px",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                borderLeft: border,
-                borderRight: border,
-              }}
-            >
-              <div
-                style={{
-                  fontSize: 9,
-                  fontWeight: 600,
-                  letterSpacing: "0.15em",
-                  textTransform: "uppercase",
-                  color: "var(--tp-muted, #4a4a5a)",
-                }}
-              >
-                Board {i + 1}
-              </div>
+            <div className="rh-mid">
+              <div className="rh-mid-label">Board {i + 1}</div>
 
               {showMiniMatch && mmScore && (
-                <span
-                  style={{
-                    color: "var(--tp-brass, #d4a853)",
-                    fontWeight: 800,
-                    fontSize: 15,
-                  }}
-                >
+                <span className="rh-mm">
                   {mmScore.A} – {mmScore.B}
                 </span>
               )}
 
               {isEditing && !showMiniMatch ? (
                 <select
-                  className="result-select"
+                  className="result-select rh-select"
                   value={p.result || ""}
                   disabled={loading}
                   onChange={(e) => onResultChange?.(i, e.target.value)}
-                  style={{ maxWidth: 140, fontSize: 11 }}
                 >
                   <option value="" disabled>
                     Select
@@ -728,36 +419,16 @@ function IndividualRound({
                   ))}
                 </select>
               ) : (
-                <>
-                  <div
-                    style={{
-                      padding: "4px 12px",
-                      borderRadius: 999,
-                      background:
-                        "rgba(var(--tp-accent-rgb, 184, 134, 58), 0.15)",
-                      color: "var(--tp-text, #e8e8e8)",
-                      fontWeight: 700,
-                      fontSize: 13,
-                    }}
-                  >
+                <div className="rh-result">
+                  <div className="rh-chip">
                     {gamePending
                       ? "vs"
                       : p.result
                       ? formatResult(p.result)
                       : "—"}
                   </div>
-                  <div
-                    style={{
-                      fontSize: 9,
-                      color: "var(--tp-muted, #8a8a9a)",
-                      textAlign: "center",
-                      lineHeight: 1.4,
-                      maxWidth: 130,
-                    }}
-                  >
-                    {outcomeText}
-                  </div>
-                </>
+                  <div className="rh-outcome">{outcomeText}</div>
+                </div>
               )}
 
               {showMiniMatch && (
@@ -818,39 +489,9 @@ export default function RoundHistory({
       <div className="team-matches">
         {round.pairings.map((p, i) =>
           p.type === "bye" ? (
-            <div
-              key={i}
-              style={{
-                background: "var(--tp-bg, #13131a)",
-                border: "1px solid var(--tp-border, #252532)",
-                borderRadius: 12,
-                padding: 24,
-                textAlign: "center",
-                marginBottom: 24,
-                fontFamily: mono,
-                color: "var(--tp-text, #e8e8e8)",
-              }}
-            >
-              <span
-                style={{
-                  color: "var(--tp-brass, #d4a853)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.1em",
-                  fontWeight: 600,
-                }}
-              >
-                {p.teamName}
-              </span>
-              <span
-                style={{
-                  display: "block",
-                  marginTop: 8,
-                  color: "var(--tp-muted, #8a8a9a)",
-                  fontSize: 12,
-                }}
-              >
-                BYE — FULL TEAM RECEIVES +1
-              </span>
+            <div className="rh-bye" key={i}>
+              <span className="rh-bye-name">{p.teamName}</span>
+              <span className="rh-bye-text">BYE — FULL TEAM RECEIVES +1</span>
             </div>
           ) : (
             <TeamHistoryMatch

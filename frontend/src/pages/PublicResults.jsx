@@ -1,4 +1,23 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+// Width of an element, capped at `max` — lets the Chess960 board shrink to fit
+// a phone instead of overflowing at a fixed 420px.
+function useFitWidth(max) {
+  const ref = useRef(null);
+  const [w, setW] = useState(max);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const measure = () =>
+      setW(Math.max(200, Math.min(max, Math.floor(el.clientWidth))));
+    measure();
+    if (typeof ResizeObserver === "undefined") return undefined;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [max]);
+  return [ref, w];
+}
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { api } from "../api.js";
 import RoundHistory from "../components/RoundHistory.jsx";
@@ -92,6 +111,7 @@ function Chess960Section({ data }) {
     );
   }, [history.length]);
 
+  const [boardRef, boardSize] = useFitWidth(420);
   const current =
     history.find((r) => r.round === selectedRound)?.chess960 ??
     data.currentChess960;
@@ -101,7 +121,14 @@ function Chess960Section({ data }) {
       <div className="pv-card c960-page">
         <div className="section-header">
           <h2>Chess960 Starting Position</h2>
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 10,
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
             <select
               value={theme}
               onChange={(e) => setTheme(e.target.value)}
@@ -140,10 +167,10 @@ function Chess960Section({ data }) {
             pairings are up.
           </p>
         ) : (
-          <div className="c960-current-layout">
+          <div className="c960-current-layout" ref={boardRef}>
             <ChessBoard
               backRank={current.backRank}
-              size={420}
+              size={boardSize}
               theme={theme}
               pieceTheme={pieceTheme}
             />
@@ -372,7 +399,14 @@ function CageMatchSection({ cm, history, performance, extrasError, view }) {
     <div className="cm-root">
       {view === "match" && (
         <>
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              flexWrap: "wrap",
+              gap: 10,
+            }}
+          >
             <select
               value={theme}
               onChange={(e) => setTheme(e.target.value)}

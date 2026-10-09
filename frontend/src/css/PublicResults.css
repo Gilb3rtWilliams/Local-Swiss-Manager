@@ -861,3 +861,156 @@
 .pv-root .rating-tag {
   font-family: var(--pv-font-num);
 }
+
+/* ── Mobile ───────────────────────────────────────────────────────────── */
+.pv-nav,
+.pv-round-picker {
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.pv-nav::-webkit-scrollbar,
+.pv-round-picker::-webkit-scrollbar {
+  display: none;
+}
+.pv-root {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+@media (max-width: 860px) {
+  /* Order: top bar, header, section nav (sticky), round picker, content. */
+  .pv-shell {
+    display: flex;
+    flex-direction: column;
+  }
+  .pv-layout {
+    display: contents;
+  }
+  .pv-topbar {
+    order: 1;
+  }
+  .pv-header {
+    order: 2;
+  }
+  .pv-nav {
+    order: 3;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    margin: 0 -4px 14px;
+    scroll-snap-type: x proximity;
+    box-shadow: 0 6px 14px -8px rgba(0, 0, 0, 0.5);
+  }
+  .pv-toolbar {
+    order: 4;
+  }
+  .pv-pane {
+    order: 5;
+  }
+  .pv-footnote {
+    order: 6;
+  }
+  .pv-nav-item {
+    min-height: 44px;
+    scroll-snap-align: center;
+  }
+  .pv-round-pill {
+    min-width: 52px;
+    min-height: 52px;
+    scroll-snap-align: center;
+  }
+  .pv-toolbar .pv-round-picker {
+    padding-top: 10px;
+  }
+}
+
+@media (max-width: 640px) {
+  .pv-shell {
+    padding: 20px max(14px, env(safe-area-inset-right))
+      env(safe-area-inset-bottom) max(14px, env(safe-area-inset-left));
+  }
+  .pv-title {
+    font-size: clamp(1.4rem, 7vw, 1.9rem);
+    line-height: 1.15;
+  }
+  .pv-meta {
+    font-size: 0.82rem;
+    line-height: 1.6;
+  }
+  .pv-toolbar {
+    padding: 8px 12px;
+    margin-bottom: 14px;
+  }
+  .pv-card {
+    padding: 14px;
+    border-radius: 12px;
+  }
+  .pv-chip {
+    min-height: 40px;
+    padding: 8px 16px;
+    font-size: 0.85rem;
+  }
+  .pv-root select,
+  .pv-root input,
+  .pv-root textarea {
+    font-size: 16px;
+  } /* stops iOS zooming on focus */
+  .pv-root select {
+    min-height: 44px;
+    max-width: 100%;
+  }
+  .pv-root table {
+    font-size: 0.82rem;
+  }
+  .pv-root th,
+  .pv-root td {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+  .pv-pane .pv-card {
+    -webkit-overflow-scrolling: touch;
+  }
+  .pv-stat-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .pv-stat {
+    flex: 1 1 40%;
+  }
+  .pv-back-link {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .pv-footnote {
+    padding-bottom: 24px;
+  }
+  .c960-current-layout {
+    flex-direction: column !important;
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 360px) {
+  .pv-shell {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  .pv-card {
+    padding: 12px;
+  }
+  .pv-nav-item {
+    padding: 10px;
+    font-size: 0.8rem;
+  }
+  .pv-root table {
+    font-size: 0.78rem;
+  }
+}
+
+/* Keep names readable in narrow standings tables (table scrolls instead). */
+@media (max-width: 640px) {
+  .pv-root .player-name {
+    min-width: 130px;
+  }
+}
