@@ -37,8 +37,23 @@ function outcomeFor(result, teamAIsWhite) {
 // team events, which misattributes points on the boards where teamBlack
 // has White — so for those we recompute here. Bughouse's stored values are
 // match-level (win = 1) and already correct.
-function matchScore(p, isBughouse) {
-  if (isBughouse) return { a: p.whitePoints, b: p.blackPoints };
+function matchScore(p, isBughouse, partial = false) {
+  if (isBughouse && !partial) return { a: p.whitePoints, b: p.blackPoints };
+  if (isBughouse) {
+    // A round still in progress has no stored match points yet, so derive
+    // them from the boards: team A wins on board 1 White (it is White on odd
+    // boards) or board 2 Black; one decisive board settles the match.
+    const real = (p.boards || []).filter((bd) => !bd.sitOut);
+    const [b1, b2] = real;
+    const aWon =
+      (b1 && WHITE_WINS.has(b1.result)) || (b2 && BLACK_WINS.has(b2.result));
+    const bWon =
+      (b1 && BLACK_WINS.has(b1.result)) || (b2 && WHITE_WINS.has(b2.result));
+    const allIn = real.length > 0 && real.every((bd) => bd.result);
+    if (aWon) return { a: 1, b: 0 };
+    if (bWon) return { a: 0, b: 1 };
+    return allIn ? { a: 0.5, b: 0.5 } : { a: 0, b: 0 };
+  }
   let a = 0;
   let b = 0;
   (p.boards || []).forEach((bd) => {
@@ -191,6 +206,7 @@ function TeamHistoryMatch({
   loading,
   matchPlay,
   pending,
+  partial,
   onResultChange,
   onOpenMiniMatch,
 }) {
@@ -199,7 +215,12 @@ function TeamHistoryMatch({
   const decisiveBoard = isBughouse
     ? p.boards?.find((b) => !b.sitOut && DECISIVE_RESULTS.has(b.result))
     : null;
-  const score = matchScore(p, isBughouse);
+  const score = matchScore(p, isBughouse, partial);
+  // In a round that's still in progress ("partial") each game is its own
+  // case: the ones with a saved result show it, the rest show "vs" / "To be
+  // played". Otherwise the whole round is either pending or played.
+  const anyResult = (p.boards || []).some((bd) => !bd.sitOut && bd.result);
+  const matchPending = partial ? !anyResult : pending;
 
   return (
     <div
@@ -245,7 +266,7 @@ function TeamHistoryMatch({
             border: "1px solid var(--tp-border, #353545)",
           }}
         >
-          {pending ? "vs" : `${score.a} – ${score.b}`}
+          {matchPending ? "vs" : `${score.a} – ${score.b}`}
         </div>
         <div style={{ padding: "16px 24px", textAlign: "right" }}>
           <span
@@ -290,6 +311,7 @@ function TeamHistoryMatch({
         const aName = teamAIsWhite ? b.whiteName : b.blackName;
         const bName = teamAIsWhite ? b.blackName : b.whiteName;
         const outcome = outcomeFor(b.result, teamAIsWhite);
+        const boardPending = partial ? !b.result : pending;
         const lockedByOtherBoard =
           decisiveBoard && decisiveBoard.boardNum !== b.boardNum && !b.result;
         const showMiniMatch = matchPlay && !isBughouse && b.miniMatch;
@@ -303,7 +325,7 @@ function TeamHistoryMatch({
             ? "Draw"
             : outcome === "double"
             ? "Double forfeit"
-            : pending
+            : boardPending
             ? "To be played"
             : "No result";
 
@@ -424,7 +446,7 @@ function TeamHistoryMatch({
                           fontSize: 13,
                         }}
                       >
-                        {pending
+                        {boardPending
                           ? "vs"
                           : b.result
                           ? formatResult(b.result)
@@ -503,6 +525,7 @@ function IndividualRound({
   loading,
   matchPlay,
   pending,
+  partial,
   onResultChange,
   onOpenMiniMatch,
 }) {
@@ -610,6 +633,7 @@ function IndividualRound({
 
         // White is always the left-hand player here.
         const outcome = outcomeFor(p.result, true);
+        const gamePending = partial ? !p.result : pending;
         const outcomeText =
           outcome === "A"
             ? `${p.whiteName} wins`
@@ -619,7 +643,7 @@ function IndividualRound({
             ? "Draw"
             : outcome === "double"
             ? "Double forfeit"
-            : pending
+            : gamePending
             ? "To be played"
             : "No result";
         const showMiniMatch = matchPlay && p.miniMatch;
@@ -716,7 +740,11 @@ function IndividualRound({
                       fontSize: 13,
                     }}
                   >
-                    {pending ? "vs" : p.result ? formatResult(p.result) : "—"}
+                    {gamePending
+                      ? "vs"
+                      : p.result
+                      ? formatResult(p.result)
+                      : "—"}
                   </div>
                   <div
                     style={{
@@ -775,6 +803,10 @@ export default function RoundHistory({
   // Round not played yet: same layout, but "vs" / "To be played" in place of
   // a result. Used by the public page for the live round.
   pending = false,
+  // Round still in progress (the open round, or one paired in advance): show
+  // the result of every game that has one and "vs" / "To be played" for the
+  // rest, game by game — unlike `pending`, which treats the whole round alike.
+  partial = false,
   onOpenMiniMatch,
 }) {
   if (!round) return <p className="muted">No completed rounds yet.</p>;
@@ -830,6 +862,7 @@ export default function RoundHistory({
               loading={loading}
               matchPlay={matchPlay}
               pending={pending}
+              partial={partial}
               onResultChange={onResultChange}
               onOpenMiniMatch={onOpenMiniMatch}
             />
@@ -846,6 +879,7 @@ export default function RoundHistory({
       loading={loading}
       matchPlay={matchPlay}
       pending={pending}
+      partial={partial}
       onResultChange={onResultChange}
       onOpenMiniMatch={onOpenMiniMatch}
     />

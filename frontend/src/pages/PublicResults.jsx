@@ -637,9 +637,9 @@ const SYSTEM_LABEL = {
 
 // The live round's payload (data.currentPairings) names team-board players as
 // objects (b.white.name) while completed rounds use flat fields
-// (b.whiteName), so reshape it once and let RoundHistory draw both. That keeps
-// an upcoming round pixel-identical to a finished one; RoundHistory's
-// `pending` flag swaps the result for "vs" / "To be played".
+// (b.whiteName), so reshape it once and let RoundHistory draw both — an
+// unfinished round then looks exactly like a finished one. Saved results are
+// kept: RoundHistory's `partial` mode shows them game by game.
 function toHistoryShape(format, pairings) {
   if (format !== "team") return { pairings };
   return {
@@ -653,11 +653,46 @@ function toHistoryShape(format, pairings) {
               whiteName: b.whiteName ?? b.white?.name,
               blackName: b.blackName ?? b.black?.name,
               playerName: b.playerName ?? (b.white || b.black)?.name,
-              result: null,
+              result: b.result ?? null,
             })),
           },
     ),
   };
+}
+
+// An open round or one paired in advance: every game that has a saved result
+// shows it, the rest show "vs" / "To be played".
+function InProgressRound({ format, variant, pairings }) {
+  let played = 0;
+  let total = 0;
+  (pairings || []).forEach((p) => {
+    if (format === "team") {
+      if (p.type !== "match") return;
+      (p.boards || []).forEach((b) => {
+        if (b.sitOut) return;
+        total += 1;
+        if (b.result) played += 1;
+      });
+    } else if (p.type === "individual") {
+      total += 1;
+      if (p.result) played += 1;
+    }
+  });
+  return (
+    <>
+      {total > 0 && (
+        <p className="pv-note-lead">
+          {played} of {total} game{total === 1 ? "" : "s"} reported
+        </p>
+      )}
+      <RoundHistory
+        format={format}
+        variant={variant}
+        round={toHistoryShape(format, pairings || [])}
+        partial
+      />
+    </>
+  );
 }
 
 export default function PublicResults() {
@@ -681,8 +716,13 @@ export default function PublicResults() {
   // completed round both just show the live data already in `data` (no
   // fetch needed); only a genuinely earlier round triggers a lookup.
   const latestCompletedRound = data?.rounds?.at(-1)?.round ?? null;
+  // A number can also name a round that was paired in advance (it hasn't been
+  // played, so there are no standings "as of" it) — only a genuinely earlier
+  // COMPLETED round triggers the snapshot lookup.
   const isViewingPastRound =
-    typeof selectedRound === "number" && selectedRound !== latestCompletedRound;
+    typeof selectedRound === "number" &&
+    selectedRound !== latestCompletedRound &&
+    Boolean(data?.rounds?.some((r) => r.round === selectedRound));
 
   const [standingsSnapshot, setStandingsSnapshot] = useState(null);
   const [standingsLoading, setStandingsLoading] = useState(false);
@@ -827,6 +867,13 @@ export default function PublicResults() {
     data.system === "single_elimination" ||
     data.system === "double_elimination";
   const hasAnyRounds = (data.rounds?.length ?? 0) > 0 || !!data.currentPairings;
+  // Rounds the organizer has already paired ahead of the open one, newest
+  // first (the same order the picker lists completed rounds in).
+  const queuedRounds = data.queuedRounds || [];
+  const selectedQueued =
+    typeof selectedRound === "number"
+      ? queuedRounds.find((q) => q.round === selectedRound)
+      : null;
   const hasStandings = !isMatch && (data.standings?.length ?? 0) > 0;
   const boardRankings = data.boardRankings || [];
 
@@ -1002,15 +1049,30 @@ export default function PublicResults() {
                 {selectedRound === "current"
                   ? data.currentRound
                   : selectedRound}
+                {selectedQueued ? " · Upcoming" : ""}
               </span>
             }
           >
             {selectedRound === "current" ? (
-              <RoundHistory
+              <InProgressRound
                 format={data.format}
-                round={toHistoryShape(data.format, data.currentPairings)}
-                pending
+                variant={data.variant}
+                pairings={data.currentPairings}
               />
+            ) : selectedQueued ? (
+              <>
+                <p className="pv-note-lead">
+                  Round {selectedQueued.round} hasn't started yet — these
+                  pairings were made in advance. Results show up as games are
+                  reported, and count towards the standings once the round has
+                  been played.
+                </p>
+                <InProgressRound
+                  format={data.format}
+                  variant={data.variant}
+                  pairings={selectedQueued.pairings}
+                />
+              </>
             ) : (
               <RoundHistory
                 format={data.format}
@@ -1199,6 +1261,23 @@ export default function PublicResults() {
           <div className="pv-toolbar">
             <span className="pv-toolbar-label">Viewing</span>
             <div className="pv-round-picker">
+              {/* Rounds paired ahead of time — only meaningful for the
+                  Pairings view, so they're left out of the standings tabs. */}
+              {activeId === "pairings" &&
+                [...queuedRounds].reverse().map((q) => (
+                  <button
+                    key={q.round}
+                    type="button"
+                    className={`pv-round-pill${
+                      selectedRound === q.round ? " active" : ""
+                    }`}
+                    onClick={() => setSelectedRound(q.round)}
+                  >
+                    <span className="pv-round-pill-label">Round</span>
+                    <span className="pv-round-pill-number">{q.round}</span>
+                    <span className="pv-round-pill-tag">Upcoming</span>
+                  </button>
+                ))}
               {data.currentPairings && (
                 <button
                   type="button"

@@ -4167,6 +4167,16 @@ function getPublicResults(token) {
     currentRound: full.currentRound,
     totalRounds: full.totalRounds,
     currentPairings: full.currentPairings,
+    // Rounds the organizer has already paired ahead of the open one, with
+    // whatever results have been saved into them. Only the pairings are public:
+    // how they were made (auto/manual, stale, basedOn) is organizer-only, and
+    // so is the Chess960 position — it's drawn per round and a spectator
+    // seeing it before the round opens would be handing players prep time, so
+    // it stays hidden until the round becomes the open one.
+    queuedRounds: (full.queuedRounds || []).map((q) => ({
+      round: q.round,
+      pairings: q.pairings,
+    })),
     rounds: full.rounds,
     standings: full.standings,
     teamStandings: full.teamStandings,
