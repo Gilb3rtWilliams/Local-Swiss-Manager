@@ -727,3 +727,213 @@
 .pt-step-num {
   font-family: var(--p-font-num);
 }
+
+/* ── Mobile refinements (phones & small tablets) ──────────────────────────
+   Appended after the base responsive rules so they win; desktop is untouched. */
+.pt-root {
+  min-height: 100dvh;
+}
+.pt-shell {
+  min-height: 100dvh;
+}
+.pt-filter-group {
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.pt-filter-group::-webkit-scrollbar {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .pt-side {
+    padding: 12px max(14px, env(safe-area-inset-right)) 10px
+      max(14px, env(safe-area-inset-left));
+    gap: 6px;
+  }
+  .pt-brand {
+    padding: 0;
+    font-size: 11px;
+    min-height: 32px;
+  }
+  .pt-filter-group {
+    gap: 6px;
+    padding: 2px 0;
+    scroll-snap-type: x proximity;
+  }
+  .pt-filter-title {
+    font-size: 9px;
+    padding-right: 4px;
+  }
+  .pt-filter-item {
+    min-height: 40px;
+    padding: 8px 12px;
+    scroll-snap-align: start;
+  }
+  .pt-main {
+    padding: 18px max(14px, env(safe-area-inset-right))
+      calc(32px + env(safe-area-inset-bottom))
+      max(14px, env(safe-area-inset-left));
+  }
+  .pt-topbar {
+    margin-bottom: 18px;
+    gap: 10px;
+  }
+  .pt-heading {
+    gap: 10px;
+  }
+  .pt-top-actions {
+    width: 100%;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .pt-link-btn {
+    min-height: 44px;
+    padding: 8px 4px;
+  }
+}
+
+@media (max-width: 760px) {
+  .pt-welcome {
+    padding: 16px;
+    margin-bottom: 18px;
+    border-radius: 14px;
+  }
+  .pt-welcome-head {
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .pt-welcome-close {
+    min-width: 40px;
+    min-height: 40px;
+    margin: -8px -8px 0 0;
+  }
+  .pt-steps {
+    gap: 12px;
+  }
+
+  .pt-stats {
+    margin-bottom: 18px;
+    border-radius: 14px;
+  }
+  .pt-stat {
+    padding: 14px;
+    gap: 10px;
+  }
+  .pt-stat-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+  }
+  .pt-stat-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+  .pt-stat-body strong {
+    font-size: 1.35rem;
+  }
+  .pt-stat-body span {
+    font-size: 0.6rem;
+    letter-spacing: 0.05em;
+  }
+
+  .pt-panel {
+    border-radius: 14px;
+  }
+  .pt-panel-head {
+    padding: 14px 16px;
+  }
+  .pt-pad {
+    padding: 20px 16px;
+  }
+
+  /* One compact card per event:
+       title ............ status →
+       progress ......... players  */
+  .pt-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 12px;
+    row-gap: 10px;
+    padding: 14px 16px;
+    min-height: 44px;
+  }
+  .pt-row:active {
+    background: var(--p-tint-strong);
+  }
+  .pt-row-main {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .pt-row-end {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .pt-row-progress {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: center;
+  }
+  .pt-row-count {
+    grid-column: 2;
+    grid-row: 2;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 5px;
+  }
+  .pt-row-count strong {
+    font-size: 1.05rem;
+  }
+  .pt-winner {
+    grid-row: 3;
+  }
+  .pt-row-title {
+    font-size: 15px;
+    margin-bottom: 6px;
+  }
+  .pt-chip {
+    font-size: 10.5px;
+  }
+  .pt-federation {
+    font-size: 11px;
+  }
+  .pt-bar {
+    height: 5px;
+  }
+  .pt-empty {
+    padding: 36px 16px;
+  }
+}
+
+@media (max-width: 640px) {
+  .pt-root .pt-title {
+    font-size: clamp(20px, 6.4vw, 26px);
+    letter-spacing: 0.03em;
+    line-height: 1.2;
+  }
+  .pt-root .pt-sub {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 360px) {
+  .pt-main {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .pt-row {
+    padding: 12px;
+  }
+  .pt-stat {
+    padding: 12px 10px;
+    gap: 8px;
+  }
+  .pt-stat-icon {
+    display: none;
+  }
+  .pt-pill {
+    padding: 3px 9px;
+    font-size: 9.5px;
+  }
+}
