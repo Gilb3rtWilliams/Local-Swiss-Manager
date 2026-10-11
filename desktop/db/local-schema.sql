@@ -73,3 +73,21 @@ CREATE TABLE IF NOT EXISTS entitlement_cache (
   checked_at      TEXT,
   valid_until     TEXT
 );
+-- Automatic publishing (publishSync.js). One row per tournament that has ever
+-- been published: what was last uploaded (by content hash), what has been
+-- confirmed visible on the website, and why the last attempt failed, if it did.
+-- The `outbox` table above belongs to the earlier event-by-event design and is
+-- no longer used for publishing.
+CREATE TABLE IF NOT EXISTS publish_sync (
+  tournament_id     TEXT PRIMARY KEY REFERENCES tournaments(id) ON DELETE CASCADE,
+  pushed_hash       TEXT,              -- sha256 of the tournament data last uploaded OK
+  pushed_at         TEXT,
+  verified_hash     TEXT,              -- the pushed_hash confirmed on the public page
+  verified_at       TEXT,
+  public_token      TEXT,              -- spectator link token returned by the server
+  unpublish_pending INTEGER NOT NULL DEFAULT 0, -- 1 = "off" not yet confirmed by the server
+  opted_in          INTEGER NOT NULL DEFAULT 0, -- 1 = switched on through the Live Publish toggle (publish_state rows from older versions don't count)
+  last_error        TEXT,
+  last_error_kind   TEXT,              -- 'network' | 'auth' | 'subscription' | 'server' | 'verify'
+  last_attempt_at   TEXT
+);

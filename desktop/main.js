@@ -25,7 +25,7 @@
 //     (LoginScreen.jsx) only ever talks to window.swissManagerDesktop's
 //     login/logout/status methods -- it never sees the token itself.
 
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow, ipcMain, shell } = require("electron");
 const path = require("path");
 const http = require("http");
 const PUBLIC_WEB_ORIGIN = (
@@ -33,13 +33,8 @@ const PUBLIC_WEB_ORIGIN = (
 ).replace(/\/+$/, "");
 
 const { openLocalDb } = require("./db/localDb");
-const { OutboxWorker } = require("./publishing/outboxWorker");
+const { PublishSync } = require("./publishing/publishSync");
 const { Entitlement } = require("./publishing/entitlement");
-const {
-  enablePublishing,
-  pushTournamentSnapshot,
-  disablePublishing,
-} = require("./publishing/outboxWriter");
 const authStore = require("./publishing/authStore");
 
 const API_BASE_URL = (
@@ -50,7 +45,7 @@ const LOCAL_PORT = 4321; // the local Express server's port inside Electron
 
 let mainWindow;
 let db;
-let outboxWorker;
+let publishSync;
 let entitlement;
 
 function getAuthToken() {
@@ -86,64 +81,55 @@ app.whenReady().then(async () => {
   const dbPath = path.join(app.getPath("userData"), "swissmanager.sqlite");
   db = openLocalDb(dbPath);
 
-  outboxWorker = new OutboxWorker(db, {
-    apiBaseUrl: API_BASE_URL,
-    getAuthToken,
-    onEvent: (name, detail) => {
-      // Surface failures somewhere visible eventually (a status icon,
-      // "3 updates pending" indicator) -- console for now.
-      if (name.endsWith("_error") || name.endsWith("_failed")) {
-        console.warn("[publish]", name, detail);
-      }
-    },
-  });
-  // outboxWorker.start();
-
   entitlement = new Entitlement(db, { apiBaseUrl: API_BASE_URL, getAuthToken });
   await entitlement.refresh();
   setInterval(() => entitlement.refresh(), 60 * 60 * 1000); // hourly; refresh() itself throttles further
+
+  // Keeps every tournament with Live Publish switched on in step with the
+  // website, automatically (and hides it when switched off).
+  publishSync = new PublishSync(db, {
+    apiBaseUrl: API_BASE_URL,
+    webOrigin: PUBLIC_WEB_ORIGIN,
+    getAuthToken,
+    isEntitled: () => entitlement?.isEntitled() ?? false,
+    onEvent: (name, detail) => {
+      if (name.endsWith("_error")) console.warn("[publish]", name, detail);
+    },
+  });
+  publishSync.start();
 
   ipcMain.handle(
     "entitlement:isEntitled",
     () => entitlement?.isEntitled() ?? false,
   );
   ipcMain.handle("outbox:kick", () => {
-    outboxWorker?.kick();
+    publishSync?.kick();
     return true;
   });
-  ipcMain.handle("publish:enable", async (_event, tournamentId) => {
-    if (!entitlement?.isEntitled()) {
-      return { ok: false, error: "Subscription required to publish." };
-    }
-    enablePublishing(db, tournamentId);
-    await pushTournamentSnapshot(db, tournamentId, {
-      apiBaseUrl: API_BASE_URL,
-      getAuthToken,
-    });
+
+  // Switching ON/OFF is instant and local; the sync loop does the network
+  // work and the UI follows it through publish:status.
+  ipcMain.handle("publish:enable", (_event, tournamentId) =>
+    publishSync.enable(tournamentId),
+  );
+  ipcMain.handle("publish:disable", (_event, tournamentId) =>
+    publishSync.disable(tournamentId),
+  );
+  ipcMain.handle("publish:status", (_event, tournamentId) =>
+    publishSync.status(tournamentId),
+  );
+  ipcMain.handle("publish:syncNow", (_event, tournamentId) => {
+    publishSync.syncNow(tournamentId);
     return { ok: true };
   });
-
-  ipcMain.handle("publish:status", (_event, tournamentId) => {
-    const row = db
-      .prepare(`SELECT enabled FROM publish_state WHERE tournament_id = ?`)
-      .get(tournamentId);
-    if (!row) return { enabled: false, synced: true, publicUrl: null };
-    const enabled = Boolean(row.enabled);
-    return {
-      enabled,
-      synced: true, // whole-blob push is synchronous-ish; no separate sync state needed
-      publicUrl: enabled
-        ? `https://local-swiss-manager.onrender.com/tournament/${tournamentId}`
-        : null,
-    };
-  });
-
-  ipcMain.handle("publish:disable", (_event, tournamentId) => {
-    // Turning OFF deliberately doesn't check entitlement -- a lapsed
-    // subscription shouldn't trap someone unable to unpublish their own
-    // tournament. Only turning on (publish:enable, above) is gated.
-    disablePublishing(db, tournamentId);
-    outboxWorker?.kick();
+  ipcMain.handle("publish:webOrigin", () => PUBLIC_WEB_ORIGIN);
+  // Open a page on the website in the arbiter's own browser. Only links on
+  // our own site are allowed.
+  ipcMain.handle("publish:openOnline", async (_event, url) => {
+    if (typeof url !== "string" || !url.startsWith(`${PUBLIC_WEB_ORIGIN}/`)) {
+      return { ok: false, error: "Not a link on the tournament website." };
+    }
+    await shell.openExternal(url);
     return { ok: true };
   });
 
@@ -182,7 +168,7 @@ app.whenReady().then(async () => {
     }
 
     await entitlement.refresh();
-    outboxWorker?.kick();
+    publishSync?.resume();
     return { ok: true, email: null, subscriptionActive: true };
   });
   ipcMain.handle("auth:logout", async () => {
@@ -195,7 +181,7 @@ app.whenReady().then(async () => {
 });
 
 app.on("window-all-closed", () => {
-  outboxWorker?.stop();
+  publishSync?.stop();
   db?.close();
   if (process.platform !== "darwin") app.quit();
 });

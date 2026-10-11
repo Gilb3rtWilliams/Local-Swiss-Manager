@@ -1,238 +1,272 @@
-// PublishToggle.jsx  (renderer -- drop into your tournament screen)
+// auth/PublishToggle.jsx  (desktop app only)
 // ─────────────────────────────────────────────────────────────────────────
-// Renders inside a single tournament's screen -- it needs the LOCAL
-// tournament id (the one already in your `tournaments` table), not
-// anything server-side.
+// "Live Publish" card. Switching it on puts the tournament on the website and
+// KEEPS it in step automatically (see publishing/publishSync.js) — this
+// component just shows what is really happening:
 //
-//   <PublishToggle tournamentId={tournament.id} />
+//   Saved on this computer → Uploaded to the website → Checked on the public page
 //
-// Turning it on/off is IMMEDIATE locally (see outboxWriter.js's
-// enable/disablePublishing -- no network round-trip needed to flip the
-// toggle's own position), but making that take effect on the server
-// (actually registering, or actually hiding) is outboxWorker.js's job and
-// happens slightly after -- so this component polls publish:status for a
-// few seconds after every toggle to show "Turning on…"/"Turning off…"
-// rather than claiming to be done before it actually is.
+// and, once it has reached the website, a link to the ADMIN view of the
+// tournament online, so the arbiter can open it and confirm it matches what
+// they see here. (The link spectators use is the "Pairings & Standings Link"
+// card above this one.)
+//
+//   <PublishToggle tournamentId={t.id} onBeforeEnable={ensurePublicView} />
+//
+// `onBeforeEnable` (optional, async) runs just before publishing is switched
+// on — Overview uses it to make sure the tournament has its spectator link.
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useAuth } from "./AuthContext";
+import { useState } from "react";
+import usePublishStatus from "./usePublishStatus";
 
-const POLL_WHILE_SYNCING_MS = 1500;
-const POLL_IDLE_MS = 30000; // catches external changes, e.g. subscription lapsing elsewhere
+const BADGE = {
+  off: ["Not published", "muted"],
+  hiding: ["Hiding…", "muted"],
+  syncing: ["Syncing…", "info"],
+  live: ["Live", "ok"],
+  offline: ["Offline", "warn"],
+  error: ["Needs attention", "bad"],
+  needs_login: ["Sign in required", "warn"],
+  subscription: ["Subscription needed", "warn"],
+};
 
-export default function PublishToggle({ tournamentId }) {
-  const { checkEntitled } = useAuth();
-  const [entitled, setEntitled] = useState(true); // optimistic default, corrected below
-  const [status, setStatus] = useState(null); // { enabled, synced, publicUrl } | null while loading
-  const [submitting, setSubmitting] = useState(false);
+function ago(iso) {
+  if (!iso) return null;
+  const secs = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000));
+  if (secs < 10) return "just now";
+  if (secs < 60) return `${secs}s ago`;
+  const mins = Math.round(secs / 60);
+  if (mins < 60) return `${mins} min ago`;
+  return new Date(iso).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function describe(s) {
+  switch (s.state) {
+    case "off":
+      return "Turn on to put this tournament on the website. After that, every change you make here is sent automatically.";
+    case "hiding":
+      return "Removing this tournament from the website…";
+    case "live":
+      return `Everything on this computer is on the website${
+        s.lastSyncedAt ? ` · last synced ${ago(s.lastSyncedAt)}` : ""
+      }.`;
+    case "offline":
+      return "No connection. Your changes are saved on this computer and will upload by themselves as soon as you're back online.";
+    case "needs_login":
+      return "Sign in (top right of the app) to publish. Your changes will upload once you're signed in.";
+    case "subscription":
+      return "Publishing needs an active subscription. Your changes are safe on this computer.";
+    case "error":
+      return "The website hasn't confirmed the latest changes yet. It keeps retrying.";
+    default:
+      return s.pendingChanges
+        ? "Sending your latest changes to the website…"
+        : "Sending this tournament to the website…";
+  }
+}
+
+// done | active | wait | fail for each of the three steps
+function stepStates(s) {
+  const failed = s.state === "error" || s.state === "offline";
+  const uploaded = s.steps.uploaded;
+  const verified = s.steps.verified;
+  return [
+    { label: "Saved on this computer", st: "done" },
+    {
+      label: "Uploaded to the website",
+      st: uploaded ? "done" : failed ? "fail" : "active",
+    },
+    {
+      label: "Checked on the public page",
+      st: verified ? "done" : !uploaded ? "wait" : failed ? "fail" : "active",
+    },
+  ];
+}
+
+export default function PublishToggle({ tournamentId, onBeforeEnable }) {
+  const { status, refresh, available } = usePublishStatus(tournamentId);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
-  const pollTimer = useRef(null);
 
-  const refresh = useCallback(async () => {
-    const [s, e] = await Promise.all([
-      window.swissManagerDesktop.publishStatus(tournamentId),
-      checkEntitled(),
-    ]);
-    setStatus(s);
-    setEntitled(e);
-    return s;
-  }, [tournamentId, checkEntitled]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function tick() {
-      const s = await refresh();
-      if (cancelled) return;
-      pollTimer.current = setTimeout(
-        tick,
-        s.synced ? POLL_IDLE_MS : POLL_WHILE_SYNCING_MS,
-      );
-    }
-    tick();
-
-    return () => {
-      cancelled = true;
-      clearTimeout(pollTimer.current);
-    };
-  }, [refresh]);
+  if (!available || !status) return null;
+  const desktop = window.swissManagerDesktop;
 
   async function handleToggle() {
-    if (submitting || !status) return;
-    setSubmitting(true);
+    if (busy) return;
+    setBusy(true);
     setError(null);
-
-    const turningOn = !status.enabled;
-    if (turningOn && !entitled) {
-      setError("Publishing requires an active subscription.");
-      setSubmitting(false);
-      return;
-    }
-
-    const result = turningOn
-      ? await window.swissManagerDesktop.enablePublishing(tournamentId)
-      : await window.swissManagerDesktop.disablePublishing(tournamentId);
-
-    setSubmitting(false);
-    if (!result.ok) {
-      setError(result.error || "Something went wrong.");
-      return;
-    }
-    // Re-poll immediately rather than waiting for the next scheduled tick,
-    // so the UI reflects the new (still-syncing) state right away.
-    clearTimeout(pollTimer.current);
-    const s = await refresh();
-    pollTimer.current = setTimeout(
-      function tick2() {
-        refresh().then((s2) => {
-          pollTimer.current = setTimeout(
-            tick2,
-            s2.synced ? POLL_IDLE_MS : POLL_WHILE_SYNCING_MS,
-          );
-        });
-      },
-      s.synced ? POLL_IDLE_MS : POLL_WHILE_SYNCING_MS,
-    );
-  }
-
-  async function handleCopyLink() {
-    if (!status?.publicUrl) return;
     try {
-      await navigator.clipboard.writeText(status.publicUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard access can fail (permissions, older environments) -- the
-      // link is still shown as selectable text below, so nothing is lost.
+      if (!status.enabled) {
+        if (onBeforeEnable) await onBeforeEnable();
+        const r = await desktop.enablePublishing(tournamentId);
+        if (!r?.ok) throw new Error(r?.error || "Couldn't turn publishing on.");
+      } else {
+        const ok = window.confirm(
+          "Hide this tournament from the website?\n\nNothing is deleted — you can turn publishing back on at any time.",
+        );
+        if (!ok) return;
+        const r = await desktop.disablePublishing(tournamentId);
+        if (!r?.ok)
+          throw new Error(r?.error || "Couldn't turn publishing off.");
+      }
+      await refresh();
+    } catch (e) {
+      setError(e.message || "Something went wrong.");
+    } finally {
+      setBusy(false);
     }
   }
 
-  if (!status) return null; // first load -- avoid flashing a wrong state
+  async function handleRetry() {
+    await desktop.syncPublishNow(tournamentId);
+    refresh();
+  }
 
-  const label = status.enabled
-    ? status.synced
-      ? "Live"
-      : "Turning on…"
-    : status.synced
-    ? "Not published"
-    : "Turning off…";
+  async function handleOpen() {
+    setError(null);
+    const r = await desktop.openOnline(status.adminUrl);
+    if (!r?.ok) setError(r?.error || "Couldn't open the link.");
+  }
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(status.adminUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      /* the link is selectable text below, nothing is lost */
+    }
+  }
+
+  const [badgeText, tone] = BADGE[status.state] || BADGE.syncing;
+  const showSteps = status.enabled && status.state !== "live";
+  const canRetry = ["offline", "error", "syncing"].includes(status.state);
+  const reachedWebsite =
+    status.enabled && (status.steps.uploaded || status.lastSyncedAt);
 
   return (
-    <div style={styles.wrap}>
-      <div style={styles.row}>
+    <div className="pp">
+      <style>{CSS}</style>
+
+      <div className="pp-row">
         <button
           type="button"
           role="switch"
           aria-checked={status.enabled}
+          aria-label="Publish this tournament"
+          className={`pp-switch${status.enabled ? " is-on" : ""}`}
           onClick={handleToggle}
-          disabled={submitting}
-          style={{
-            ...styles.switch,
-            background: status.enabled ? "#2b6cb0" : "#ccc",
-          }}
+          disabled={busy || status.state === "hiding"}
         >
-          <span
-            style={{
-              ...styles.knob,
-              transform: status.enabled
-                ? "translateX(18px)"
-                : "translateX(2px)",
-            }}
-          />
+          <span className="pp-knob" />
         </button>
-        <span style={styles.label}>Publish this tournament</span>
-        <span
-          style={{
-            ...styles.badge,
-            ...(status.enabled && status.synced
-              ? styles.badgeLive
-              : styles.badgeMuted),
-          }}
-        >
-          {label}
+        <span className="pp-title">Publish this tournament</span>
+        <span className={`pp-badge pp-badge--${tone}`} role="status">
+          {(status.state === "syncing" || status.state === "hiding") && (
+            <span className="pp-spin" aria-hidden="true" />
+          )}
+          {badgeText}
         </span>
       </div>
 
-      {!entitled && !status.enabled && (
-        <p style={styles.hint}>Publishing requires an active subscription.</p>
-      )}
-      {error && (
-        <p style={styles.error} role="alert">
-          {error}
-        </p>
+      <p className="pp-desc">{describe(status)}</p>
+
+      {showSteps && (
+        <ol className="pp-steps" aria-label="Publishing progress">
+          {stepStates(status).map((step) => (
+            <li key={step.label} className={`pp-step is-${step.st}`}>
+              <span className="pp-dot" aria-hidden="true">
+                {step.st === "done" ? "✓" : step.st === "fail" ? "!" : ""}
+                {step.st === "active" && <span className="pp-spin" />}
+              </span>
+              {step.label}
+            </li>
+          ))}
+        </ol>
       )}
 
-      {status.enabled && status.cloudTournamentId && (
-        <div style={styles.linkRow}>
-          <input
-            readOnly
-            value={`https://local-swiss-manager.onrender.com/tournament/${status.cloudTournamentId}`}
-            style={styles.linkInput}
-            onFocus={(e) => e.target.select()}
-          />
-          <button
-            type="button"
-            onClick={handleCopyLink}
-            style={styles.copyButton}
-          >
-            {copied ? "Copied!" : "Copy link"}
-          </button>
+      {(status.error || error) && (
+        <div className="pp-alert" role="alert">
+          {error || status.error}
+        </div>
+      )}
+
+      {canRetry && status.enabled && (
+        <button type="button" className="pp-btn" onClick={handleRetry}>
+          Sync now
+        </button>
+      )}
+
+      {reachedWebsite && (
+        <div className="pp-links">
+          <div className="pp-links-label">
+            Admin view on the website
+            <span>Open it to check that it matches what you see here.</span>
+          </div>
+          <div className="pp-linkrow">
+            <input
+              readOnly
+              value={status.adminUrl}
+              className="pp-input"
+              onFocus={(e) => e.target.select()}
+              aria-label="Admin link on the website"
+            />
+            <button
+              type="button"
+              className="pp-btn pp-btn--primary"
+              onClick={handleOpen}
+            >
+              Open ↗
+            </button>
+            <button type="button" className="pp-btn" onClick={handleCopy}>
+              {copied ? "Copied ✓" : "Copy"}
+            </button>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-const styles = {
-  wrap: { padding: 16, border: "1px solid #e2e2e2", borderRadius: 10 },
-  row: { display: "flex", alignItems: "center", gap: 10 },
-  switch: {
-    position: "relative",
-    width: 40,
-    height: 22,
-    borderRadius: 999,
-    border: "none",
-    cursor: "pointer",
-    padding: 0,
-  },
-  knob: {
-    position: "absolute",
-    top: 2,
-    left: 0,
-    width: 18,
-    height: 18,
-    borderRadius: "50%",
-    background: "#fff",
-    transition: "transform 0.15s",
-  },
-  label: { fontSize: 14, fontWeight: 600 },
-  badge: {
-    marginLeft: "auto",
-    padding: "2px 10px",
-    borderRadius: 999,
-    fontSize: 11,
-    fontWeight: 600,
-  },
-  badgeLive: { background: "#e6f4ea", color: "#1a7f37" },
-  badgeMuted: { background: "#f0f0f0", color: "#777" },
-  hint: { margin: "10px 0 0", fontSize: 12, color: "#888" },
-  error: { margin: "10px 0 0", fontSize: 12, color: "#a33" },
-  linkRow: { display: "flex", gap: 8, marginTop: 12 },
-  linkInput: {
-    flex: 1,
-    padding: "6px 8px",
-    fontSize: 12,
-    border: "1px solid #ddd",
-    borderRadius: 6,
-    color: "#444",
-  },
-  copyButton: {
-    padding: "6px 12px",
-    fontSize: 12,
-    border: "1px solid #ccc",
-    borderRadius: 6,
-    background: "#fff",
-    cursor: "pointer",
-  },
-};
+const CSS = `
+.pp { --pp-b: var(--tp-border, #d9d2c0); --pp-m: var(--tp-muted, #7a7a8a); --pp-t: var(--tp-text, inherit); --pp-a: var(--tp-accent, var(--tp-brass, #b8863a)); }
+.pp-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pp-title { font-size: 14px; font-weight: 700; }
+.pp-switch { position: relative; flex: 0 0 auto; width: 44px; height: 26px; border-radius: 999px; border: 0; padding: 0; cursor: pointer; background: color-mix(in srgb, var(--pp-m) 45%, transparent); transition: background .15s; }
+.pp-switch.is-on { background: var(--pp-a); }
+.pp-switch:disabled { opacity: .6; cursor: progress; }
+.pp-knob { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: transform .15s; box-shadow: 0 1px 2px rgba(0,0,0,.3); }
+.pp-switch.is-on .pp-knob { transform: translateX(18px); }
+.pp-badge { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; padding: 3px 11px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: .04em; background: color-mix(in srgb, var(--pp-m) 16%, transparent); color: var(--pp-m); }
+.pp-badge--ok { background: color-mix(in srgb, #1fa463 18%, transparent); color: color-mix(in srgb, #1fa463 70%, var(--pp-t, #000)); }
+.pp-badge--info { background: color-mix(in srgb, #3b82f6 16%, transparent); color: color-mix(in srgb, #3b82f6 70%, var(--pp-t, #000)); }
+.pp-badge--warn { background: color-mix(in srgb, #d99a1c 20%, transparent); color: color-mix(in srgb, #d99a1c 65%, var(--pp-t, #000)); }
+.pp-badge--bad { background: color-mix(in srgb, #e5484d 18%, transparent); color: color-mix(in srgb, #e5484d 75%, var(--pp-t, #000)); }
+.pp-desc { margin: 10px 0 0; font-size: 12.5px; line-height: 1.55; color: var(--pp-m); }
+.pp-steps { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+.pp-step { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--pp-m); }
+.pp-step.is-done, .pp-step.is-active { color: var(--pp-t); }
+.pp-step.is-fail { color: color-mix(in srgb, #e5484d 75%, var(--pp-t, #000)); }
+.pp-dot { position: relative; flex: 0 0 auto; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--pp-b); display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+.pp-step.is-done .pp-dot { background: #1fa463; border-color: #1fa463; color: #fff; }
+.pp-step.is-fail .pp-dot { background: #e5484d; border-color: #e5484d; color: #fff; }
+.pp-spin { display: inline-block; width: 11px; height: 11px; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent; animation: pp-rot .8s linear infinite; }
+.pp-step.is-active .pp-dot .pp-spin { color: var(--pp-a); }
+@keyframes pp-rot { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .pp-spin { animation-duration: 2.4s; } .pp-knob, .pp-switch { transition: none; } }
+.pp-alert { margin-top: 12px; padding: 9px 12px; border-radius: 8px; font-size: 12.5px; line-height: 1.5; border: 1px solid color-mix(in srgb, #e5484d 35%, transparent); background: color-mix(in srgb, #e5484d 9%, transparent); color: color-mix(in srgb, #e5484d 75%, var(--pp-t, #000)); overflow-wrap: anywhere; }
+.pp-btn { margin-top: 12px; min-height: 38px; padding: 6px 14px; font: inherit; font-size: 12.5px; font-weight: 600; border-radius: 8px; border: 1px solid var(--pp-b); background: transparent; color: var(--pp-t); cursor: pointer; }
+.pp-btn:hover { border-color: var(--pp-a); }
+.pp-btn--primary { background: var(--pp-a); border-color: var(--pp-a); color: #fff; }
+.pp-links { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--pp-b); }
+.pp-links-label { display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; font-weight: 700; }
+.pp-links-label span { font-weight: 400; color: var(--pp-m); }
+.pp-linkrow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.pp-linkrow .pp-btn { margin-top: 0; }
+.pp-input { flex: 1 1 220px; min-width: 0; min-height: 38px; padding: 6px 10px; font: inherit; font-size: 12.5px; border: 1px solid var(--pp-b); border-radius: 8px; background: transparent; color: var(--pp-t); }
+@media (max-width: 640px) { .pp-input { font-size: 16px; } .pp-btn { flex: 1 1 auto; min-height: 44px; } .pp-badge { margin-left: 0; } }
+`;

@@ -19,6 +19,10 @@ contextBridge.exposeInMainWorld("swissManagerDesktop", {
     ipcRenderer.invoke("publish:disable", tournamentId),
   publishStatus: (tournamentId) =>
     ipcRenderer.invoke("publish:status", tournamentId),
+  syncPublishNow: (tournamentId) =>
+    ipcRenderer.invoke("publish:syncNow", tournamentId),
+  publishWebOrigin: () => ipcRenderer.invoke("publish:webOrigin"),
+  openOnline: (url) => ipcRenderer.invoke("publish:openOnline", url),
   authStatus: () => ipcRenderer.invoke("auth:status"),
   login: (password) => ipcRenderer.invoke("auth:login", { password }),
   logout: () => ipcRenderer.invoke("auth:logout"),

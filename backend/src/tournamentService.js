@@ -4114,7 +4114,9 @@ function findByPublicViewToken(token) {
   const t = Object.values(db.tournaments).find(
     (x) => x.publicViewToken === token,
   );
-  if (!t) {
+  // A tournament the organizer unpublished from the desktop app is hidden
+  // exactly like one that never existed.
+  if (!t || t.unpublished) {
     const e = new Error("This results link isn't valid or has been removed");
     e.status = 404;
     throw e;
@@ -4220,6 +4222,8 @@ function listPublicTournaments() {
   return (
     Object.values(db.tournaments)
       // Removed the t.publicViewOpen && t.publicViewToken filter so everything goes through
+      // (only tournaments the organizer explicitly unpublished are left out)
+      .filter((t) => !t.unpublished)
       .map((t) => {
         try {
           const full = serializeTournament(t);
@@ -5262,9 +5266,44 @@ async function exportStandingsWorkbook(id) {
 // getTournament() immediately — not a separate write path that bypasses
 // the in-memory cache the rest of the app reads from.
 async function adoptPublishedTournament(id, tournamentData, source) {
-  db.tournaments[id] = { ...tournamentData, id, source };
+  const t = { ...tournamentData, id, source };
+  // Publishing always gives the tournament a results token and undoes any
+  // earlier "unpublish".
+  // The token must stay the SAME across re-uploads (the link has been shared),
+  // so keep the one already on the server if the upload doesn't bring its own.
+  if (!t.publicViewToken) {
+    t.publicViewToken = db.tournaments[id]?.publicViewToken || uid();
+  }
+  // Whether spectators may open /results/<token> stays the organizer's call
+  // (the "Pairings & Standings Link" switch) — it travels in the upload.
+  if (t.publicViewOpen === undefined) t.publicViewOpen = true;
+  t.unpublished = false;
+  db.tournaments[id] = t;
   await persist();
-  return db.tournaments[id];
+  return t;
+}
+
+// Turning publishing OFF in the desktop app: hide the tournament from the
+// website (list + results link) but keep the data, so turning it back on is
+// instant. Only desktop-published tournaments can be hidden this way.
+async function unpublishTournament(id) {
+  const t = db.tournaments[id];
+  if (!t) {
+    const e = new Error("Tournament not found.");
+    e.status = 404;
+    throw e;
+  }
+  if (t.source !== "desktop") {
+    const e = new Error(
+      "Only tournaments published from the desktop app can be unpublished here.",
+    );
+    e.status = 403;
+    throw e;
+  }
+  t.unpublished = true;
+  t.updatedAt = new Date().toISOString();
+  await persist();
+  return { id, unpublished: true };
 }
 
 function serializeBracket(t) {
@@ -6253,6 +6292,7 @@ module.exports = {
   listPublicTournaments,
   exportStandingsWorkbook,
   adoptPublishedTournament,
+  unpublishTournament,
   singleRoundRobinSchedule: roundRobin.singleRoundRobinSchedule,
   doubleRoundRobinSchedule: roundRobin.doubleRoundRobinSchedule,
   scheduleLength: roundRobin.scheduleLength,

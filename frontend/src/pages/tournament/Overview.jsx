@@ -4,6 +4,7 @@ import { api } from "../../api.js";
 import TournamentDetailsCard from "../../components/TournamentDetailsCard.jsx";
 import "../../css/Overview.css";
 import PublishToggle from "../../auth/PublishToggle.jsx";
+import usePublishStatus from "../../auth/usePublishStatus.js";
 
 const AVAILABLE_TIEBREAKS = [
   { id: "buchholz_cut1", label: "Buchholz Cut 1" },
@@ -94,6 +95,10 @@ export default function Overview() {
   const [pubBusy, setPubBusy] = useState(false);
   const [pubError, setPubError] = useState("");
   const [pubCopied, setPubCopied] = useState(false);
+  // Desktop app only: live publishing status (null elsewhere). In the desktop
+  // app the page is served from this computer, so links meant for other
+  // people must be built from the WEBSITE's address, not window.location.
+  const { status: pubStatus, available: isDesktop } = usePublishStatus(t.id);
 
   const [editOpen, setEditOpen] = useState(false);
   const [editName, setEditName] = useState("");
@@ -164,9 +169,13 @@ export default function Overview() {
   const registrationLink = t.registrationToken
     ? `${window.location.origin}/register/${t.registrationToken}`
     : null;
-  const publicResultsLink = t.publicViewToken
-    ? `${window.location.origin}/results/${t.publicViewToken}`
-    : null;
+  const resultsOrigin = isDesktop
+    ? pubStatus?.webOrigin
+    : window.location.origin;
+  const publicResultsLink =
+    t.publicViewToken && resultsOrigin
+      ? `${resultsOrigin}/results/${t.publicViewToken}`
+      : null;
 
   function buildTeamRows(source = t) {
     return (source.teams || []).map((team) => ({
@@ -577,6 +586,25 @@ export default function Overview() {
       setPubError(e.message);
     } finally {
       setPubBusy(false);
+    }
+  }
+
+  // Publishing must give spectators something to open: make sure the
+  // tournament has its results link (and that it's switched on) BEFORE the
+  // first upload, so the link shown here is the one that goes online.
+  async function ensurePublicViewBeforePublish() {
+    if (t.publicViewOpen && t.publicViewToken) return;
+    const updated = await api.enablePublicView(t.id);
+    setTournament(updated);
+  }
+
+  async function handleOpenPublicLink() {
+    if (!publicResultsLink) return;
+    if (isDesktop) {
+      const r = await window.swissManagerDesktop.openOnline(publicResultsLink);
+      if (!r?.ok) setPubError(r?.error || "Couldn't open the link.");
+    } else {
+      window.open(publicResultsLink, "_blank", "noopener");
     }
   }
 
@@ -1518,22 +1546,46 @@ export default function Overview() {
             >
               {pubCopied ? "Copied ✓" : "Copy Link"}
             </button>
+            <button
+              className="btn-secondary btn-sm"
+              onClick={handleOpenPublicLink}
+            >
+              Open ↗
+            </button>
           </div>
+        )}
+        {isDesktop && t.publicViewOpen && pubStatus && (
+          <p
+            className={pubStatus.state === "live" ? "hint" : "inline-error"}
+            style={{ marginTop: 8 }}
+          >
+            {!pubStatus.enabled
+              ? "This link only works once Live Publish (below) is switched on — until then the tournament isn't on the website."
+              : pubStatus.state === "live"
+              ? "✓ This tournament is on the website — anyone with this link can follow it."
+              : "The website doesn't have the latest yet — see Live Publish below. The link works as soon as it shows Live."}
+          </p>
         )}
         {pubError && <div className="inline-error">{pubError}</div>}
       </div>
 
-      {typeof window !== "undefined" && window.swissManagerDesktop && (
+      {isDesktop && (
         <div className="card ov-registration-card">
           <div className="section-header">
             <h2>Live Publish</h2>
           </div>
           <p className="muted" style={{ marginBottom: 10 }}>
-            Push this tournament live to the website as you enter results —
-            separate from the read-only link above. Requires signing in and an
-            active subscription (see the top-right corner).
+            Put this tournament on the website and keep it up to date
+            automatically as you pair rounds and enter results. Share the
+            Pairings &amp; Standings link above with players; the link here
+            opens the admin view online so you can check it matches what you see
+            in this app. Requires signing in and an active subscription (see the
+            top-right corner).
           </p>
-          <PublishToggle tournamentId={t.id} />
+          <PublishToggle
+            tournamentId={t.id}
+            onBeforeEnable={ensurePublicViewBeforePublish}
+          />
         </div>
       )}
 
