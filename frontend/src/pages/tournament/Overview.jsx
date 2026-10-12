@@ -5,6 +5,7 @@ import TournamentDetailsCard from "../../components/TournamentDetailsCard.jsx";
 import "../../css/Overview.css";
 import PublishToggle from "../../auth/PublishToggle.jsx";
 import usePublishStatus from "../../auth/usePublishStatus.js";
+import BrochureStudio from "../../components/brochure/BrochureStudio.jsx";
 
 const AVAILABLE_TIEBREAKS = [
   { id: "buchholz_cut1", label: "Buchholz Cut 1" },
@@ -78,6 +79,7 @@ export default function Overview() {
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [brochureOpen, setBrochureOpen] = useState(false);
   const [matchPlayRoundGames, setMatchPlayRoundGames] = useState(
     t.matchPlayNumberOfGames || 2,
   );
@@ -166,12 +168,15 @@ export default function Overview() {
   const lateDeleteEligible =
     rosterFormatMutable && !rosterLockedByQueue && t.currentRound <= 1;
 
-  const registrationLink = t.registrationToken
-    ? `${window.location.origin}/register/${t.registrationToken}`
-    : null;
+  // Links handed to players must use the website, never the desktop app's
+  // local address.
   const resultsOrigin = isDesktop
     ? pubStatus?.webOrigin
     : window.location.origin;
+  const registrationLink =
+    t.registrationToken && resultsOrigin
+      ? `${resultsOrigin}/register/${t.registrationToken}`
+      : null;
   const publicResultsLink =
     t.publicViewToken && resultsOrigin
       ? `${resultsOrigin}/results/${t.publicViewToken}`
@@ -715,9 +720,17 @@ export default function Overview() {
       <div className="card">
         <div className="section-header" style={{ marginBottom: 16 }}>
           <h2>Tournament Details</h2>
-          <button className="btn-secondary btn-sm" onClick={openEdit}>
-            ✎ Edit Details
-          </button>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button
+              className="btn-secondary btn-sm"
+              onClick={() => setBrochureOpen(true)}
+            >
+              ✦ Create Brochure
+            </button>
+            <button className="btn-secondary btn-sm" onClick={openEdit}>
+              ✎ Edit Details
+            </button>
+          </div>
         </div>
 
         <TournamentDetailsCard t={t} />
@@ -1812,6 +1825,15 @@ export default function Overview() {
             </div>
           )}
         </>
+      )}
+
+      {brochureOpen && (
+        <BrochureStudio
+          t={t}
+          registrationUrl={registrationLink}
+          resultsUrl={publicResultsLink}
+          onClose={() => setBrochureOpen(false)}
+        />
       )}
     </div>
   );
