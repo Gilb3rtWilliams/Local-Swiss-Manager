@@ -100,8 +100,12 @@ export const DEFAULT_EXTRAS = {
   website: "",
   sponsors: "",
   notes: "",
-  logo: null,
+  mainLogo: null, // { id, src, orig, shape, scale, crop }
+  sponsorLogos: [], // same shape as mainLogo
+  sponsorLabel: "Supported by",
+  logoPlate: false, // white backing behind logos
   hero: null,
+  posters: [], // { id, src, caption }
   showRules: true,
   showOfficials: true,
   qrMode: "auto", // auto | registration | results | custom | none
@@ -257,8 +261,12 @@ export function buildBrochure(t, extras, links) {
     keyFacts,
     sections,
     qr: resolveQr(x, links),
-    logo: x.logo,
+    mainLogo: x.mainLogo?.src ? x.mainLogo : null,
+    sponsorLogos: (x.sponsorLogos || []).filter((l) => l?.src),
+    sponsorLabel: x.sponsorLabel,
+    logoPlate: !!x.logoPlate,
     hero: x.hero,
+    posters: (x.posters || []).filter((q) => q?.src),
     contactLine: [x.phone, x.email, x.website].filter(hasValue).join("  ·  "),
   };
 }

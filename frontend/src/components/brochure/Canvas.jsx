@@ -93,8 +93,56 @@ const Badges = ({ list }) =>
     </div>
   );
 
-const Logo = ({ src }) =>
-  src ? <img className="bro-logo" src={src} alt="" /> : null;
+function Logo({ logo, plate, h = 4.4 }) {
+  if (!logo?.src) return null;
+  return (
+    <img
+      className={`bro-logo${plate ? " has-plate" : ""}`}
+      data-shape={logo.shape || "original"}
+      style={{ height: `${h * (logo.scale || 1)}em` }}
+      src={logo.src}
+      alt=""
+    />
+  );
+}
+
+// The organizer's main logo, always top centre.
+const Brand = ({ b }) =>
+  b.mainLogo ? (
+    <div className="bro-brand">
+      <Logo logo={b.mainLogo} plate={b.logoPlate} h={5} />
+    </div>
+  ) : null;
+
+// Sponsor logos in a quiet strip above the footer.
+const Sponsors = ({ b }) =>
+  b.sponsorLogos.length > 0 ? (
+    <div className="bro-sponsors">
+      {b.sponsorLabel && <span className="bro-sponsors-l">{b.sponsorLabel}</span>}
+      <div className="bro-sponsors-row">
+        {b.sponsorLogos.map((l) => (
+          <Logo key={l.id || l.src.slice(-20)} logo={l} plate={b.logoPlate} h={3} />
+        ))}
+      </div>
+    </div>
+  ) : null;
+
+// One or more posters (e.g. junior / ladies / senior), shown whole, never cropped.
+const Posters = ({ b }) =>
+  b.posters.length > 0 ? (
+    <div
+      className="bro-posters"
+      style={{ "--n": Math.min(b.posters.length, 3) }}
+      data-many={b.posters.length > 3 ? "1" : undefined}
+    >
+      {b.posters.map((q) => (
+        <figure className="bro-poster" key={q.id || q.src.slice(-20)}>
+          <img src={q.src} alt="" />
+          {q.caption && <figcaption>{q.caption}</figcaption>}
+        </figure>
+      ))}
+    </div>
+  ) : null;
 
 const Checker = () => <div className="bro-checker" aria-hidden="true" />;
 
@@ -105,7 +153,7 @@ function Classic({ b, cols, bodyRef }) {
     <div className="bro-frame">
       <Checker />
       <header className="bro-head">
-        <Logo src={b.logo} />
+        <Brand b={b} />
         <span className="bro-eyebrow">{b.eyebrow}</span>
         <h1 className="bro-title">{b.title}</h1>
         {b.tagline && <p className="bro-tagline">{b.tagline}</p>}
@@ -123,8 +171,10 @@ function Classic({ b, cols, bodyRef }) {
         </div>
       )}
       <div className="bro-body" ref={bodyRef}>
+        <Posters b={b} />
         <Columns sections={b.sections} cols={cols} />
       </div>
+      <Sponsors b={b} />
       <footer className="bro-foot">
         <div className="bro-foot-text">
           {b.contactLine && <span>{b.contactLine}</span>}
@@ -142,9 +192,9 @@ function Modern({ b, cols, bodyRef }) {
       <header className={`bro-head${b.hero ? " has-hero" : ""}`}>
         {b.hero && <img className="bro-hero" src={b.hero} alt="" />}
         <div className="bro-head-in">
+          <Brand b={b} />
           <div className="bro-head-top">
             <span className="bro-eyebrow">{b.eyebrow}</span>
-            <Logo src={b.logo} />
           </div>
           <h1 className="bro-title">{b.title}</h1>
           {b.tagline && <p className="bro-tagline">{b.tagline}</p>}
@@ -162,8 +212,10 @@ function Modern({ b, cols, bodyRef }) {
         </div>
       )}
       <div className="bro-body" ref={bodyRef}>
+        <Posters b={b} />
         <Columns sections={b.sections} cols={cols} />
       </div>
+      <Sponsors b={b} />
       <footer className="bro-foot">
         <div className="bro-foot-text">
           <strong>{b.title}</strong>
@@ -179,9 +231,9 @@ function Bold({ b, cols, bodyRef }) {
   return (
     <>
       <header className="bro-head">
+        <Brand b={b} />
         <div className="bro-head-top">
           <span className="bro-eyebrow">{b.eyebrow}</span>
-          <Logo src={b.logo} />
         </div>
         <h1 className="bro-title">{b.title}</h1>
         {b.tagline && <p className="bro-tagline">{b.tagline}</p>}
@@ -207,8 +259,10 @@ function Bold({ b, cols, bodyRef }) {
         </ul>
       )}
       <div className="bro-body" ref={bodyRef}>
+        <Posters b={b} />
         <Columns sections={b.sections} cols={cols} />
       </div>
+      <Sponsors b={b} />
       <footer className="bro-foot">
         <div className="bro-foot-text">
           {b.contactLine && <span>{b.contactLine}</span>}
@@ -223,9 +277,9 @@ function Minimal({ b, cols, bodyRef }) {
   return (
     <>
       <header className="bro-head">
+        <Brand b={b} />
         <div className="bro-head-top">
           <span className="bro-eyebrow">{b.eyebrow}</span>
-          <Logo src={b.logo} />
         </div>
         <h1 className="bro-title">{b.title}</h1>
         {b.tagline && <p className="bro-tagline">{b.tagline}</p>}
@@ -243,8 +297,10 @@ function Minimal({ b, cols, bodyRef }) {
         </dl>
       )}
       <div className="bro-body" ref={bodyRef}>
+        <Posters b={b} />
         <Columns sections={b.sections} cols={cols} />
       </div>
+      <Sponsors b={b} />
       <footer className="bro-foot">
         <div className="bro-foot-text">
           {b.contactLine && <span>{b.contactLine}</span>}

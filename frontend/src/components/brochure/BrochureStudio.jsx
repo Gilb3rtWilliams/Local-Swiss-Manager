@@ -2,9 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toPng } from "html-to-image";
 import BrochureCanvas, { TEMPLATES } from "./Canvas.jsx";
+import LogoCropper from "./LogoCropper.jsx";
 import { DEFAULT_EXTRAS, SIZES, THEMES, resolveQr, hasValue } from "./data.js";
 import "./brochure.css";
 
+const uid = () => Math.random().toString(36).slice(2, 9);
 const storeKey = (id) => `swiss-brochure:${id}`;
 
 function loadSaved(id) {
@@ -50,6 +52,9 @@ const slug = (s) =>
     .replace(/^-+|-+$/g, "")
     .slice(0, 50) || "tournament";
 
+const readOrig = (file) =>
+  readImage(file, 700, file.type === "image/jpeg" ? "image/jpeg" : "image/png");
+
 function Group({ title, open, children }) {
   return (
     <details className="bs-group" open={open}>
@@ -64,7 +69,17 @@ export default function BrochureStudio({ t, registrationUrl, resultsUrl, onClose
   const [template, setTemplate] = useState(saved?.template || "classic");
   const [themeKey, setThemeKey] = useState(saved?.themeKey || "slate");
   const [sizeKey, setSizeKey] = useState(saved?.sizeKey || "a4");
-  const [extras, setExtras] = useState({ ...DEFAULT_EXTRAS, ...(saved?.extras || {}) });
+  const [extras, setExtras] = useState(() => {
+    const x = { ...DEFAULT_EXTRAS, ...(saved?.extras || {}) };
+    // Older saves kept a single plain logo picture.
+    if (x.logo && !x.mainLogo) {
+      x.mainLogo = { id: "legacy", src: x.logo, orig: x.logo, shape: "original", scale: 1, crop: null };
+    }
+    delete x.logo;
+    return x;
+  });
+  const [crop, setCrop] = useState(null);
+  const [saveWarn, setSaveWarn] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -85,8 +100,10 @@ export default function BrochureStudio({ t, registrationUrl, resultsUrl, onClose
           storeKey(t.id),
           JSON.stringify({ template, themeKey, sizeKey, extras })
         );
+        setSaveWarn(false);
       } catch {
-        /* storage full or blocked: the brochure still works, it just isn't remembered */
+        // Storage full or blocked: the brochure still works this session.
+        setSaveWarn(true);
       }
     }, 400);
     return () => clearTimeout(id);
@@ -187,6 +204,79 @@ export default function BrochureStudio({ t, registrationUrl, resultsUrl, onClose
     }
   };
 
+  /* ── logos ─────────────────────────────────────────────────────────── */
+  const nextInQueue = async (queue, target) => {
+    if (!queue.length) {
+      setCrop(null);
+      return;
+    }
+    try {
+      const orig = await readOrig(queue[0]);
+      setCrop({ target, initial: { orig, shape: "original" }, queue: queue.slice(1) });
+    } catch (err) {
+      setError(err.message);
+      setCrop(null);
+    }
+  };
+  const startLogo = async (files, target) => {
+    const list = Array.from(files || []);
+    if (!list.length) return;
+    setError("");
+    try {
+      const orig = await readOrig(list[0]);
+      setCrop({
+        target,
+        initial: { orig, shape: "original" },
+        queue: target === "main" ? [] : list.slice(1),
+      });
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+  const saveCrop = (result) => {
+    const c = crop;
+    const item = { id: c.id || uid(), scale: c.scale ?? 1, ...result };
+    setExtras((p) =>
+      c.target === "main"
+        ? { ...p, mainLogo: item }
+        : c.id
+        ? { ...p, sponsorLogos: p.sponsorLogos.map((l) => (l.id === c.id ? item : l)) }
+        : { ...p, sponsorLogos: [...p.sponsorLogos, item] }
+    );
+    nextInQueue(c.id ? [] : c.queue, c.target);
+  };
+  const editLogo = (target, l) =>
+    setCrop({ target, id: l.id, scale: l.scale, initial: l, queue: [] });
+  const setSponsorScale = (id, v) =>
+    setExtras((p) => ({ ...p, sponsorLogos: p.sponsorLogos.map((l) => (l.id === id ? { ...l, scale: v } : l)) }));
+  const moveItem = (key, i, d) =>
+    setExtras((p) => {
+      const a = [...p[key]];
+      const j = i + d;
+      if (j < 0 || j >= a.length) return p;
+      [a[i], a[j]] = [a[j], a[i]];
+      return { ...p, [key]: a };
+    });
+
+  /* ── posters ───────────────────────────────────────────────────────── */
+  const addPosters = async (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (!files.length) return;
+    setError("");
+    try {
+      const added = [];
+      for (const f of files) {
+        added.push({ id: uid(), src: await readImage(f, 1400, "image/jpeg"), caption: "" });
+      }
+      setExtras((p) => ({ ...p, posters: [...p.posters, ...added] }));
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+  const setCaption = (id, v) =>
+    setExtras((p) => ({ ...p, posters: p.posters.map((q) => (q.id === id ? { ...q, caption: v } : q)) }));
+
   const theme = THEMES[themeKey];
   const heavyInk =
     canPrint && theme.dark && template !== "minimal";
@@ -232,6 +322,12 @@ export default function BrochureStudio({ t, registrationUrl, resultsUrl, onClose
       <div className="bs-main">
         <div className="bs-panel">
           {error && <p className="bs-err">{error}</p>}
+          {saveWarn && (
+            <p className="bs-note" style={{ marginBottom: 12 }}>
+              Your images are too large to remember on this device. They work
+              for now, so download your brochure before closing.
+            </p>
+          )}
           {!canPrint && (
             <p className="bs-note" style={{ marginBottom: 12 }}>
               Social sizes are made for sharing as an image. Pick A4 or A5 to
@@ -319,19 +415,101 @@ export default function BrochureStudio({ t, registrationUrl, resultsUrl, onClose
             </label>
           </Group>
 
-          <Group title="Images">
+          <Group title="Logos">
             <div className="bs-field">
-              <span>Logo (club or sponsor)</span>
-              <div className="bs-img-row">
-                {extras.logo && <img src={extras.logo} alt="" />}
-                <input type="file" accept="image/*" onChange={pickImage("logo", 500, "image/png")} />
-                {extras.logo && (
-                  <button className="bs-btn" onClick={() => setExtras((p) => ({ ...p, logo: null }))}>Remove</button>
-                )}
-              </div>
+              <span>Main logo (top centre)</span>
+              {extras.mainLogo ? (
+                <div className="bs-item">
+                  <div className="bs-item-thumb"><img src={extras.mainLogo.src} alt="" /></div>
+                  <div className="bs-item-body">
+                    <label className="bs-size">
+                      Size
+                      <input
+                        type="range" min="0.4" max="1.8" step="0.05"
+                        value={extras.mainLogo.scale ?? 1}
+                        onChange={(e) =>
+                          setExtras((p) => ({ ...p, mainLogo: { ...p.mainLogo, scale: +e.target.value } }))
+                        }
+                      />
+                    </label>
+                  </div>
+                  <div className="bs-item-actions">
+                    <button className="bs-mini" onClick={() => editLogo("main", extras.mainLogo)}>Crop</button>
+                    <button className="bs-mini" onClick={() => setExtras((p) => ({ ...p, mainLogo: null }))}>✕</button>
+                  </div>
+                </div>
+              ) : (
+                <input type="file" accept="image/*" onChange={(e) => { startLogo(e.target.files, "main"); e.target.value = ""; }} />
+              )}
+            </div>
+
+            <div className="bs-field">
+              <span>Sponsor &amp; partner logos</span>
+              {extras.sponsorLogos.map((l, i) => (
+                <div className="bs-item" key={l.id}>
+                  <div className="bs-item-thumb"><img src={l.src} alt="" /></div>
+                  <div className="bs-item-body">
+                    <label className="bs-size">
+                      Size
+                      <input
+                        type="range" min="0.4" max="2" step="0.05"
+                        value={l.scale ?? 1}
+                        onChange={(e) => setSponsorScale(l.id, +e.target.value)}
+                      />
+                    </label>
+                  </div>
+                  <div className="bs-item-actions">
+                    <button className="bs-mini" onClick={() => editLogo("sponsor", l)}>Crop</button>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <button className="bs-mini" disabled={i === 0} onClick={() => moveItem("sponsorLogos", i, -1)}>←</button>
+                      <button className="bs-mini" disabled={i === extras.sponsorLogos.length - 1} onClick={() => moveItem("sponsorLogos", i, 1)}>→</button>
+                      <button className="bs-mini" onClick={() => setExtras((p) => ({ ...p, sponsorLogos: p.sponsorLogos.filter((x) => x.id !== l.id) }))}>✕</button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <input
+                type="file" accept="image/*" multiple
+                onChange={(e) => { startLogo(e.target.files, "sponsor"); e.target.value = ""; }}
+              />
+              <p className="bs-hint">Pick several files at once; you can shape and crop each one.</p>
+            </div>
+            {field("Label above sponsor logos", "sponsorLabel", { placeholder: "Supported by" })}
+            <label className="bs-check">
+              <input type="checkbox" checked={extras.logoPlate} onChange={setX("logoPlate")} />
+              White backing behind logos (helps dark logos on dark designs)
+            </label>
+          </Group>
+
+          <Group title="Posters & banner">
+            <div className="bs-field">
+              <span>Posters (e.g. Junior, Ladies, Senior)</span>
+              {extras.posters.map((q, i) => (
+                <div className="bs-item" key={q.id}>
+                  <div className="bs-item-thumb is-poster"><img src={q.src} alt="" /></div>
+                  <div className="bs-item-body">
+                    <input
+                      type="text" placeholder="Caption, e.g. Junior section"
+                      value={q.caption} onChange={(e) => setCaption(q.id, e.target.value)}
+                    />
+                  </div>
+                  <div className="bs-item-actions">
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <button className="bs-mini" disabled={i === 0} onClick={() => moveItem("posters", i, -1)}>↑</button>
+                      <button className="bs-mini" disabled={i === extras.posters.length - 1} onClick={() => moveItem("posters", i, 1)}>↓</button>
+                    </div>
+                    <button className="bs-mini" onClick={() => setExtras((p) => ({ ...p, posters: p.posters.filter((x) => x.id !== q.id) }))}>✕</button>
+                  </div>
+                </div>
+              ))}
+              <input type="file" accept="image/*" multiple onChange={addPosters} />
+              <p className="bs-hint">
+                Posters are shown whole, side by side, never cropped. Several
+                posters need room, so A4 or a tall social size works best.
+              </p>
             </div>
             <div className="bs-field">
-              <span>Banner photo</span>
+              <span>Header banner photo (cropped to fill the header)</span>
               <div className="bs-img-row">
                 {extras.hero && <img src={extras.hero} alt="" />}
                 <input type="file" accept="image/*" onChange={pickImage("hero", 1600, "image/jpeg")} />
@@ -405,6 +583,16 @@ export default function BrochureStudio({ t, registrationUrl, resultsUrl, onClose
           </div>
         </div>
       </div>
+
+      {crop && (
+        <LogoCropper
+          key={(crop.id || "new") + crop.initial.orig.length}
+          initial={crop.initial}
+          hasNext={crop.queue.length > 0}
+          onSave={saveCrop}
+          onCancel={() => nextInQueue(crop.queue, crop.target)}
+        />
+      )}
 
       {printing &&
         createPortal(
