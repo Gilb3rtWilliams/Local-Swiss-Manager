@@ -385,7 +385,7 @@ export default function Welcome() {
               </button>
             )}
           </div>
-          <p className="welcome-credit">by Gilbert Williams</p>
+          <p className="welcome-credit">by Gilbert Williams productions</p>
         </div>
 
         <button
